@@ -9,17 +9,17 @@
 
 ## THuman2.0
 
-Please refer to [THuman2.0-Dataset](https://github.com/ytrock/THuman2.0-Dataset) to download the original scans into `data/thuman2/scans`, and its SMPL-X(male) fits into `data/thuman2/fits`. Then generate `all.txt` by `ls > ../all.txt` under `data/thuman2/scans`, which contains all the subject names (0000~0525).
+Please refer to [THuman2.0-Dataset](https://github.com/ytrock/THuman2.0-Dataset) to download the original scans into `data/thuman2/scans`. Then generate `all.txt` by `ls > ../all.txt` under `data/thuman2/scans`, which contains all the subject names (0000~0525). 
 
-PaMIR only support SMPL instead of SMPL-X, please download THuman2.0's SMPL fits (.obj, .pkl) and put them at `./data/thuman2.0/smpl`
+The SMPL and SMPLX fits could be downloaded as follows: 
 
 ```bash
-wget https://download.is.tue.mpg.de/icon/smpl.zip --no-check-certificate -O ./data/thuman2/smpl.zip
-unzip ./data/thuman2/smpl.zip -d ./data/thuman2/
-rm ./data/thuman2/smpl.zip
+wget https://download.is.tue.mpg.de/icon/SMPL+X.zip --no-check-certificate -O ./data/thuman2/SMPL+X.zip
+unzip ./data/thuman2/SMPL+X.zip -d ./data/thuman2/
+rm ./data/thuman2/SMPL+X.zip
 ```
 
-:eyes: `./sample_data` contains one example of THuman2.0 which shows the data folder structure.
+:eyes: `./sample_data` contains one example of THuman2.0 which shows the data folder structure. Note that PaMIR only support SMPL, if you want to use SMPL-X instead, please refer to `./scripts/tetrahedronize_scripits` to generate necessary data used for voxelization.
 
 ## Debug Mode
 

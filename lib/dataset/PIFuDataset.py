@@ -97,7 +97,6 @@ class PIFuDataset():
             dataset_dir = osp.join(self.root, dataset)
 
             mesh_dir = osp.join(dataset_dir, "scans")
-            param_dir = osp.join(dataset_dir, "fits")
             smplx_dir = osp.join(dataset_dir, "smplx")
             smpl_dir = osp.join(dataset_dir, "smpl")
 
@@ -105,7 +104,6 @@ class PIFuDataset():
                 "smplx_dir": smplx_dir,
                 "smpl_dir": smpl_dir,
                 "mesh_dir": mesh_dir,
-                "param_dir": param_dir,
                 "scale": self.scales[dataset_id]
             }
 
@@ -236,11 +234,11 @@ class PIFuDataset():
                 osp.join(self.datasets_dict[dataset]["smplx_dir"],
                          f"{subject}.obj"),
                 'smpl_param':
-                osp.join(self.datasets_dict[dataset]["param_dir"],
-                         f"{subject}/smpl_param.pkl"),
+                osp.join(self.datasets_dict[dataset]["smpl_dir"],
+                         f"{subject}.pkl"),
                 'smplx_param':
-                osp.join(self.datasets_dict[dataset]["param_dir"],
-                         f"{subject}/smplx_param.pkl"),
+                osp.join(self.datasets_dict[dataset]["smplx_dir"],
+                         f"{subject}.pkl"),
             })
         elif dataset == 'cape':
             data_dict.update({
@@ -410,8 +408,8 @@ class PIFuDataset():
                             noise_type=None,
                             noise_scale=None):
 
-        smpl_param = np.load(data_dict['smpl_path'], allow_pickle=True)
-        smplx_param = np.load(data_dict['smplx_path'], allow_pickle=True)
+        smpl_param = np.load(data_dict['smpl_param'], allow_pickle=True)
+        smplx_param = np.load(data_dict['smplx_param'], allow_pickle=True)
 
         smpl_pose = rotation_matrix_to_angle_axis(
             torch.as_tensor(smpl_param['full_pose'][0])).numpy()

@@ -963,8 +963,8 @@ class SMPLX():
         self.smplx_fill_mouth_fid = osp.join(self.current_dir,
                                              "smpl_data/fill_mouth_fid.npy")
 
-        self.faces = np.load(self.smplx_faces_path)
-        self.verts = np.load(self.smplx_verts_path)
+        self.smplx_faces = np.load(self.smplx_faces_path)
+        self.smplx_verts = np.load(self.smplx_verts_path)
         self.smpl_verts = np.load(self.smpl_verts_path)
         self.smpl_faces = np.load(self.smpl_faces_path)
 
