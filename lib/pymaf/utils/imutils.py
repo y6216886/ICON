@@ -9,7 +9,7 @@ import numpy as np
 import scipy.misc
 from PIL import Image
 from rembg.bg import remove
-import human_det
+from torchvision.models import detection
 
 from lib.pymaf.core import constants
 from lib.pymaf.utils.streamer import aug_matrix
@@ -88,7 +88,6 @@ def get_transformer(input_res):
 
 
 def process_image(img_file,
-                  det,
                   hps_type,
                   input_res=512,
                   device=None,
@@ -113,21 +112,20 @@ def process_image(img_file,
                                   M[0:2, :], (input_res * 2, input_res * 2),
                                   flags=cv2.INTER_CUBIC)
 
-    if det is not None:
-
-        # detection for bbox
-        bbox = get_bbox(img_for_crop, det)
-
-        width = bbox[2] - bbox[0]
-        height = bbox[3] - bbox[1]
-        center = np.array([(bbox[0] + bbox[2]) / 2.0,
-                           (bbox[1] + bbox[3]) / 2.0])
-
-    else:
-        # Assume that the person is centerered in the image
-        height = img_for_crop.shape[0]
-        width = img_for_crop.shape[1]
-        center = np.array([width // 2, height // 2])
+    # detection for bbox
+    detector = detection.maskrcnn_resnet50_fpn(pretrained=True)
+    detector.eval()
+    predictions = detector(
+        [torch.from_numpy(img_for_crop).permute(2, 0, 1) / 255.])[0]
+    human_ids = torch.logical_and(
+        predictions["labels"] == 1,
+        predictions["scores"] == predictions["scores"].max()).nonzero().squeeze(1)
+    bbox = predictions["boxes"][human_ids, :].flatten().detach().cpu().numpy()
+    
+    width = bbox[2] - bbox[0]
+    height = bbox[3] - bbox[1]
+    center = np.array([(bbox[0] + bbox[2]) / 2.0,
+                        (bbox[1] + bbox[3]) / 2.0])
 
     scale = max(height, width) / 180
 
