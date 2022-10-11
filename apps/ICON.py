@@ -273,7 +273,7 @@ class ICON(pl.LightningModule):
             k: batch[k] if k in batch.keys() else None
             for k in getattr(self, f"{self.prior_type}_keys")
         })
-
+        
         preds_G, error_G = self.netG(in_tensor_dict)
 
         acc, iou, prec, recall = self.evaluator.calc_acc(
@@ -530,12 +530,6 @@ class ICON(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
 
-        # dict_keys(['dataset', 'subject', 'rotation', 'scale', 'calib',
-        #            'normal_F', 'normal_B', 'image', 'T_normal_F', 'T_normal_B',
-        #            'z-trans', 'verts', 'faces', 'samples_geo', 'labels_geo',
-        #            'smpl_verts', 'smpl_faces', 'smpl_vis', 'smpl_cmap', 'pts_signs',
-        #            'type', 'gender', 'age', 'body_pose', 'global_orient', 'betas', 'transl'])
-
         self.netG.eval()
         self.netG.training = False
         in_tensor_dict = {}
@@ -674,7 +668,8 @@ class ICON(pl.LightningModule):
     def render_func(self, in_tensor_dict, dataset="title", idx=0):
 
         for name in in_tensor_dict.keys():
-            in_tensor_dict[name] = in_tensor_dict[name][0:1]
+            if in_tensor_dict[name] is not None:
+                in_tensor_dict[name] = in_tensor_dict[name][0:1]
 
         self.netG.eval()
         features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
