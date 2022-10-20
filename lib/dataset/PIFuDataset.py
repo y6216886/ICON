@@ -28,8 +28,16 @@ import os, cv2
 import trimesh
 import torch
 import vedo
-from kaolin.ops.mesh import check_sign
 import torchvision.transforms as transforms
+
+cape_gender = {
+    "male": [
+        '00032', '00096', '00122', '00127', '00145', '00215', '02474', '03284',
+        '03375', '03394'
+    ],
+    "female": ['00134', '00159', '03223', '03331', '03383']
+}
+
 
 
 class PIFuDataset():
@@ -224,6 +232,7 @@ class PIFuDataset():
         elif dataset == 'cape':
             data_dict.update({
                 'mesh_path': osp.join(self.datasets_dict[dataset]["mesh_dir"], f"{subject}.obj"),
+                'smpl_param': osp.join(self.datasets_dict[dataset]["smpl_dir"], f"{subject}.npz"),
             })
 
         # load training data
@@ -365,17 +374,23 @@ class PIFuDataset():
 
     def compute_voxel_verts(self, data_dict, noise_type=None, noise_scale=None):
 
-        smpl_param = np.load(data_dict['smpl_param'], allow_pickle=True)
-        smplx_param = np.load(data_dict['smplx_param'], allow_pickle=True)
+        smpl_param = np.load(data_dict["smpl_param"], allow_pickle=True)
 
-        smpl_pose = rotation_matrix_to_angle_axis(torch.as_tensor(
-            smpl_param['full_pose'][0])).numpy()
-        smpl_betas = smpl_param["betas"]
+        if data_dict['dataset'] == 'cape':
+            pid = data_dict['subject'].split("-")[0]
+            gender = "male" if pid in cape_gender["male"] else "female"
+            smpl_pose = smpl_param['pose'].flatten()
+            smpl_betas = np.zeros((1, 10))
+        else:
+            gender = 'male'
+            smpl_pose = rotation_matrix_to_angle_axis(torch.as_tensor(
+                smpl_param["full_pose"][0])).numpy()
+            smpl_betas = smpl_param["betas"]
 
-        smpl_path = osp.join(self.smplx.model_dir, "smpl/SMPL_MALE.pkl")
-        tetra_path = osp.join(self.smplx.tedra_dir, "tetra_male_adult_smpl.npz")
+        smpl_path = osp.join(self.smplx.model_dir, f"smpl/SMPL_{gender.upper()}.pkl")
+        tetra_path = osp.join(self.smplx.tedra_dir, f"tetra_{gender}_adult_smpl.npz")
 
-        smpl_model = TetraSMPLModel(smpl_path, tetra_path, 'adult')
+        smpl_model = TetraSMPLModel(smpl_path, tetra_path, "adult")
 
         smpl_pose, smpl_betas = self.add_noise(
             smpl_model.beta_shape[0],
@@ -383,25 +398,31 @@ class PIFuDataset():
             smpl_betas[0],
             noise_type,
             noise_scale,
-            type='smpl',
-            hashcode=(hash(f"{data_dict['subject']}_{data_dict['rotation']}")) % (10**8))
+            type="smpl",
+            hashcode=(hash(f"{data_dict['subject']}_{data_dict['rotation']}")) % (10**8),
+        )
 
         smpl_model.set_params(pose=smpl_pose.reshape(-1, 3),
                               beta=smpl_betas,
                               trans=smpl_param["transl"])
+        if data_dict['dataset'] == 'cape':
+            verts = np.concatenate([smpl_model.verts, smpl_model.verts_added], axis=0) * 100.0
+        else:
+            verts = (np.concatenate([smpl_model.verts, smpl_model.verts_added], axis=0) *
+                     smpl_param["scale"] +
+                     smpl_param["translation"]) * self.datasets_dict[data_dict["dataset"]]["scale"]
 
-        verts = (np.concatenate([smpl_model.verts, smpl_model.verts_added], axis=0) *
-                 smplx_param["scale"] +
-                 smplx_param["translation"]) * self.datasets_dict[data_dict['dataset']]['scale']
-        faces = np.loadtxt(osp.join(self.smplx.tedra_dir, "tetrahedrons_male_adult.txt"),
-                           dtype=np.int32) - 1
+        faces = (np.loadtxt(
+            osp.join(self.smplx.tedra_dir, "tetrahedrons_male_adult.txt"),
+            dtype=np.int32,
+        ) - 1)
 
         pad_v_num = int(8000 - verts.shape[0])
         pad_f_num = int(25100 - faces.shape[0])
 
-        verts = np.pad(verts, ((0, pad_v_num), (0, 0)), mode='constant',
+        verts = np.pad(verts, ((0, pad_v_num), (0, 0)), mode="constant",
                        constant_values=0.0).astype(np.float32)
-        faces = np.pad(faces, ((0, pad_f_num), (0, 0)), mode='constant',
+        faces = np.pad(faces, ((0, pad_f_num), (0, 0)), mode="constant",
                        constant_values=0.0).astype(np.int32)
 
         return verts, faces, pad_v_num, pad_f_num
