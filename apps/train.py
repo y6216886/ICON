@@ -22,10 +22,7 @@ import numpy as np
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cfg",
-                        "--config_file",
-                        type=str,
-                        help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, help="path of the yaml config file")
     parser.add_argument("-test", "--test_mode", action="store_true")
     args = parser.parse_args()
     cfg = get_cfg_defaults()
@@ -87,10 +84,8 @@ if __name__ == "__main__":
         "num_sanity_val_steps": cfg.num_sanity_val_steps,
         "checkpoint_callback": checkpoint,
         "limit_train_batches": cfg.dataset.train_bsize,
-        "limit_val_batches":
-        cfg.dataset.val_bsize if not cfg.overfit else 0.001,
-        "limit_test_batches":
-        cfg.dataset.test_bsize if not cfg.overfit else 0.0,
+        "limit_val_batches": cfg.dataset.val_bsize if not cfg.overfit else 0.001,
+        "limit_test_batches": cfg.dataset.test_bsize if not cfg.overfit else 0.0,
         "profiler": None,
         "fast_dev_run": cfg.fast_dev,
         "max_epochs": cfg.num_epoch,
@@ -105,10 +100,9 @@ if __name__ == "__main__":
         val_len = datamodule.data_size["val"]
         trainer_kwargs.update({
             "log_every_n_steps":
-            int(cfg.freq_plot * train_len // cfg.batch_size),
+                int(cfg.freq_plot * train_len // cfg.batch_size),
             "val_check_interval":
-            int(freq_eval * train_len //
-                cfg.batch_size) if freq_eval > 10 else freq_eval,
+                int(freq_eval * train_len // cfg.batch_size) if freq_eval > 10 else freq_eval,
         })
 
         if cfg.overfit:
@@ -128,10 +122,7 @@ if __name__ == "__main__":
     trainer = SubTrainer(**trainer_kwargs)
 
     # load checkpoints
-    load_networks(cfg,
-                  model,
-                  mlp_path=cfg.resume_path,
-                  normal_path=cfg.normal_path)
+    load_networks(cfg, model, mlp_path=cfg.resume_path, normal_path=cfg.normal_path)
 
     if not cfg.test_mode:
         trainer.fit(model=model, datamodule=datamodule)

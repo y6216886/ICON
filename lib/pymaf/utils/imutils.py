@@ -1,14 +1,12 @@
 """
 This file contains functions that are used to perform data augmentation.
 """
-from turtle import reset
 import cv2
-import io
 import torch
 import numpy as np
-import scipy.misc
+from rembg.session_factory import new_session
 from PIL import Image
-from rembg.bg import remove
+from rembg import remove
 from torchvision.models import detection
 
 from lib.pymaf.core import constants
@@ -34,14 +32,12 @@ def load_img(img_file):
 def get_bbox(img, det):
 
     input = np.float32(img)
-    input = (input / 255.0 -
-             (0.5, 0.5, 0.5)) / (0.5, 0.5, 0.5)  # TO [-1.0, 1.0]
+    input = (input / 255.0 - (0.5, 0.5, 0.5)) / (0.5, 0.5, 0.5)  # TO [-1.0, 1.0]
     input = input.transpose(2, 0, 1)  # TO [3 x H x W]
     bboxes, probs = det(torch.from_numpy(input).float().unsqueeze(0))
 
     probs = probs.unsqueeze(3)
-    bboxes = (bboxes * probs).sum(dim=1, keepdim=True) / probs.sum(
-        dim=1, keepdim=True)
+    bboxes = (bboxes * probs).sum(dim=1, keepdim=True) / probs.sum(dim=1, keepdim=True)
     bbox = bboxes[0, 0, 0].cpu().numpy()
 
     return bbox
@@ -55,16 +51,14 @@ def get_transformer(input_res):
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
-    mask_to_tensor = transforms.Compose([
-        transforms.Resize(input_res),
-        transforms.ToTensor(),
-        transforms.Normalize((0.0, ), (1.0, ))
-    ])
+    mask_to_tensor = transforms.Compose(
+        [transforms.Resize(input_res),
+         transforms.ToTensor(),
+         transforms.Normalize((0.0,), (1.0,))])
 
     image_to_pymaf_tensor = transforms.Compose([
         transforms.Resize(size=224),
-        transforms.Normalize(mean=constants.IMG_NORM_MEAN,
-                             std=constants.IMG_NORM_STD)
+        transforms.Normalize(mean=constants.IMG_NORM_MEAN, std=constants.IMG_NORM_STD)
     ])
 
     image_to_pixie_tensor = transforms.Compose([transforms.Resize(224)])
@@ -82,24 +76,20 @@ def get_transformer(input_res):
         return img
 
     return [
-        image_to_tensor, mask_to_tensor, image_to_pymaf_tensor,
-        image_to_pixie_tensor, image_to_hybrik_tensor
+        image_to_tensor, mask_to_tensor, image_to_pymaf_tensor, image_to_pixie_tensor,
+        image_to_hybrik_tensor
     ]
 
 
-def process_image(img_file,
-                  hps_type,
-                  input_res=512,
-                  device=None,
-                  seg_path=None):
+def process_image(img_file, hps_type, input_res=512, device=None, seg_path=None):
     """Read image, do preprocessing and possibly crop it according to the bounding box.
     If there are bounding box annotations, use them to crop the image.
     If no bounding box is specified but openpose detections are available, use them to get the bounding box.
     """
 
     [
-        image_to_tensor, mask_to_tensor, image_to_pymaf_tensor,
-        image_to_pixie_tensor, image_to_hybrik_tensor
+        image_to_tensor, mask_to_tensor, image_to_pymaf_tensor, image_to_pixie_tensor,
+        image_to_hybrik_tensor
     ] = get_transformer(input_res)
 
     img_ori = load_img(img_file)
@@ -115,37 +105,27 @@ def process_image(img_file,
     # detection for bbox
     detector = detection.maskrcnn_resnet50_fpn(pretrained=True)
     detector.eval()
-    predictions = detector(
-        [torch.from_numpy(img_for_crop).permute(2, 0, 1) / 255.])[0]
-    human_ids = torch.logical_and(
-        predictions["labels"] == 1,
-        predictions["scores"] == predictions["scores"].max()).nonzero().squeeze(1)
+    predictions = detector([torch.from_numpy(img_for_crop).permute(2, 0, 1) / 255.])[0]
+    human_ids = torch.where(
+        predictions["scores"] == predictions["scores"][predictions['labels'] == 1].max())
     bbox = predictions["boxes"][human_ids, :].flatten().detach().cpu().numpy()
-    
+
     width = bbox[2] - bbox[0]
     height = bbox[3] - bbox[1]
-    center = np.array([(bbox[0] + bbox[2]) / 2.0,
-                        (bbox[1] + bbox[3]) / 2.0])
+    center = np.array([(bbox[0] + bbox[2]) / 2.0, (bbox[1] + bbox[3]) / 2.0])
 
     scale = max(height, width) / 180
 
     if hps_type == 'hybrik':
-        img_np = crop_for_hybrik(img_for_crop, center,
-                                 np.array([scale * 180, scale * 180]))
+        img_np = crop_for_hybrik(img_for_crop, center, np.array([scale * 180, scale * 180]))
     else:
-        img_np, cropping_parameters = crop(img_for_crop, center, scale,
-                                           (input_res, input_res))
+        img_np, cropping_parameters = crop(img_for_crop, center, scale, (input_res, input_res))
 
-    with torch.no_grad():
-        buf = io.BytesIO()
-        Image.fromarray(img_np).save(buf, format='png')
-        img_pil = Image.open(io.BytesIO(remove(
-            buf.getvalue()))).convert("RGBA")
+    img_pil = Image.fromarray(remove(img_np, post_process_mask=True, session=new_session("u2net")))
 
     # for icon
     img_rgb = image_to_tensor(img_pil.convert("RGB"))
-    img_mask = torch.tensor(1.0) - (mask_to_tensor(img_pil.split()[-1]) <
-                                    torch.tensor(0.5)).float()
+    img_mask = torch.tensor(1.0) - (mask_to_tensor(img_pil.split()[-1]) < torch.tensor(0.5)).float()
     img_tensor = img_rgb * img_mask
 
     # for hps
@@ -183,23 +163,17 @@ def process_image(img_file,
                 warped_indeces.resize((warped_indeces.shape[:2]))
 
                 # cropped_indeces = crop_segmentation(warped_indeces, center, scale, (input_res, input_res), img_np.shape)
-                cropped_indeces = crop_segmentation(warped_indeces,
-                                                    (input_res, input_res),
+                cropped_indeces = crop_segmentation(warped_indeces, (input_res, input_res),
                                                     cropping_parameters)
 
-                indices = np.vstack(
-                    (cropped_indeces[:, 0], cropped_indeces[:, 1])).T
+                indices = np.vstack((cropped_indeces[:, 0], cropped_indeces[:, 1])).T
 
                 # Convert to NDC coordinates
                 seg_cropped_normalized = 2 * (indices / input_res) - 1
                 # Don't know why we need to divide by 50 but it works ¯\_(ツ)_/¯ (probably some scaling factor somewhere)
                 # Divide only by 45 on the horizontal axis to take the curve of the human body into account
-                seg_cropped_normalized[:,
-                                       0] = (1 /
-                                             40) * seg_cropped_normalized[:, 0]
-                seg_cropped_normalized[:,
-                                       1] = (1 /
-                                             50) * seg_cropped_normalized[:, 1]
+                seg_cropped_normalized[:, 0] = (1 / 40) * seg_cropped_normalized[:, 0]
+                seg_cropped_normalized[:, 1] = (1 / 50) * seg_cropped_normalized[:, 1]
                 coord_normalized.append(seg_cropped_normalized)
 
             seg['coord_normalized'] = coord_normalized
@@ -255,13 +229,11 @@ def crop(img, center, scale, res):
     old_x = max(0, ul[0]), min(len(img[0]), br[0])
     old_y = max(0, ul[1]), min(len(img), br[1])
 
-    new_img[new_y[0]:new_y[1], new_x[0]:new_x[1]] = img[old_y[0]:old_y[1],
-                                                        old_x[0]:old_x[1]]
+    new_img[new_y[0]:new_y[1], new_x[0]:new_x[1]] = img[old_y[0]:old_y[1], old_x[0]:old_x[1]]
     if len(img.shape) == 2:
         new_img = np.array(Image.fromarray(new_img).resize(res))
     else:
-        new_img = np.array(
-            Image.fromarray(new_img.astype(np.uint8)).resize(res))
+        new_img = np.array(Image.fromarray(new_img.astype(np.uint8)).resize(res))
 
     return new_img, (old_x, new_x, old_y, new_y, new_shape)
 
@@ -282,9 +254,7 @@ def crop_segmentation(org_coord, res, cropping_parameters):
 def crop_for_hybrik(img, center, scale):
     inp_h, inp_w = (256, 256)
     trans = get_affine_transform(center, scale, 0, [inp_w, inp_h])
-    new_img = cv2.warpAffine(img,
-                             trans, (int(inp_w), int(inp_h)),
-                             flags=cv2.INTER_LINEAR)
+    new_img = cv2.warpAffine(img, trans, (int(inp_w), int(inp_h)), flags=cv2.INTER_LINEAR)
     return new_img
 
 
@@ -377,8 +347,7 @@ def uncrop(img, center, scale, orig_shape):
 
     img = np.array(Image.fromarray(img.astype(np.uint8)).resize(crop_shape))
 
-    new_img[old_y[0]:old_y[1], old_x[0]:old_x[1]] = img[new_y[0]:new_y[1],
-                                                        new_x[0]:new_x[1]]
+    new_img[old_y[0]:old_y[1], old_x[0]:old_x[1]] = img[new_y[0]:new_y[1], new_x[0]:new_x[1]]
 
     return new_img
 
@@ -387,8 +356,7 @@ def rot_aa(aa, rot):
     """Rotate axis angle parameters."""
     # pose parameters
     R = np.array([[np.cos(np.deg2rad(-rot)), -np.sin(np.deg2rad(-rot)), 0],
-                  [np.sin(np.deg2rad(-rot)),
-                   np.cos(np.deg2rad(-rot)), 0], [0, 0, 1]])
+                  [np.sin(np.deg2rad(-rot)), np.cos(np.deg2rad(-rot)), 0], [0, 0, 1]])
     # find the rotation of the body in camera frame
     per_rdg, _ = cv2.Rodrigues(aa)
     # apply the global rotation to the global orientation

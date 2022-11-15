@@ -94,14 +94,12 @@ class HoppeMesh:
         self.trimesh = trimesh.Trimesh(verts, faces, process=True)
         self.verts = np.array(self.trimesh.vertices)
         self.faces = np.array(self.trimesh.faces)
-        self.vert_normals, self.faces_normals = compute_normal(
-            self.verts, self.faces)
+        self.vert_normals, self.faces_normals = compute_normal(self.verts, self.faces)
 
     def contains(self, points):
 
         labels = check_sign(
-            torch.as_tensor(self.verts).unsqueeze(0),
-            torch.as_tensor(self.faces),
+            torch.as_tensor(self.verts).unsqueeze(0), torch.as_tensor(self.faces),
             torch.as_tensor(points).unsqueeze(0))
         return labels.squeeze(0).numpy()
 
@@ -146,10 +144,7 @@ def mesh_edge_loss(meshes, target_length: float = 0.0):
         no meshes or all empty meshes.
     """
     if meshes.isempty():
-        return torch.tensor([0.0],
-                            dtype=torch.float32,
-                            device=meshes.device,
-                            requires_grad=True)
+        return torch.tensor([0.0], dtype=torch.float32, device=meshes.device, requires_grad=True)
 
     N = len(meshes)
     edges_packed = meshes.edges_packed()  # (sum(E_n), 3)
@@ -180,12 +175,10 @@ def remesh(obj_path, perc, device):
     ms = pymeshlab.MeshSet()
     ms.load_new_mesh(obj_path)
     ms.laplacian_smooth()
-    ms.remeshing_isotropic_explicit_remeshing(
-        targetlen=pymeshlab.Percentage(perc), adaptive=True)
+    ms.remeshing_isotropic_explicit_remeshing(targetlen=pymeshlab.Percentage(perc), adaptive=True)
     ms.save_current_mesh(obj_path.replace("recon", "remesh"))
     polished_mesh = trimesh.load_mesh(obj_path.replace("recon", "remesh"))
-    verts_pr = torch.tensor(
-        polished_mesh.vertices).float().unsqueeze(0).to(device)
+    verts_pr = torch.tensor(polished_mesh.vertices).float().unsqueeze(0).to(device)
     faces_pr = torch.tensor(polished_mesh.faces).long().unsqueeze(0).to(device)
 
     return verts_pr, faces_pr
@@ -222,9 +215,7 @@ def blend_rgb_norm(rgb, norm, mask):
 def unwrap(image, data):
 
     img_uncrop = uncrop(
-        np.array(
-            Image.fromarray(image).resize(
-                data['uncrop_param']['box_shape'][:2])),
+        np.array(Image.fromarray(image).resize(data['uncrop_param']['box_shape'][:2])),
         data['uncrop_param']['center'], data['uncrop_param']['scale'],
         data['uncrop_param']['crop_shape'])
 
@@ -244,8 +235,7 @@ def update_mesh_shape_prior_losses(mesh, losses):
     # mesh normal consistency
     losses["nc"]['value'] = mesh_normal_consistency(mesh)
     # mesh laplacian smoothing
-    losses["laplacian"]['value'] = mesh_laplacian_smoothing(mesh,
-                                                            method="uniform")
+    losses["laplacian"]['value'] = mesh_laplacian_smoothing(mesh, method="uniform")
 
 
 def rename(old_dict, old_name, new_name):
@@ -265,25 +255,21 @@ def load_checkpoint(model, cfg):
     device = torch.device(f"cuda:{cfg['test_gpus'][0]}")
 
     if os.path.exists(cfg.resume_path) and cfg.resume_path.endswith("ckpt"):
-        main_dict = torch.load(cfg.resume_path,
-                               map_location=device)['state_dict']
+        main_dict = torch.load(cfg.resume_path, map_location=device)['state_dict']
 
         main_dict = {
             k: v
             for k, v in main_dict.items()
-            if k in model_dict and v.shape == model_dict[k].shape and (
-                'reconEngine' not in k) and ("normal_filter" not in k) and (
-                    'voxelization' not in k)
+            if k in model_dict and v.shape == model_dict[k].shape and ('reconEngine' not in k) and
+            ("normal_filter" not in k) and ('voxelization' not in k)
         }
         print(colored(f"Resume MLP weights from {cfg.resume_path}", 'green'))
 
     if os.path.exists(cfg.normal_path) and cfg.normal_path.endswith("ckpt"):
-        normal_dict = torch.load(cfg.normal_path,
-                                 map_location=device)['state_dict']
+        normal_dict = torch.load(cfg.normal_path, map_location=device)['state_dict']
 
         for key in normal_dict.keys():
-            normal_dict = rename(normal_dict, key,
-                                 key.replace("netG", "netG.normal_filter"))
+            normal_dict = rename(normal_dict, key, key.replace("netG", "netG.normal_filter"))
 
         normal_dict = {
             k: v
@@ -324,13 +310,10 @@ def read_smpl_constants(folder):
     smpl_vtx_std[:, 2] = (smpl_vtx_std[:, 2] - min_z) / (max_z - min_z)
     smpl_vertex_code = np.float32(np.copy(smpl_vtx_std))
     """Load smpl faces & tetrahedrons"""
-    smpl_faces = np.loadtxt(os.path.join(folder, 'faces.txt'),
-                            dtype=np.int32) - 1
-    smpl_face_code = (smpl_vertex_code[smpl_faces[:, 0]] +
-                      smpl_vertex_code[smpl_faces[:, 1]] +
+    smpl_faces = np.loadtxt(os.path.join(folder, 'faces.txt'), dtype=np.int32) - 1
+    smpl_face_code = (smpl_vertex_code[smpl_faces[:, 0]] + smpl_vertex_code[smpl_faces[:, 1]] +
                       smpl_vertex_code[smpl_faces[:, 2]]) / 3.0
-    smpl_tetras = np.loadtxt(os.path.join(folder, 'tetrahedrons.txt'),
-                             dtype=np.int32) - 1
+    smpl_tetras = np.loadtxt(os.path.join(folder, 'tetrahedrons.txt'), dtype=np.int32) - 1
 
     return smpl_vertex_code, smpl_face_code, smpl_faces, smpl_tetras
 
@@ -444,9 +427,8 @@ def cal_sdf_batch(verts, faces, cmaps, vis, points):
 
     if verts.shape[1] == 10475:
         faces = faces[:, ~SMPLX().smplx_eyeball_fid]
-        mouth_faces = torch.as_tensor(
-            SMPLX().smplx_mouth_fid).unsqueeze(0).repeat(Bsize, 1,
-                                                         1).to(faces.device)
+        mouth_faces = torch.as_tensor(SMPLX().smplx_mouth_fid).unsqueeze(0).repeat(Bsize, 1, 1).to(
+            faces.device)
         faces = torch.cat([faces, mouth_faces], dim=1)
 
     triangles = face_vertices(verts, faces)
@@ -455,27 +437,20 @@ def cal_sdf_batch(verts, faces, cmaps, vis, points):
     vis = face_vertices(vis, faces)
 
     residues, pts_ind, _ = point_to_mesh_distance(points, triangles)
-    closest_triangles = torch.gather(
-        triangles, 1, pts_ind[:, :, None, None].expand(-1, -1, 3,
-                                                       3)).view(-1, 3, 3)
-    closest_normals = torch.gather(
-        normals, 1, pts_ind[:, :, None, None].expand(-1, -1, 3,
-                                                     3)).view(-1, 3, 3)
-    closest_cmaps = torch.gather(
-        cmaps, 1, pts_ind[:, :, None, None].expand(-1, -1, 3,
-                                                   3)).view(-1, 3, 3)
-    closest_vis = torch.gather(vis, 1, pts_ind[:, :, None,
-                                               None].expand(-1, -1, 3,
-                                                            1)).view(-1, 3, 1)
-    bary_weights = barycentric_coordinates_of_projection(
-        points.view(-1, 3), closest_triangles)
+    closest_triangles = torch.gather(triangles, 1,
+                                     pts_ind[:, :, None, None].expand(-1, -1, 3, 3)).view(-1, 3, 3)
+    closest_normals = torch.gather(normals, 1, pts_ind[:, :, None, None].expand(-1, -1, 3,
+                                                                                3)).view(-1, 3, 3)
+    closest_cmaps = torch.gather(cmaps, 1, pts_ind[:, :, None, None].expand(-1, -1, 3,
+                                                                            3)).view(-1, 3, 3)
+    closest_vis = torch.gather(vis, 1, pts_ind[:, :, None, None].expand(-1, -1, 3,
+                                                                        1)).view(-1, 3, 1)
+    bary_weights = barycentric_coordinates_of_projection(points.view(-1, 3), closest_triangles)
 
     pts_cmap = (closest_cmaps * bary_weights[:, :, None]).sum(1).unsqueeze(0)
-    pts_vis = (closest_vis *
-               bary_weights[:, :, None]).sum(1).unsqueeze(0).ge(1e-1)
-    pts_norm = (closest_normals *
-                bary_weights[:, :, None]).sum(1).unsqueeze(0) * torch.tensor(
-                    [-1.0, 1.0, -1.0]).type_as(normals)
+    pts_vis = (closest_vis * bary_weights[:, :, None]).sum(1).unsqueeze(0).ge(1e-1)
+    pts_norm = (closest_normals * bary_weights[:, :, None]).sum(1).unsqueeze(0) * torch.tensor(
+        [-1.0, 1.0, -1.0]).type_as(normals)
     pts_norm = F.normalize(pts_norm, dim=2)
     pts_dist = torch.sqrt(residues) / torch.sqrt(torch.tensor(3))
 
@@ -483,8 +458,9 @@ def cal_sdf_batch(verts, faces, cmaps, vis, points):
     pts_sdf = (pts_dist * pts_signs).unsqueeze(-1)
 
     return pts_sdf.view(Bsize, -1,
-                        1), pts_norm.view(Bsize, -1, 3), pts_cmap.view(
-                            Bsize, -1, 3), pts_vis.view(Bsize, -1, 1)
+                        1), pts_norm.view(Bsize, -1,
+                                          3), pts_cmap.view(Bsize, -1,
+                                                            3), pts_vis.view(Bsize, -1, 1)
 
 
 def orthogonal(points, calibrations, transforms=None):
@@ -548,9 +524,7 @@ def load_obj_mesh_for_Hoppe(mesh_file):
             if len(values) > 4:
                 f = list(map(lambda x: int(x.split('/')[0]), values[1:4]))
                 face_data.append(f)
-                f = list(
-                    map(lambda x: int(x.split('/')[0]),
-                        [values[3], values[4], values[1]]))
+                f = list(map(lambda x: int(x.split('/')[0]), [values[3], values[4], values[1]]))
                 face_data.append(f)
             # tri mesh
             else:
@@ -595,9 +569,7 @@ def load_obj_mesh_with_color(mesh_file):
             if len(values) > 4:
                 f = list(map(lambda x: int(x.split('/')[0]), values[1:4]))
                 face_data.append(f)
-                f = list(
-                    map(lambda x: int(x.split('/')[0]),
-                        [values[3], values[4], values[1]]))
+                f = list(map(lambda x: int(x.split('/')[0]), [values[3], values[4], values[1]]))
                 face_data.append(f)
             # tri mesh
             else:
@@ -649,9 +621,7 @@ def load_obj_mesh(mesh_file, with_normal=False, with_texture=False):
             if len(values) > 4:
                 f = list(map(lambda x: int(x.split('/')[0]), values[1:4]))
                 face_data.append(f)
-                f = list(
-                    map(lambda x: int(x.split('/')[0]),
-                        [values[3], values[4], values[1]]))
+                f = list(map(lambda x: int(x.split('/')[0]), [values[3], values[4], values[1]]))
                 face_data.append(f)
             # tri mesh
             else:
@@ -664,9 +634,7 @@ def load_obj_mesh(mesh_file, with_normal=False, with_texture=False):
                 if len(values) > 4:
                     f = list(map(lambda x: int(x.split('/')[1]), values[1:4]))
                     face_uv_data.append(f)
-                    f = list(
-                        map(lambda x: int(x.split('/')[1]),
-                            [values[3], values[4], values[1]]))
+                    f = list(map(lambda x: int(x.split('/')[1]), [values[3], values[4], values[1]]))
                     face_uv_data.append(f)
                 # tri mesh
                 elif len(values[1].split('/')[1]) != 0:
@@ -678,9 +646,7 @@ def load_obj_mesh(mesh_file, with_normal=False, with_texture=False):
                 if len(values) > 4:
                     f = list(map(lambda x: int(x.split('/')[2]), values[1:4]))
                     face_norm_data.append(f)
-                    f = list(
-                        map(lambda x: int(x.split('/')[2]),
-                            [values[3], values[4], values[1]]))
+                    f = list(map(lambda x: int(x.split('/')[2]), [values[3], values[4], values[1]]))
                     face_norm_data.append(f)
                 # tri mesh
                 elif len(values[1].split('/')[2]) != 0:
@@ -767,8 +733,7 @@ def save_obj_mesh_with_color(mesh_path, verts, faces, colors):
 
     for idx, v in enumerate(verts):
         c = colors[idx]
-        file.write('v %.4f %.4f %.4f %.4f %.4f %.4f\n' %
-                   (v[0], v[1], v[2], c[0], c[1], c[2]))
+        file.write('v %.4f %.4f %.4f %.4f %.4f %.4f\n' % (v[0], v[1], v[2], c[0], c[1], c[2]))
     for f in faces:
         f_plus = f + 1
         file.write('f %d %d %d\n' % (f_plus[0], f_plus[1], f_plus[2]))
@@ -782,17 +747,13 @@ def calculate_mIoU(outputs, labels):
     outputs = outputs.int()
     labels = labels.int()
 
-    intersection = (
-        outputs
-        & labels).float().sum()  # Will be zero if Truth=0 or Prediction=0
+    intersection = (outputs & labels).float().sum()  # Will be zero if Truth=0 or Prediction=0
     union = (outputs | labels).float().sum()  # Will be zzero if both are 0
 
-    iou = (intersection + SMOOTH) / (union + SMOOTH
-                                     )  # We smooth our devision to avoid 0/0
+    iou = (intersection + SMOOTH) / (union + SMOOTH)  # We smooth our devision to avoid 0/0
 
-    thresholded = torch.clamp(
-        20 * (iou - 0.5), 0,
-        10).ceil() / 10  # This is equal to comparing with thresolds
+    thresholded = torch.clamp(20 * (iou - 0.5), 0,
+                              10).ceil() / 10  # This is equal to comparing with thresolds
 
     return thresholded.mean().detach().cpu().numpy(
     )  # Or thresholded.mean() if you are interested in average across the batch
@@ -821,9 +782,7 @@ def query_mesh(path):
 
 def add_alpha(colors, alpha=0.7):
 
-    colors_pad = np.pad(colors, ((0, 0), (0, 1)),
-                        mode='constant',
-                        constant_values=alpha)
+    colors_pad = np.pad(colors, ((0, 0), (0, 1)), mode='constant', constant_values=alpha)
 
     return colors_pad
 
@@ -832,11 +791,9 @@ def get_optim_grid_image(per_loop_lst, loss=None, nrow=4, type='smpl'):
 
     font_path = os.path.join(os.path.dirname(__file__), "tbfo.ttf")
     font = ImageFont.truetype(font_path, 30)
-    grid_img = torchvision.utils.make_grid(torch.cat(per_loop_lst, dim=0),
-                                           nrow=nrow)
+    grid_img = torchvision.utils.make_grid(torch.cat(per_loop_lst, dim=0), nrow=nrow)
     grid_img = Image.fromarray(
-        ((grid_img.permute(1, 2, 0).detach().cpu().numpy() + 1.0) * 0.5 *
-         255.0).astype(np.uint8))
+        ((grid_img.permute(1, 2, 0).detach().cpu().numpy() + 1.0) * 0.5 * 255.0).astype(np.uint8))
 
     # add text
     draw = ImageDraw.Draw(grid_img)
@@ -845,19 +802,13 @@ def get_optim_grid_image(per_loop_lst, loss=None, nrow=4, type='smpl'):
         draw.text((10, 5), f"error: {loss:.3f}", (255, 0, 0), font=font)
 
     if type == 'smpl':
-        for col_id, col_txt in enumerate([
-                'image', 'smpl-norm(render)', 'cloth-norm(pred)', 'diff-norm',
-                'diff-mask'
-        ]):
-            draw.text((10 + (col_id * grid_size), 5),
-                      col_txt, (255, 0, 0),
-                      font=font)
+        for col_id, col_txt in enumerate(
+            ['image', 'smpl-norm(render)', 'cloth-norm(pred)', 'diff-norm', 'diff-mask']):
+            draw.text((10 + (col_id * grid_size), 5), col_txt, (255, 0, 0), font=font)
     elif type == 'cloth':
         for col_id, col_txt in enumerate(
             ['image', 'cloth-norm(recon)', 'cloth-norm(pred)', 'diff-norm']):
-            draw.text((10 + (col_id * grid_size), 5),
-                      col_txt, (255, 0, 0),
-                      font=font)
+            draw.text((10 + (col_id * grid_size), 5), col_txt, (255, 0, 0), font=font)
         for col_id, col_txt in enumerate(['0', '90', '180', '270']):
             draw.text((10 + (col_id * grid_size), grid_size * 2 + 5),
                       col_txt, (255, 0, 0),
@@ -865,8 +816,7 @@ def get_optim_grid_image(per_loop_lst, loss=None, nrow=4, type='smpl'):
     else:
         print(f"{type} should be 'smpl' or 'cloth'")
 
-    grid_img = grid_img.resize((grid_img.size[0], grid_img.size[1]),
-                               Image.ANTIALIAS)
+    grid_img = grid_img.resize((grid_img.size[0], grid_img.size[1]), Image.ANTIALIAS)
 
     return grid_img
 
@@ -875,8 +825,7 @@ def clean_mesh(verts, faces):
 
     device = verts.device
 
-    mesh_lst = trimesh.Trimesh(verts.detach().cpu().numpy(),
-                               faces.detach().cpu().numpy())
+    mesh_lst = trimesh.Trimesh(verts.detach().cpu().numpy(), faces.detach().cpu().numpy())
     mesh_lst = mesh_lst.split(only_watertight=False)
     comp_num = [mesh.vertices.shape[0] for mesh in mesh_lst]
     mesh_clean = mesh_lst[comp_num.index(max(comp_num))]
@@ -890,9 +839,7 @@ def clean_mesh(verts, faces):
 def merge_mesh(verts_A, faces_A, verts_B, faces_B, color=False):
 
     sep_mesh = trimesh.Trimesh(np.concatenate([verts_A, verts_B], axis=0),
-                               np.concatenate(
-                                   [faces_A, faces_B + faces_A.max() + 1],
-                                   axis=0),
+                               np.concatenate([faces_A, faces_B + faces_A.max() + 1], axis=0),
                                maintain_order=True,
                                process=False)
     if color:
@@ -911,8 +858,7 @@ def mesh_move(mesh_lst, step, scale=1.0):
 
     trans = np.array([1.0, 0.0, 0.0]) * step
 
-    resize_matrix = trimesh.transformations.scale_and_translate(
-        scale=(scale), translate=trans)
+    resize_matrix = trimesh.transformations.scale_and_translate(scale=(scale), translate=trans)
 
     results = []
 
@@ -925,12 +871,8 @@ def mesh_move(mesh_lst, step, scale=1.0):
 
 def rescale_smpl(fitted_path, scale=100, translate=(0, 0, 0)):
 
-    fitted_body = trimesh.load(fitted_path,
-                               process=False,
-                               maintain_order=True,
-                               skip_materials=True)
-    resize_matrix = trimesh.transformations.scale_and_translate(
-        scale=(scale), translate=translate)
+    fitted_body = trimesh.load(fitted_path, process=False, maintain_order=True, skip_materials=True)
+    resize_matrix = trimesh.transformations.scale_and_translate(scale=(scale), translate=translate)
 
     fitted_body.apply_transform(resize_matrix)
 
@@ -941,27 +883,18 @@ class SMPLX():
 
     def __init__(self):
 
-        self.current_dir = osp.join(osp.dirname(__file__),
-                                    "../../data/smpl_related")
+        self.current_dir = osp.join(osp.dirname(__file__), "../../data/smpl_related")
 
-        self.smpl_verts_path = osp.join(self.current_dir,
-                                        "smpl_data/smpl_verts.npy")
-        self.smpl_faces_path = osp.join(self.current_dir,
-                                        "smpl_data/smpl_faces.npy")
-        self.smplx_verts_path = osp.join(self.current_dir,
-                                         "smpl_data/smplx_verts.npy")
-        self.smplx_faces_path = osp.join(self.current_dir,
-                                         "smpl_data/smplx_faces.npy")
-        self.cmap_vert_path = osp.join(self.current_dir,
-                                       "smpl_data/smplx_cmap.npy")
+        self.smpl_verts_path = osp.join(self.current_dir, "smpl_data/smpl_verts.npy")
+        self.smpl_faces_path = osp.join(self.current_dir, "smpl_data/smpl_faces.npy")
+        self.smplx_verts_path = osp.join(self.current_dir, "smpl_data/smplx_verts.npy")
+        self.smplx_faces_path = osp.join(self.current_dir, "smpl_data/smplx_faces.npy")
+        self.cmap_vert_path = osp.join(self.current_dir, "smpl_data/smplx_cmap.npy")
 
-        self.smplx_to_smplx_path = osp.join(self.current_dir,
-                                            "smpl_data/smplx_to_smpl.pkl")
+        self.smplx_to_smplx_path = osp.join(self.current_dir, "smpl_data/smplx_to_smpl.pkl")
 
-        self.smplx_eyeball_fid = osp.join(self.current_dir,
-                                          "smpl_data/eyeball_fid.npy")
-        self.smplx_fill_mouth_fid = osp.join(self.current_dir,
-                                             "smpl_data/fill_mouth_fid.npy")
+        self.smplx_eyeball_fid = osp.join(self.current_dir, "smpl_data/eyeball_fid.npy")
+        self.smplx_fill_mouth_fid = osp.join(self.current_dir, "smpl_data/fill_mouth_fid.npy")
 
         self.smplx_faces = np.load(self.smplx_faces_path)
         self.smplx_verts = np.load(self.smplx_verts_path)
@@ -987,10 +920,8 @@ class SMPLX():
             return cmap_smplx
         elif type == 'smpl':
             bc = torch.as_tensor(self.smplx_to_smpl['bc'].astype(np.float32))
-            closest_faces = self.smplx_to_smpl['closest_faces'].astype(
-                np.int32)
+            closest_faces = self.smplx_to_smpl['closest_faces'].astype(np.int32)
 
-            cmap_smpl = torch.einsum('bij, bi->bj', cmap_smplx[closest_faces],
-                                     bc)
+            cmap_smpl = torch.einsum('bij, bi->bj', cmap_smplx[closest_faces], bc)
 
             return cmap_smpl
