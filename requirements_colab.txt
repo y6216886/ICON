@@ -35,5 +35,5 @@ numpy==1.22.4
 https://download.is.tue.mpg.de/icon/colab/pytorch3d-0.7.0-cp38-cp38-linux_x86_64.whl
 https://download.is.tue.mpg.de/icon/colab/kaolin-0.11.0-cp38-cp38-linux_x86_64.whl
 https://download.is.tue.mpg.de/icon/colab/voxelize_cuda-0.0.0-cp38-cp38-linux_x86_64.whl
-git+https://github.com/YuliangXiu/rembg.git@hf
+git+https://github.com/YuliangXiu/rembg.git
 
