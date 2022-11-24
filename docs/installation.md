@@ -10,6 +10,7 @@ cd ICON
 ## Environment
 
 - Ubuntu 20 / 18
+- GCC = 7.5.0
 - **CUDA=11.0, GPU Memory > 12GB**
 - Python = 3.8
 - PyTorch = 1.8.2 LTS (official [Get Started](https://pytorch.org/get-started/locally/))
