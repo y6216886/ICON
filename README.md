@@ -37,6 +37,7 @@
 <br />
 
 ## News :triangular_flag_on_post:
+- [2022/12/15] ICON belongs to the past, [ECON](https://github.com/YuliangXiu/ECON) is the future!
 - [2022/09/12] Apply [KeypointNeRF](https://markomih.github.io/KeypointNeRF/) on ICON, quantitative numbers in [evaluation](docs/evaluation.md#benchmark-train-on-thuman20-test-on-cape)  
 - [2022/07/30] <a href="https://huggingface.co/spaces/Yuliang/ICON"  style='padding-left: 0.5rem;'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-orange'></a> <a href='https://colab.research.google.com/drive/1-AWeWhPvCTBX0KfMtgtMk10uPU05ihoA?usp=sharing' style='padding-left: 0.5rem;'><img src='https://colab.research.google.com/assets/colab-badge.svg' alt='Google Colab'></a> are both available
 - [2022/07/26] New cloth-refinement module is released, try `-loop_cloth`

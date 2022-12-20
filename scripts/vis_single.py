@@ -24,7 +24,7 @@ rotation = int(args.rotation)
 dataset = save_folder.split("/")[-1].split("_")[0]
 
 mesh_file = os.path.join(f'./data/{dataset}/scans/{subject}', f'{subject}.obj')
-fit_file = f'./data/{dataset}/fits/{subject}/smplx_param.pkl'
+fit_file = f'./data/{dataset}/smplx/{subject}.pkl'
 
 rescale_fitted_body, _ = load_fit_body(fit_file,
                                        180.0,

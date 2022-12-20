@@ -16,6 +16,7 @@ jpeg4py
 shapely==1.7.1
 vedo==2020.4.2
 rtree==0.9.7
+gdown==4.6.0
 pytorch_lightning==1.2.5
 PyMCubes
 kornia

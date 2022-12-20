@@ -49,9 +49,9 @@ normal = True
 
 mesh_file = os.path.join(f'./data/{dataset}/scans/{subject}',
                          f'{subject}.{format}')
-smplx_file = f'./data/{dataset}/smplx/{subject}.obj'
+smplx_file = f'./data/{dataset}/{smpl_type}/{subject}.obj'
 tex_file = f'./data/{dataset}/scans/{subject}/material0.jpeg'
-fit_file = f'./data/{dataset}/fits/{subject}/smplx_param.pkl'
+fit_file = f'./data/{dataset}/{smpl_type}/{subject}.pkl'
 
 # mesh
 mesh = trimesh.load(mesh_file,
@@ -78,11 +78,11 @@ else:
 scan_scale = 1.8 / (vertices.max(0)[up_axis] - vertices.min(0)[up_axis])
 rescale_fitted_body, joints = load_fit_body(fit_file,
                                             scale,
-                                            smpl_type='smplx',
+                                            smpl_type=smpl_type,
                                             smpl_gender='male')
 
 os.makedirs(os.path.dirname(smplx_file), exist_ok=True)
-ori_smplx = load_ori_fit_body(fit_file, smpl_type='smplx', smpl_gender='male')
+ori_smplx = load_ori_fit_body(fit_file, smpl_type=smpl_type, smpl_gender='male')
 ori_smplx.export(smplx_file)
 
 vertices *= scale

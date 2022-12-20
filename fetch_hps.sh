@@ -11,7 +11,7 @@ tar xvf data.tar.gz
 mv data/* .
 rm -rf data && rm -f data.tar.gz
 
-# PyMAF pre-trained model
+# PyMAF pre-trained modeln (gdown>=4.6.0)
 gdown https://drive.google.com/drive/u/1/folders/1CkF79XRaZzdRlj6eJUt4W0nbTORv2t7O -O pretrained_model --folder
 cd ../../..
 echo "PyMAF done!"
