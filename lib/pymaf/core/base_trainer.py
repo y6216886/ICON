@@ -16,25 +16,21 @@ class BaseTrainer(object):
     """Base class for Trainer objects.
     Takes care of checkpointing/logging/resuming training.
     """
-
     def __init__(self, options):
         self.options = options
         if options.multiprocessing_distributed:
             self.device = torch.device('cuda', options.gpu)
         else:
-            self.device = torch.device(
-                'cuda' if torch.cuda.is_available() else 'cpu')
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # override this function to define your model, optimizers etc.
-        self.saver = CheckpointSaver(save_dir=options.checkpoint_dir,
-                                     overwrite=options.overwrite)
+        self.saver = CheckpointSaver(save_dir=options.checkpoint_dir, overwrite=options.overwrite)
         if options.rank == 0:
             self.summary_writer = SummaryWriter(self.options.summary_dir)
         self.init_fn()
 
         self.checkpoint = None
         if options.resume and self.saver.exists_checkpoint():
-            self.checkpoint = self.saver.load_checkpoint(
-                self.models_dict, self.optimizers_dict)
+            self.checkpoint = self.saver.load_checkpoint(self.models_dict, self.optimizers_dict)
 
         if self.checkpoint is None:
             self.epoch_count = 0
@@ -58,8 +54,7 @@ class BaseTrainer(object):
             checkpoint = torch.load(checkpoint_file)
             for model in self.models_dict:
                 if model in checkpoint:
-                    self.models_dict[model].load_state_dict(checkpoint[model],
-                                                            strict=True)
+                    self.models_dict[model].load_state_dict(checkpoint[model], strict=True)
                     print(f'Checkpoint {model} loaded')
 
     def move_dict_to_device(self, dict, device, tensor2float=False):
@@ -81,8 +76,7 @@ class BaseTrainer(object):
         raise NotImplementedError('You need to provide a _train_step method')
 
     def train_summaries(self, input_batch):
-        raise NotImplementedError(
-            'You need to provide a _train_summaries method')
+        raise NotImplementedError('You need to provide a _train_summaries method')
 
     def visualize(self, input_batch):
         raise NotImplementedError('You need to provide a visualize method')
@@ -98,9 +92,11 @@ class BaseTrainer(object):
 
     def fit(self):
         # Run training for num_epochs epochs
-        for epoch in tqdm(range(self.epoch_count, self.options.num_epochs),
-                          total=self.options.num_epochs,
-                          initial=self.epoch_count):
+        for epoch in tqdm(
+            range(self.epoch_count, self.options.num_epochs),
+            total=self.options.num_epochs,
+            initial=self.epoch_count
+        ):
             self.epoch_count = epoch
             self.train(epoch)
         return

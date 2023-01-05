@@ -9,13 +9,7 @@ import numpy as np
 
 
 class SpatialEncoder(pl.LightningModule):
-
-    def __init__(self,
-                 sp_level=1,
-                 sp_type="rel_z_decay",
-                 scale=1.0,
-                 n_kpt=24,
-                 sigma=0.2):
+    def __init__(self, sp_level=1, sp_type="rel_z_decay", scale=1.0, n_kpt=24, sigma=0.2):
 
         super().__init__()
 
@@ -72,15 +66,15 @@ class SpatialEncoder(pl.LightningModule):
 
         dz = cxyz[:, :, None, 2:3] - kptxyz[:, None, :, 2:3]
         dxyz = cxyz[:, :, None] - kptxyz[:, None, :]
-        
+
         # (B, N, K)
         weight = torch.exp(-(dxyz**2).sum(-1) / (2.0 * (self.sigma**2)))
 
         # position embedding ( B, N, K * (2*n_levels+1) )
         out = self.position_embedding(dz.view(B, N, K), self.sp_level)
-        
+
         # BV,N,K,(2*n_levels+1) * B,N,K,1 = B,N,K*(2*n_levels+1) -> BV,K*(2*n_levels+1),N
-        out = (out.view(B, N, -1, K) * weight[:, :, None]).view(B, N, -1).permute(0,2,1) 
+        out = (out.view(B, N, -1, K) * weight[:, :, None]).view(B, N, -1).permute(0, 2, 1)
 
         return out
 
@@ -89,10 +83,7 @@ if __name__ == "__main__":
     pts = torch.randn(2, 10000, 3).to("cuda")
     kpts = torch.randn(2, 24, 3).to("cuda")
 
-    sp_encoder = SpatialEncoder(sp_level=3,
-                                sp_type="rel_z_decay",
-                                scale=1.0,
-                                n_kpt=24,
+    sp_encoder = SpatialEncoder(sp_level=3, sp_type="rel_z_decay", scale=1.0, n_kpt=24,
                                 sigma=0.1).to("cuda")
     out = sp_encoder(pts, kpts)
     print(out.shape)

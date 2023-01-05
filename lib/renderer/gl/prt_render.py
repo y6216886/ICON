@@ -22,24 +22,20 @@ from .cam_render import CamRender
 
 
 class PRTRender(CamRender):
-
-    def __init__(self,
-                 width=1600,
-                 height=1200,
-                 name='PRT Renderer',
-                 uv_mode=False,
-                 ms_rate=1,
-                 egl=False):
-        program_files = ['prt.vs', 'prt.fs'
-                         ] if not uv_mode else ['prt_uv.vs', 'prt_uv.fs']
-        CamRender.__init__(self,
-                           width,
-                           height,
-                           name,
-                           program_files=program_files,
-                           color_size=8,
-                           ms_rate=ms_rate,
-                           egl=egl)
+    def __init__(
+        self, width=1600, height=1200, name='PRT Renderer', uv_mode=False, ms_rate=1, egl=False
+    ):
+        program_files = ['prt.vs', 'prt.fs'] if not uv_mode else ['prt_uv.vs', 'prt_uv.fs']
+        CamRender.__init__(
+            self,
+            width,
+            height,
+            name,
+            program_files=program_files,
+            color_size=8,
+            ms_rate=ms_rate,
+            egl=egl
+        )
 
         # WARNING: this differs from vertex_buffer and vertex_data in Render
         self.vert_buffer = {}
@@ -109,18 +105,15 @@ class PRTRender(CamRender):
         glActiveTexture(GL_TEXTURE0)
 
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-        glBindTexture(GL_TEXTURE_2D,
-                      self.render_texture_mat[mat_name][smplr_name])
+        glBindTexture(GL_TEXTURE_2D, self.render_texture_mat[mat_name][smplr_name])
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
-                     GL_UNSIGNED_BYTE, img_data)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img_data)
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 3)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                        GL_LINEAR_MIPMAP_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
 
         glGenerateMipmap(GL_TEXTURE_2D)
 
@@ -130,19 +123,21 @@ class PRTRender(CamRender):
     def set_normal_map(self, texture_image, mat_name='all'):
         self.set_texture(mat_name, 'NormalMap', texture_image)
 
-    def set_mesh(self,
-                 vertices,
-                 faces,
-                 norms,
-                 faces_nml,
-                 uvs,
-                 faces_uvs,
-                 prt,
-                 faces_prt,
-                 tans,
-                 bitans,
-                 verts_label=None,
-                 mat_name='all'):
+    def set_mesh(
+        self,
+        vertices,
+        faces,
+        norms,
+        faces_nml,
+        uvs,
+        faces_uvs,
+        prt,
+        faces_prt,
+        tans,
+        bitans,
+        verts_label=None,
+        mat_name='all'
+    ):
 
         self.vert_data[mat_name] = vertices[faces.reshape([-1])]
         self.vert_label_data[mat_name] = verts_label[faces.reshape([-1])]
@@ -158,8 +153,7 @@ class PRTRender(CamRender):
         if mat_name not in self.vert_label_buffer.keys():
             self.vert_label_buffer[mat_name] = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, self.vert_label_buffer[mat_name])
-        glBufferData(GL_ARRAY_BUFFER, self.vert_label_data[mat_name],
-                     GL_STATIC_DRAW)
+        glBufferData(GL_ARRAY_BUFFER, self.vert_label_data[mat_name], GL_STATIC_DRAW)
 
         self.uv_data[mat_name] = uvs[faces_uvs.reshape([-1])]
         if mat_name not in self.uv_buffer.keys():
@@ -204,17 +198,19 @@ class PRTRender(CamRender):
 
         glBindBuffer(GL_ARRAY_BUFFER, 0)
 
-    def set_mesh_mtl(self,
-                     vertices,
-                     faces,
-                     norms,
-                     faces_nml,
-                     uvs,
-                     faces_uvs,
-                     tans,
-                     bitans,
-                     prt,
-                     verts_label=None):
+    def set_mesh_mtl(
+        self,
+        vertices,
+        faces,
+        norms,
+        faces_nml,
+        uvs,
+        faces_uvs,
+        tans,
+        bitans,
+        prt,
+        verts_label=None
+    ):
         for key in faces:
             self.vert_data[key] = vertices[faces[key].reshape([-1])]
             self.vert_label_data[key] = verts_label[faces[key].reshape([-1])]
@@ -230,8 +226,7 @@ class PRTRender(CamRender):
             if key not in self.vert_label_buffer.keys():
                 self.vert_label_buffer[key] = glGenBuffers(1)
             glBindBuffer(GL_ARRAY_BUFFER, self.vert_label_buffer[key])
-            glBufferData(GL_ARRAY_BUFFER, self.vert_label_data[key],
-                         GL_STATIC_DRAW)
+            glBufferData(GL_ARRAY_BUFFER, self.vert_label_data[key], GL_STATIC_DRAW)
 
             self.uv_data[key] = uvs[faces_uvs[key].reshape([-1])]
             if key not in self.uv_buffer.keys():
@@ -351,12 +346,9 @@ class PRTRender(CamRender):
         glEnable(GL_MULTISAMPLE)
 
         glUseProgram(self.program)
-        glUniformMatrix4fv(self.norm_mat_unif, 1, GL_FALSE,
-                           self.normalize_matrix.transpose())
-        glUniformMatrix4fv(self.model_mat_unif, 1, GL_FALSE,
-                           self.model_view_matrix.transpose())
-        glUniformMatrix4fv(self.persp_mat_unif, 1, GL_FALSE,
-                           self.projection_matrix.transpose())
+        glUniformMatrix4fv(self.norm_mat_unif, 1, GL_FALSE, self.normalize_matrix.transpose())
+        glUniformMatrix4fv(self.model_mat_unif, 1, GL_FALSE, self.model_view_matrix.transpose())
+        glUniformMatrix4fv(self.persp_mat_unif, 1, GL_FALSE, self.projection_matrix.transpose())
 
         if 'AlbedoMap' in self.render_texture_mat['all']:
             glUniform1ui(self.hasAlbedoUnif, GLuint(1))
@@ -368,20 +360,17 @@ class PRTRender(CamRender):
         else:
             glUniform1ui(self.hasNormalUnif, GLuint(0))
 
-        glUniform1ui(self.analyticUnif,
-                     GLuint(1) if self.analytic else GLuint(0))
+        glUniform1ui(self.analyticUnif, GLuint(1) if self.analytic else GLuint(0))
 
         glUniform3fv(self.shcoeff_unif, 9, self.shcoeffs)
 
-        glUniformMatrix3fv(self.rot_mat_unif, 1, GL_FALSE,
-                           self.rot_matrix.transpose())
+        glUniformMatrix3fv(self.rot_mat_unif, 1, GL_FALSE, self.rot_matrix.transpose())
 
         for mat in self.vert_buffer:
             # Handle vertex buffer
             glBindBuffer(GL_ARRAY_BUFFER, self.vert_buffer[mat])
             glEnableVertexAttribArray(0)
-            glVertexAttribPointer(0, self.vertex_dim[mat], GL_DOUBLE, GL_FALSE,
-                                  0, None)
+            glVertexAttribPointer(0, self.vertex_dim[mat], GL_DOUBLE, GL_FALSE, 0, None)
 
             # Handle normal buffer
             glBindBuffer(GL_ARRAY_BUFFER, self.norm_buffer[mat])
@@ -419,13 +408,11 @@ class PRTRender(CamRender):
             # Handle vertex label buffer
             glBindBuffer(GL_ARRAY_BUFFER, self.vert_label_buffer[mat])
             glEnableVertexAttribArray(8)
-            glVertexAttribPointer(8, self.label_dim[mat], GL_DOUBLE, GL_FALSE,
-                                  0, None)
+            glVertexAttribPointer(8, self.label_dim[mat], GL_DOUBLE, GL_FALSE, 0, None)
 
             for i, smplr in enumerate(self.render_texture_mat[mat]):
                 glActiveTexture(GL_TEXTURE0 + i)
-                glBindTexture(GL_TEXTURE_2D,
-                              self.render_texture_mat[mat][smplr])
+                glBindTexture(GL_TEXTURE_2D, self.render_texture_mat[mat][smplr])
                 glUniform1i(glGetUniformLocation(self.program, smplr), i)
 
             glDrawArrays(GL_TRIANGLES, 0, self.n_vertices[mat])

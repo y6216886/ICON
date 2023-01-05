@@ -44,7 +44,6 @@ def rename(old_dict, old_name, new_name):
 
 
 class SubTrainer(pl.Trainer):
-
     def save_checkpoint(self, filepath, weights_only=False):
         """Save model/training states as a checkpoint file through state-dump and file-write.
         Args:
@@ -73,7 +72,8 @@ class SubTrainer(pl.Trainer):
                     del checkpoint[LightningModule.CHECKPOINT_HYPER_PARAMS_KEY]
                 rank_zero_warn(
                     "Warning, `hyper_parameters` dropped from checkpoint."
-                    f" An attribute is not picklable {err}")
+                    f" An attribute is not picklable {err}"
+                )
                 atomic_save(checkpoint, filepath)
 
 
@@ -85,33 +85,27 @@ def load_networks(cfg, model, mlp_path, normal_path):
 
     # MLP part loading
     if os.path.exists(mlp_path) and mlp_path.endswith("ckpt"):
-        main_dict = torch.load(
-            mlp_path,
-            map_location=torch.device(f"cuda:{cfg.gpus[0]}"))["state_dict"]
+        main_dict = torch.load(mlp_path,
+                               map_location=torch.device(f"cuda:{cfg.gpus[0]}"))["state_dict"]
 
         main_dict = {
             k: v
-            for k, v in main_dict.items()
-            if k in model_dict and v.shape == model_dict[k].shape and (
-                "reconEngine" not in k) and ("normal_filter" not in k) and (
-                    "voxelization" not in k)
+            for k, v in main_dict.items() if k in model_dict and v.shape == model_dict[k].shape and
+            ("reconEngine" not in k) and ("normal_filter" not in k) and ("voxelization" not in k)
         }
         print(colored(f"Resume MLP weights from {mlp_path}", "green"))
 
     # normal network part loading
     if os.path.exists(normal_path) and normal_path.endswith("ckpt"):
-        normal_dict = torch.load(
-            normal_path,
-            map_location=torch.device(f"cuda:{cfg.gpus[0]}"))["state_dict"]
+        normal_dict = torch.load(normal_path,
+                                 map_location=torch.device(f"cuda:{cfg.gpus[0]}"))["state_dict"]
 
         for key in normal_dict.keys():
-            normal_dict = rename(normal_dict, key,
-                                 key.replace("netG", "netG.normal_filter"))
+            normal_dict = rename(normal_dict, key, key.replace("netG", "netG.normal_filter"))
 
         normal_dict = {
             k: v
-            for k, v in normal_dict.items()
-            if k in model_dict and v.shape == model_dict[k].shape
+            for k, v in normal_dict.items() if k in model_dict and v.shape == model_dict[k].shape
         }
         print(colored(f"Resume normal model from {normal_path}", "green"))
 
@@ -133,8 +127,9 @@ def reshape_sample_tensor(sample_tensor, num_views):
     sample_tensor = sample_tensor.unsqueeze(dim=1)
     sample_tensor = sample_tensor.repeat(1, num_views, 1, 1)
     sample_tensor = sample_tensor.view(
-        sample_tensor.shape[0] * sample_tensor.shape[1],
-        sample_tensor.shape[2], sample_tensor.shape[3])
+        sample_tensor.shape[0] * sample_tensor.shape[1], sample_tensor.shape[2],
+        sample_tensor.shape[3]
+    )
     return sample_tensor
 
 
@@ -148,13 +143,9 @@ def gen_mesh_eval(opt, net, cuda, data, resolution=None):
     b_min = data['b_min']
     b_max = data['b_max']
     try:
-        verts, faces, _, _ = reconstruction_faster(net,
-                                                   cuda,
-                                                   calib_tensor,
-                                                   resolution,
-                                                   b_min,
-                                                   b_max,
-                                                   use_octree=False)
+        verts, faces, _, _ = reconstruction_faster(
+            net, cuda, calib_tensor, resolution, b_min, b_max, use_octree=False
+        )
 
     except Exception as e:
         print(e)
@@ -176,17 +167,17 @@ def gen_mesh(opt, net, cuda, data, save_path, resolution=None):
         save_img_path = save_path[:-4] + '.png'
         save_img_list = []
         for v in range(image_tensor.shape[0]):
-            save_img = (np.transpose(image_tensor[v].detach().cpu().numpy(),
-                                     (1, 2, 0)) * 0.5 +
-                        0.5)[:, :, ::-1] * 255.0
+            save_img = (
+                np.transpose(image_tensor[v].detach().cpu().numpy(), (1, 2, 0)) * 0.5 + 0.5
+            )[:, :, ::-1] * 255.0
             save_img_list.append(save_img)
         save_img = np.concatenate(save_img_list, axis=1)
         Image.fromarray(np.uint8(save_img[:, :, ::-1])).save(save_img_path)
 
-        verts, faces, _, _ = reconstruction_faster(net, cuda, calib_tensor,
-                                                   resolution, b_min, b_max)
-        verts_tensor = torch.from_numpy(
-            verts.T).unsqueeze(0).to(device=cuda).float()
+        verts, faces, _, _ = reconstruction_faster(
+            net, cuda, calib_tensor, resolution, b_min, b_max
+        )
+        verts_tensor = torch.from_numpy(verts.T).unsqueeze(0).to(device=cuda).float()
         xyz_tensor = net.projection(verts_tensor, calib_tensor[:1])
         uv = xyz_tensor[:, :2, :]
         color = netG.index(image_tensor[:1], uv).detach().cpu().numpy()[0].T
@@ -213,24 +204,19 @@ def gen_mesh_color(opt, netG, netC, cuda, data, save_path, use_octree=True):
         save_img_path = save_path[:-4] + '.png'
         save_img_list = []
         for v in range(image_tensor.shape[0]):
-            save_img = (np.transpose(image_tensor[v].detach().cpu().numpy(),
-                                     (1, 2, 0)) * 0.5 +
-                        0.5)[:, :, ::-1] * 255.0
+            save_img = (
+                np.transpose(image_tensor[v].detach().cpu().numpy(), (1, 2, 0)) * 0.5 + 0.5
+            )[:, :, ::-1] * 255.0
             save_img_list.append(save_img)
         save_img = np.concatenate(save_img_list, axis=1)
         Image.fromarray(np.uint8(save_img[:, :, ::-1])).save(save_img_path)
 
-        verts, faces, _, _ = reconstruction_faster(netG,
-                                                   cuda,
-                                                   calib_tensor,
-                                                   opt.resolution,
-                                                   b_min,
-                                                   b_max,
-                                                   use_octree=use_octree)
+        verts, faces, _, _ = reconstruction_faster(
+            netG, cuda, calib_tensor, opt.resolution, b_min, b_max, use_octree=use_octree
+        )
 
         # Now Getting colors
-        verts_tensor = torch.from_numpy(
-            verts.T).unsqueeze(0).to(device=cuda).float()
+        verts_tensor = torch.from_numpy(verts.T).unsqueeze(0).to(device=cuda).float()
         verts_tensor = reshape_sample_tensor(verts_tensor, opt.num_views)
         color = np.zeros(verts.shape)
         interval = 10000
@@ -355,14 +341,10 @@ def calc_error(opt, net, cuda, dataset, num_tests):
             calib_tensor = data['calib'].to(device=cuda)
             sample_tensor = data['samples'].to(device=cuda).unsqueeze(0)
             if opt.num_views > 1:
-                sample_tensor = reshape_sample_tensor(sample_tensor,
-                                                      opt.num_views)
+                sample_tensor = reshape_sample_tensor(sample_tensor, opt.num_views)
             label_tensor = data['labels'].to(device=cuda).unsqueeze(0)
 
-            res, error = net.forward(image_tensor,
-                                     sample_tensor,
-                                     calib_tensor,
-                                     labels=label_tensor)
+            res, error = net.forward(image_tensor, sample_tensor, calib_tensor, labels=label_tensor)
 
             IOU, prec, recall = compute_acc(res, label_tensor)
 
@@ -374,8 +356,7 @@ def calc_error(opt, net, cuda, dataset, num_tests):
             prec_arr.append(prec.item())
             recall_arr.append(recall.item())
 
-    return np.average(erorr_arr), np.average(IOU_arr), np.average(
-        prec_arr), np.average(recall_arr)
+    return np.average(erorr_arr), np.average(IOU_arr), np.average(prec_arr), np.average(recall_arr)
 
 
 def calc_error_color(opt, netG, netC, cuda, dataset, num_tests):
@@ -389,21 +370,21 @@ def calc_error_color(opt, netG, netC, cuda, dataset, num_tests):
             # retrieve the data
             image_tensor = data['img'].to(device=cuda)
             calib_tensor = data['calib'].to(device=cuda)
-            color_sample_tensor = data['color_samples'].to(
-                device=cuda).unsqueeze(0)
+            color_sample_tensor = data['color_samples'].to(device=cuda).unsqueeze(0)
 
             if opt.num_views > 1:
-                color_sample_tensor = reshape_sample_tensor(
-                    color_sample_tensor, opt.num_views)
+                color_sample_tensor = reshape_sample_tensor(color_sample_tensor, opt.num_views)
 
             rgb_tensor = data['rgbs'].to(device=cuda).unsqueeze(0)
 
             netG.filter(image_tensor)
-            _, errorC = netC.forward(image_tensor,
-                                     netG.get_im_feat(),
-                                     color_sample_tensor,
-                                     calib_tensor,
-                                     labels=rgb_tensor)
+            _, errorC = netC.forward(
+                image_tensor,
+                netG.get_im_feat(),
+                color_sample_tensor,
+                calib_tensor,
+                labels=rgb_tensor
+            )
 
             # print('{0}/{1} | Error inout: {2:06f} | Error color: {3:06f}'
             #       .format(idx, num_tests, errorG.item(), errorC.item()))
@@ -423,7 +404,7 @@ def query_func(opt, netG, features, points, proj_matrix=None):
     '''
     assert len(points) == 1
     samples = points.repeat(opt.num_views, 1, 1)
-    samples = samples.permute(0, 2, 1)  # [bz, 3, N]
+    samples = samples.permute(0, 2, 1)    # [bz, 3, N]
 
     # view specific query
     if proj_matrix is not None:
@@ -431,10 +412,9 @@ def query_func(opt, netG, features, points, proj_matrix=None):
 
     calib_tensor = torch.stack([torch.eye(4).float()], dim=0).type_as(samples)
 
-    preds = netG.query(features=features,
-                       points=samples,
-                       calibs=calib_tensor,
-                       regressor=netG.if_regressor)
+    preds = netG.query(
+        features=features, points=samples, calibs=calib_tensor, regressor=netG.if_regressor
+    )
 
     if type(preds) is list:
         preds = preds[0]
@@ -493,9 +473,7 @@ def get_visibility(xy, z, faces):
 
 def batch_mean(res, key):
     # recursive mean for multilevel dicts
-    return torch.stack([
-        x[key] if isinstance(x, dict) else batch_mean(x, key) for x in res
-    ]).mean()
+    return torch.stack([x[key] if isinstance(x, dict) else batch_mean(x, key) for x in res]).mean()
 
 
 def tf_log_convert(log_dict):
@@ -536,12 +514,9 @@ def bar_log_convert(log_dict, name=None, rot=None):
             k = k.replace("recall", "R")
 
         if 'lr' not in k:
-            new_log_dict[colored(k.split("_")[1],
-                                 color)] = colored(f"{v:.3f}", color)
+            new_log_dict[colored(k.split("_")[1], color)] = colored(f"{v:.3f}", color)
         else:
-            new_log_dict[colored(k.split("_")[1],
-                                 color)] = colored(f"{Decimal(str(v)):.1E}",
-                                                   color)
+            new_log_dict[colored(k.split("_")[1], color)] = colored(f"{Decimal(str(v)):.1E}", color)
 
     if 'loss' in new_log_dict.keys():
         del new_log_dict['loss']
@@ -561,11 +536,9 @@ def accumulate(outputs, rot_num, split):
             keyword = f"{dataset}-{metric}"
             if keyword not in hparam_log_dict.keys():
                 hparam_log_dict[keyword] = 0
-            for idx in range(split[dataset][0] * rot_num,
-                             split[dataset][1] * rot_num):
+            for idx in range(split[dataset][0] * rot_num, split[dataset][1] * rot_num):
                 hparam_log_dict[keyword] += outputs[idx][metric]
-            hparam_log_dict[keyword] /= (split[dataset][1] -
-                                         split[dataset][0]) * rot_num
+            hparam_log_dict[keyword] /= (split[dataset][1] - split[dataset][0]) * rot_num
 
     print(colored(hparam_log_dict, "green"))
 
@@ -609,11 +582,11 @@ def calc_knn_acc(preds, carn_verts, labels, pick_num):
     """
     N_knn_full = labels.shape[1]
     preds = preds.permute(0, 2, 1).reshape(-1, 3)
-    labels = labels.permute(0, 2, 1).reshape(-1, N_knn_full)  # [BxN, num_knn]
+    labels = labels.permute(0, 2, 1).reshape(-1, N_knn_full)    # [BxN, num_knn]
     labels = labels[:, :pick_num]
 
-    dist = torch.cdist(preds, carn_verts, p=2)  # [BxN, SMPL_V_num]
-    knn = dist.topk(k=pick_num, dim=1, largest=False)[1]  # [BxN, num_knn]
+    dist = torch.cdist(preds, carn_verts, p=2)    # [BxN, SMPL_V_num]
+    knn = dist.topk(k=pick_num, dim=1, largest=False)[1]    # [BxN, num_knn]
     cat_mat = torch.sort(torch.cat((knn, labels), dim=1))[0]
     bool_col = torch.zeros_like(cat_mat)[:, 0]
     for i in range(pick_num * 2 - 1):
@@ -625,8 +598,7 @@ def calc_knn_acc(preds, carn_verts, labels, pick_num):
 
 def calc_acc_seg(output, target, num_multiseg):
     from pytorch_lightning.metrics import Accuracy
-    return Accuracy()(output.reshape(-1, num_multiseg).cpu(),
-                      target.flatten().cpu())
+    return Accuracy()(output.reshape(-1, num_multiseg).cpu(), target.flatten().cpu())
 
 
 def add_watermark(imgs, titles):
@@ -643,12 +615,13 @@ def add_watermark(imgs, titles):
     for i in range(len(imgs)):
 
         title = titles[i + 1]
-        cv2.putText(imgs[i], title, bottomLeftCornerOfText, font, fontScale,
-                    fontColor, lineType)
+        cv2.putText(imgs[i], title, bottomLeftCornerOfText, font, fontScale, fontColor, lineType)
 
         if i == 0:
-            cv2.putText(imgs[i], str(titles[i][0]), bottomRightCornerOfText,
-                        font, fontScale, fontColor, lineType)
+            cv2.putText(
+                imgs[i], str(titles[i][0]), bottomRightCornerOfText, font, fontScale, fontColor,
+                lineType
+            )
 
     result = np.concatenate(imgs, axis=0).transpose(2, 0, 1)
 
@@ -662,28 +635,29 @@ def make_test_gif(img_dir):
             for subject in sorted(os.listdir(osp.join(img_dir, dataset))):
                 img_lst = []
                 im1 = None
-                for file in sorted(
-                        os.listdir(osp.join(img_dir, dataset, subject))):
+                for file in sorted(os.listdir(osp.join(img_dir, dataset, subject))):
                     if file[-3:] not in ['obj', 'gif']:
-                        img_path = os.path.join(img_dir, dataset, subject,
-                                                file)
+                        img_path = os.path.join(img_dir, dataset, subject, file)
                         if im1 == None:
                             im1 = Image.open(img_path)
                         else:
                             img_lst.append(Image.open(img_path))
 
                 print(os.path.join(img_dir, dataset, subject, "out.gif"))
-                im1.save(os.path.join(img_dir, dataset, subject, "out.gif"),
-                         save_all=True,
-                         append_images=img_lst,
-                         duration=500,
-                         loop=0)
+                im1.save(
+                    os.path.join(img_dir, dataset, subject, "out.gif"),
+                    save_all=True,
+                    append_images=img_lst,
+                    duration=500,
+                    loop=0
+                )
 
 
 def export_cfg(logger, cfg):
 
-    cfg_export_file = osp.join(logger.save_dir, logger.name,
-                               f"version_{logger.version}", "cfg.yaml")
+    cfg_export_file = osp.join(
+        logger.save_dir, logger.name, f"version_{logger.version}", "cfg.yaml"
+    )
 
     if not osp.exists(cfg_export_file):
         os.makedirs(osp.dirname(cfg_export_file), exist_ok=True)

@@ -23,7 +23,6 @@ class MAF_Extractor(nn.Module):
     As discussed in the paper, we extract mesh-aligned features based on 2D projection of the mesh vertices.
     The features extrated from spatial feature maps will go through a MLP for dimension reduction.
     '''
-
     def __init__(self, device=torch.device('cuda')):
         super().__init__()
 
@@ -36,11 +35,10 @@ class MAF_Extractor(nn.Module):
         for l in range(0, len(filter_channels) - 1):
             if 0 != l:
                 self.filters.append(
-                    nn.Conv1d(filter_channels[l] + filter_channels[0],
-                              filter_channels[l + 1], 1))
+                    nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
+                )
             else:
-                self.filters.append(
-                    nn.Conv1d(filter_channels[l], filter_channels[l + 1], 1))
+                self.filters.append(nn.Conv1d(filter_channels[l], filter_channels[l + 1], 1))
 
             self.add_module("conv%d" % l, self.filters[l])
 
@@ -49,13 +47,11 @@ class MAF_Extractor(nn.Module):
 
         # downsample SMPL mesh and assign part labels
         # from https://github.com/nkolot/GraphCMR/blob/master/data/mesh_downsampling.npz
-        smpl_mesh_graph = np.load(MESH_DOWNSAMPLEING,
-                                  allow_pickle=True,
-                                  encoding='latin1')
+        smpl_mesh_graph = np.load(MESH_DOWNSAMPLEING, allow_pickle=True, encoding='latin1')
 
         A = smpl_mesh_graph['A']
         U = smpl_mesh_graph['U']
-        D = smpl_mesh_graph['D']  # shape: (2,)
+        D = smpl_mesh_graph['D']    # shape: (2,)
 
         # downsampling
         ptD = []
@@ -68,8 +64,7 @@ class MAF_Extractor(nn.Module):
         # downsampling mapping from 6890 points to 431 points
         # ptD[0].to_dense() - Size: [1723, 6890]
         # ptD[1].to_dense() - Size: [431. 1723]
-        Dmap = torch.matmul(ptD[1].to_dense(),
-                            ptD[0].to_dense())  # 6890 -> 431
+        Dmap = torch.matmul(ptD[1].to_dense(), ptD[0].to_dense())    # 6890 -> 431
         self.register_buffer('Dmap', Dmap)
 
     def reduce_dim(self, feature):
@@ -81,13 +76,11 @@ class MAF_Extractor(nn.Module):
         y = feature
         tmpy = feature
         for i, f in enumerate(self.filters):
-            y = self._modules['conv' +
-                              str(i)](y if i == 0 else torch.cat([y, tmpy], 1))
+            y = self._modules['conv' + str(i)](y if i == 0 else torch.cat([y, tmpy], 1))
             if i != len(self.filters) - 1:
                 y = F.leaky_relu(y)
             if self.num_views > 1 and i == len(self.filters) // 2:
-                y = y.view(-1, self.num_views, y.shape[1],
-                           y.shape[2]).mean(dim=1)
+                y = y.view(-1, self.num_views, y.shape[1], y.shape[2]).mean(dim=1)
                 tmpy = feature.view(-1, self.num_views, feature.shape[1],
                                     feature.shape[2]).mean(dim=1)
 
@@ -113,10 +106,10 @@ class MAF_Extractor(nn.Module):
         if version.parse(torch.__version__) >= version.parse('1.3.0'):
             # Default grid_sample behavior has changed to align_corners=False since 1.3.0.
             point_feat = torch.nn.functional.grid_sample(
-                im_feat, points.unsqueeze(2), align_corners=True)[..., 0]
+                im_feat, points.unsqueeze(2), align_corners=True
+            )[..., 0]
         else:
-            point_feat = torch.nn.functional.grid_sample(
-                im_feat, points.unsqueeze(2))[..., 0]
+            point_feat = torch.nn.functional.grid_sample(im_feat, points.unsqueeze(2))[..., 0]
 
         mesh_align_feat = self.reduce_dim(point_feat)
         return mesh_align_feat

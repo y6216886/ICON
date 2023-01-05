@@ -40,7 +40,6 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class TestDataset():
-
     def __init__(self, cfg, device):
 
         random.seed(1993)
@@ -69,11 +68,12 @@ class TestDataset():
         # smpl-smplx correspondence
         self.smpl_joint_ids_24 = np.arange(22).tolist() + [68, 73]
         self.smpl_joint_ids_24_pixie = np.arange(22).tolist() + [68 + 61, 72 + 68]
-        self.get_smpl_model = lambda smpl_type, smpl_gender: smplx.create(model_path=self.smpl_data.
-                                                                          model_dir,
-                                                                          gender=smpl_gender,
-                                                                          model_type=smpl_type,
-                                                                          ext='npz')
+        self.get_smpl_model = lambda smpl_type, smpl_gender: smplx.create(
+            model_path=self.smpl_data.model_dir,
+            gender=smpl_gender,
+            model_type=smpl_type,
+            ext='npz'
+        )
 
         # Load SMPL model
         self.smpl_model = self.get_smpl_model(self.smpl_type, self.smpl_gender).to(self.device)
@@ -91,11 +91,14 @@ class TestDataset():
             self.smpl_model = self.hps.smplx
         elif self.hps_type == 'hybrik':
             smpl_path = osp.join(self.smpl_data.model_dir, "smpl/SMPL_NEUTRAL.pkl")
-            self.hps = HybrIKBaseSMPLCam(cfg_file=path_config.HYBRIK_CFG,
-                                         smpl_path=smpl_path,
-                                         data_path=path_config.hybrik_data_dir)
-            self.hps.load_state_dict(torch.load(path_config.HYBRIK_CKPT, map_location='cpu'),
-                                     strict=False)
+            self.hps = HybrIKBaseSMPLCam(
+                cfg_file=path_config.HYBRIK_CFG,
+                smpl_path=smpl_path,
+                data_path=path_config.hybrik_data_dir
+            )
+            self.hps.load_state_dict(
+                torch.load(path_config.HYBRIK_CKPT, map_location='cpu'), strict=False
+            )
             self.hps.to(self.device)
         elif self.hps_type == 'bev':
             try:
@@ -142,8 +145,9 @@ class TestDataset():
 
         verts = np.concatenate([smpl_model.verts, smpl_model.verts_added],
                                axis=0) * scale.item() + trans.detach().cpu().numpy()
-        faces = np.loadtxt(osp.join(self.smpl_data.tedra_dir, 'tetrahedrons_neutral_adult.txt'),
-                           dtype=np.int32) - 1
+        faces = np.loadtxt(
+            osp.join(self.smpl_data.tedra_dir, 'tetrahedrons_neutral_adult.txt'), dtype=np.int32
+        ) - 1
 
         pad_v_num = int(8000 - verts.shape[0])
         pad_f_num = int(25100 - faces.shape[0])
@@ -172,7 +176,8 @@ class TestDataset():
 
         if self.seg_dir is None:
             img_icon, img_hps, img_ori, img_mask, uncrop_param = process_image(
-                img_path, self.hps_type, 512, self.device)
+                img_path, self.hps_type, 512, self.device
+            )
 
             data_dict = {
                 'name': img_name,
@@ -188,7 +193,8 @@ class TestDataset():
                 self.hps_type,
                 512,
                 self.device,
-                seg_path=os.path.join(self.seg_dir, f'{img_name}.json'))
+                seg_path=os.path.join(self.seg_dir, f'{img_name}.json')
+            )
             data_dict = {
                 'name': img_name,
                 'image': img_icon.to(self.device).unsqueeze(0),
@@ -203,7 +209,8 @@ class TestDataset():
             preds_dict = self.hps.forward(img_hps)
 
         data_dict['smpl_faces'] = torch.Tensor(self.faces.astype(np.int64)).long().unsqueeze(0).to(
-            self.device)
+            self.device
+        )
 
         if self.hps_type == 'pymaf':
             output = preds_dict['smpl_out'][-1]
@@ -242,13 +249,15 @@ class TestDataset():
 
         elif self.hps_type == 'bev':
             data_dict['betas'] = torch.from_numpy(preds_dict['smpl_betas'])[[0], :10].to(
-                self.device).float()
+                self.device
+            ).float()
             pred_thetas = batch_rodrigues(
-                torch.from_numpy(preds_dict['smpl_thetas'][0]).reshape(-1, 3)).float()
+                torch.from_numpy(preds_dict['smpl_thetas'][0]).reshape(-1, 3)
+            ).float()
             data_dict['body_pose'] = pred_thetas[1:][None].to(self.device)
             data_dict['global_orient'] = pred_thetas[[0]][None].to(self.device)
-            data_dict['smpl_verts'] = torch.from_numpy(preds_dict['verts'][[0]]).to(
-                self.device).float()
+            data_dict['smpl_verts'] = torch.from_numpy(preds_dict['verts'][[0]]).to(self.device
+                                                                                   ).float()
             tranX = preds_dict['cam_trans'][0, 0]
             tranY = preds_dict['cam'][0, 1] + 0.28
             scale = preds_dict['cam'][0, 0] * 1.1
@@ -289,20 +298,24 @@ class TestDataset():
         import trimesh
 
         if self.hps_type != 'pixie':
-            smpl_out = self.smpl_model(betas=data['betas'],
-                                       body_pose=data['body_pose'],
-                                       global_orient=data['global_orient'],
-                                       pose2rot=False)
+            smpl_out = self.smpl_model(
+                betas=data['betas'],
+                body_pose=data['body_pose'],
+                global_orient=data['global_orient'],
+                pose2rot=False
+            )
             smpl_verts = ((smpl_out.vertices + data['trans']) *
                           data['scale']).detach().cpu().numpy()[0]
         else:
-            smpl_verts, _, _ = self.smpl_model(shape_params=data['betas'],
-                                               expression_params=data['exp'],
-                                               body_pose=data['body_pose'],
-                                               global_pose=data['global_orient'],
-                                               jaw_pose=data['jaw_pose'],
-                                               left_hand_pose=data['left_hand_pose'],
-                                               right_hand_pose=data['right_hand_pose'])
+            smpl_verts, _, _ = self.smpl_model(
+                shape_params=data['betas'],
+                expression_params=data['exp'],
+                body_pose=data['body_pose'],
+                global_pose=data['global_orient'],
+                jaw_pose=data['jaw_pose'],
+                left_hand_pose=data['left_hand_pose'],
+                right_hand_pose=data['right_hand_pose']
+            )
 
             smpl_verts = ((smpl_verts + data['trans']) * data['scale']).detach().cpu().numpy()[0]
 
@@ -321,8 +334,9 @@ class TestDataset():
         image_P = (0.5 * (1.0 + image_P[0].permute(1, 2, 0).detach().cpu().numpy()) * 255.0)
 
         vis_list.append(
-            vedo.Picture(image_P * 0.5 + image_F * 0.5).scale(2.0 / image_P.shape[0]).pos(
-                -1.0, -1.0, 1.0))
+            vedo.Picture(image_P * 0.5 + image_F * 0.5).scale(2.0 / image_P.shape[0]
+                                                             ).pos(-1.0, -1.0, 1.0)
+        )
         vis_list.append(vedo.Picture(image_F).scale(2.0 / image_F.shape[0]).pos(-1.0, -1.0, -0.5))
         vis_list.append(vedo.Picture(image_B).scale(2.0 / image_B.shape[0]).pos(-1.0, -1.0, -1.0))
 
@@ -350,10 +364,11 @@ if __name__ == '__main__':
     dataset = TestDataset(
         {
             'image_dir': "./examples",
-            'has_det': True,  # w/ or w/o detection
-            'hps_type': 'bev'  # pymaf/pare/pixie/hybrik/bev
+            'has_det': True,    # w/ or w/o detection
+            'hps_type': 'bev'    # pymaf/pare/pixie/hybrik/bev
         },
-        device)
+        device
+    )
 
     for i in range(len(dataset)):
         dataset.visualize_alignment(dataset[i])

@@ -22,7 +22,6 @@ from .smpl_head import SMPL
 
 
 class SMPLCamHead(nn.Module):
-
     def __init__(self, img_res=224):
         super(SMPLCamHead, self).__init__()
         self.smpl = SMPL(config.SMPL_MODEL_DIR, create_transl=False)
@@ -30,17 +29,19 @@ class SMPLCamHead(nn.Module):
 
         self.img_res = img_res
 
-    def forward(self,
-                rotmat,
-                shape,
-                cam,
-                cam_rotmat,
-                cam_intrinsics,
-                bbox_scale,
-                bbox_center,
-                img_w,
-                img_h,
-                normalize_joints2d=False):
+    def forward(
+        self,
+        rotmat,
+        shape,
+        cam,
+        cam_rotmat,
+        cam_intrinsics,
+        bbox_scale,
+        bbox_center,
+        img_w,
+        img_h,
+        normalize_joints2d=False
+    ):
         '''
         :param rotmat: rotation in euler angles format (N,J,3,3)
         :param shape: smpl betas
@@ -118,19 +119,14 @@ def perspective_projection(points, rotation, translation, cam_intrinsics):
     projected_points = points / points[:, :, -1].unsqueeze(-1)
 
     # Apply camera intrinsics
-    projected_points = torch.einsum('bij,bkj->bki', K,
-                                    projected_points.float())
+    projected_points = torch.einsum('bij,bkj->bki', K, projected_points.float())
 
     return projected_points[:, :, :-1]
 
 
-def convert_pare_to_full_img_cam(pare_cam,
-                                 bbox_height,
-                                 bbox_center,
-                                 img_w,
-                                 img_h,
-                                 focal_length,
-                                 crop_res=224):
+def convert_pare_to_full_img_cam(
+    pare_cam, bbox_height, bbox_center, img_w, img_h, focal_length, crop_res=224
+):
     # Converts weak perspective camera estimated by PARE in
     # bbox coords to perspective camera in full image coordinates
     # from https://arxiv.org/pdf/2009.06549.pdf

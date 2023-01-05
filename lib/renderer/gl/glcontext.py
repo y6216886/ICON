@@ -92,16 +92,15 @@ def create_opengl_context(surface_size=(640, 480)):
     egl.eglInitialize(egl_display, pointer(major), pointer(minor))
 
     config_attribs = [
-        egl.EGL_SURFACE_TYPE, egl.EGL_PBUFFER_BIT, egl.EGL_BLUE_SIZE, 8,
-        egl.EGL_GREEN_SIZE, 8, egl.EGL_RED_SIZE, 8, egl.EGL_DEPTH_SIZE, 24,
-        egl.EGL_RENDERABLE_TYPE, egl.EGL_OPENGL_BIT, egl.EGL_NONE
+        egl.EGL_SURFACE_TYPE, egl.EGL_PBUFFER_BIT, egl.EGL_BLUE_SIZE, 8, egl.EGL_GREEN_SIZE, 8,
+        egl.EGL_RED_SIZE, 8, egl.EGL_DEPTH_SIZE, 24, egl.EGL_RENDERABLE_TYPE, egl.EGL_OPENGL_BIT,
+        egl.EGL_NONE
     ]
     config_attribs = (egl.EGLint * len(config_attribs))(*config_attribs)
 
     num_configs = egl.EGLint()
     egl_cfg = egl.EGLConfig()
-    egl.eglChooseConfig(egl_display, config_attribs, pointer(egl_cfg), 1,
-                        pointer(num_configs))
+    egl.eglChooseConfig(egl_display, config_attribs, pointer(egl_cfg), 1, pointer(num_configs))
 
     width, height = surface_size
     pbuffer_attribs = [
@@ -112,8 +111,7 @@ def create_opengl_context(surface_size=(640, 480)):
         egl.EGL_NONE,
     ]
     pbuffer_attribs = (egl.EGLint * len(pbuffer_attribs))(*pbuffer_attribs)
-    egl_surf = egl.eglCreatePbufferSurface(egl_display, egl_cfg,
-                                           pbuffer_attribs)
+    egl_surf = egl.eglCreatePbufferSurface(egl_display, egl_cfg, pbuffer_attribs)
 
     egl.eglBindAPI(egl.EGL_OPENGL_API)
 
@@ -126,11 +124,9 @@ def create_opengl_context(surface_size=(640, 480)):
     #     egl.EGL_NONE,
     # ]
 
-    egl_context = egl.eglCreateContext(egl_display, egl_cfg,
-                                       egl.EGL_NO_CONTEXT, context_attribs)
+    egl_context = egl.eglCreateContext(egl_display, egl_cfg, egl.EGL_NO_CONTEXT, context_attribs)
     egl.eglMakeCurrent(egl_display, egl_surf, egl_surf, egl_context)
 
     buffer_type = egl.EGLint()
-    out = egl.eglQueryContext(egl_display, egl_context,
-                              egl.EGL_CONTEXT_CLIENT_VERSION, buffer_type)
+    out = egl.eglQueryContext(egl_display, egl_context, egl.EGL_CONTEXT_CLIENT_VERSION, buffer_type)
     # print(buffer_type)

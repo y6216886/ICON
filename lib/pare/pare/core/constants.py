@@ -145,8 +145,7 @@ J24_TO_J14 = J24_TO_J17[:14]
 
 # Permutation of SMPL pose parameters when flipping the shape
 SMPL_JOINTS_FLIP_PERM = [
-    0, 2, 1, 3, 5, 4, 6, 8, 7, 9, 11, 10, 12, 14, 13, 15, 17, 16, 19, 18, 21,
-    20, 23, 22
+    0, 2, 1, 3, 5, 4, 6, 8, 7, 9, 11, 10, 12, 14, 13, 15, 17, 16, 19, 18, 21, 20, 23, 22
 ]
 SMPL_POSE_FLIP_PERM = []
 for i in SMPL_JOINTS_FLIP_PERM:
@@ -155,17 +154,15 @@ for i in SMPL_JOINTS_FLIP_PERM:
     SMPL_POSE_FLIP_PERM.append(3 * i + 2)
 # Permutation indices for the 24 ground truth joints
 J24_FLIP_PERM = [
-    5, 4, 3, 2, 1, 0, 11, 10, 9, 8, 7, 6, 12, 13, 14, 15, 16, 17, 18, 19, 21,
-    20, 23, 22
+    5, 4, 3, 2, 1, 0, 11, 10, 9, 8, 7, 6, 12, 13, 14, 15, 16, 17, 18, 19, 21, 20, 23, 22
 ]
 # Permutation indices for the full set of 49 joints
 J49_FLIP_PERM = [0, 1, 5, 6, 7, 2, 3, 4, 8, 12, 13, 14, 9, 10, 11, 16, 15, 18, 17, 22, 23, 24, 19, 20, 21]\
     + [25+i for i in J24_FLIP_PERM]
 
-SMPLH_TO_SMPL = np.arange(0, 156).reshape((-1, 3))[np.array([
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-    21, 22, 37
-])].reshape(-1)
+SMPLH_TO_SMPL = np.arange(0, 156).reshape((-1, 3))[np.array(
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 37]
+)].reshape(-1)
 
 pw3d_occluded_sequences = [
     'courtyard_backpack',
@@ -188,13 +185,11 @@ pw3d_occluded_sequences = [
 ]
 
 pw3d_test_sequences = [
-    'flat_packBags_00', 'downtown_weeklyMarket_00', 'outdoors_fencing_01',
-    'downtown_walkBridge_01', 'downtown_enterShop_00',
-    'downtown_rampAndStairs_00', 'downtown_bar_00', 'downtown_runForBus_01',
-    'downtown_cafe_00', 'flat_guitar_01', 'downtown_runForBus_00',
-    'downtown_sitOnStairs_00', 'downtown_bus_00', 'downtown_arguing_00',
-    'downtown_crossStreets_00', 'downtown_walkUphill_00',
-    'downtown_walking_00', 'downtown_car_00', 'downtown_warmWelcome_00',
+    'flat_packBags_00', 'downtown_weeklyMarket_00', 'outdoors_fencing_01', 'downtown_walkBridge_01',
+    'downtown_enterShop_00', 'downtown_rampAndStairs_00', 'downtown_bar_00',
+    'downtown_runForBus_01', 'downtown_cafe_00', 'flat_guitar_01', 'downtown_runForBus_00',
+    'downtown_sitOnStairs_00', 'downtown_bus_00', 'downtown_arguing_00', 'downtown_crossStreets_00',
+    'downtown_walkUphill_00', 'downtown_walking_00', 'downtown_car_00', 'downtown_warmWelcome_00',
     'downtown_upstairs_00', 'downtown_stairs_00', 'downtown_windowShopping_00',
     'office_phoneCall_00', 'downtown_downstairs_00'
 ]

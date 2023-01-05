@@ -21,13 +21,14 @@ import torch.nn.functional as F
 
 
 class KeypointAttention(nn.Module):
-
-    def __init__(self,
-                 use_conv=False,
-                 in_channels=(256, 64),
-                 out_channels=(256, 64),
-                 act='softmax',
-                 use_scale=False):
+    def __init__(
+        self,
+        use_conv=False,
+        in_channels=(256, 64),
+        out_channels=(256, 64),
+        act='softmax',
+        use_scale=False
+    ):
         super(KeypointAttention, self).__init__()
         self.use_conv = use_conv
         self.in_channels = in_channels
@@ -35,12 +36,8 @@ class KeypointAttention(nn.Module):
         self.act = act
         self.use_scale = use_scale
         if use_conv:
-            self.conv1x1_pose = nn.Conv1d(in_channels[0],
-                                          out_channels[0],
-                                          kernel_size=1)
-            self.conv1x1_shape_cam = nn.Conv1d(in_channels[1],
-                                               out_channels[1],
-                                               kernel_size=1)
+            self.conv1x1_pose = nn.Conv1d(in_channels[0], out_channels[0], kernel_size=1)
+            self.conv1x1_shape_cam = nn.Conv1d(in_channels[1], out_channels[1], kernel_size=1)
 
     def forward(self, features, heatmaps):
         batch_size, num_joints, height, width = heatmaps.shape
@@ -50,16 +47,12 @@ class KeypointAttention(nn.Module):
             heatmaps = heatmaps * scale
 
         if self.act == 'softmax':
-            normalized_heatmap = F.softmax(heatmaps.reshape(
-                batch_size, num_joints, -1),
-                                           dim=-1)
+            normalized_heatmap = F.softmax(heatmaps.reshape(batch_size, num_joints, -1), dim=-1)
         elif self.act == 'sigmoid':
-            normalized_heatmap = torch.sigmoid(
-                heatmaps.reshape(batch_size, num_joints, -1))
+            normalized_heatmap = torch.sigmoid(heatmaps.reshape(batch_size, num_joints, -1))
         features = features.reshape(batch_size, -1, height * width)
 
-        attended_features = torch.matmul(normalized_heatmap,
-                                         features.transpose(2, 1))
+        attended_features = torch.matmul(normalized_heatmap, features.transpose(2, 1))
         attended_features = attended_features.transpose(2, 1)
 
         if self.use_conv:

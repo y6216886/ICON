@@ -32,9 +32,9 @@ if __name__ == "__main__":
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
 
-    tb_logger = pl_loggers.TensorBoardLogger(save_dir=cfg.results_path,
-                                             name=cfg.name,
-                                             default_hp_metric=False)
+    tb_logger = pl_loggers.TensorBoardLogger(
+        save_dir=cfg.results_path, name=cfg.name, default_hp_metric=False
+    )
 
     if cfg.overfit:
         cfg_overfit_list = ["batch_size", 1]
@@ -98,12 +98,14 @@ if __name__ == "__main__":
         datamodule.setup(stage="fit")
         train_len = datamodule.data_size["train"]
         val_len = datamodule.data_size["val"]
-        trainer_kwargs.update({
-            "log_every_n_steps":
-                int(cfg.freq_plot * train_len // cfg.batch_size),
-            "val_check_interval":
-                int(freq_eval * train_len // cfg.batch_size) if freq_eval > 10 else freq_eval,
-        })
+        trainer_kwargs.update(
+            {
+                "log_every_n_steps":
+                    int(cfg.freq_plot * train_len // cfg.batch_size),
+                "val_check_interval":
+                    int(freq_eval * train_len // cfg.batch_size) if freq_eval > 10 else freq_eval,
+            }
+        )
 
         if cfg.overfit:
             cfg_show_list = ["freq_show_train", 100.0, "freq_show_val", 10.0]

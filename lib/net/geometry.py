@@ -23,7 +23,7 @@ def index(feat, uv):
     :param uv: [B, 2, N] uv coordinates in the image plane, range [0, 1]
     :return: [B, C, N] image features at the uv coordinates
     '''
-    uv = uv.transpose(1, 2)  # [B, N, 2]
+    uv = uv.transpose(1, 2)    # [B, N, 2]
 
     (B, N, _) = uv.shape
     C = feat.shape[1]
@@ -31,15 +31,14 @@ def index(feat, uv):
     if uv.shape[-1] == 3:
         # uv = uv[:,:,[2,1,0]]
         # uv = uv * torch.tensor([1.0,-1.0,1.0]).type_as(uv)[None,None,...]
-        uv = uv.unsqueeze(2).unsqueeze(3)  # [B, N, 1, 1, 3]
+        uv = uv.unsqueeze(2).unsqueeze(3)    # [B, N, 1, 1, 3]
     else:
-        uv = uv.unsqueeze(2)  # [B, N, 1, 2]
+        uv = uv.unsqueeze(2)    # [B, N, 1, 2]
 
     # NOTE: for newer PyTorch, it seems that training results are degraded due to implementation diff in F.grid_sample
     # for old versions, simply remove the aligned_corners argument.
-    samples = torch.nn.functional.grid_sample(
-        feat, uv, align_corners=True)  # [B, C, N, 1]
-    return samples.view(B, C, N)  # [B, C, N]
+    samples = torch.nn.functional.grid_sample(feat, uv, align_corners=True)    # [B, C, N, 1]
+    return samples.view(B, C, N)    # [B, C, N]
 
 
 def orthogonal(points, calibrations, transforms=None):
@@ -52,7 +51,7 @@ def orthogonal(points, calibrations, transforms=None):
     '''
     rot = calibrations[:, :3, :3]
     trans = calibrations[:, :3, 3:4]
-    pts = torch.baddbmm(trans, rot, points)  # [B, 3, N]
+    pts = torch.baddbmm(trans, rot, points)    # [B, 3, N]
     if transforms is not None:
         scale = transforms[:2, :2]
         shift = transforms[:2, 2:3]
@@ -70,7 +69,7 @@ def perspective(points, calibrations, transforms=None):
     '''
     rot = calibrations[:, :3, :3]
     trans = calibrations[:, :3, 3:4]
-    homo = torch.baddbmm(trans, rot, points)  # [B, 3, N]
+    homo = torch.baddbmm(trans, rot, points)    # [B, 3, N]
     xy = homo[:, :2, :] / homo[:, 2:3, :]
     if transforms is not None:
         scale = transforms[:2, :2]

@@ -16,7 +16,6 @@
 
 import numpy as np
 import cv2
-import pymeshlab
 import torch
 import torchvision
 import trimesh
@@ -82,7 +81,6 @@ def obj_loader(path):
 
 
 class HoppeMesh:
-
     def __init__(self, verts, faces):
         '''
         The HoppeSDF calculates signed distance towards a predefined oriented point cloud
@@ -100,11 +98,12 @@ class HoppeMesh:
 
         labels = check_sign(
             torch.as_tensor(self.verts).unsqueeze(0), torch.as_tensor(self.faces),
-            torch.as_tensor(points).unsqueeze(0))
+            torch.as_tensor(points).unsqueeze(0)
+        )
         return labels.squeeze(0).numpy()
 
     def triangles(self):
-        return self.verts[self.faces]  # [n, 3, 3]
+        return self.verts[self.faces]    # [n, 3, 3]
 
 
 def tensor2variable(tensor, device):
@@ -113,7 +112,6 @@ def tensor2variable(tensor, device):
 
 
 class GMoF(torch.nn.Module):
-
     def __init__(self, rho=1):
         super(GMoF, self).__init__()
         self.rho = rho
@@ -147,10 +145,10 @@ def mesh_edge_loss(meshes, target_length: float = 0.0):
         return torch.tensor([0.0], dtype=torch.float32, device=meshes.device, requires_grad=True)
 
     N = len(meshes)
-    edges_packed = meshes.edges_packed()  # (sum(E_n), 3)
-    verts_packed = meshes.verts_packed()  # (sum(V_n), 3)
-    edge_to_mesh_idx = meshes.edges_packed_to_mesh_idx()  # (sum(E_n), )
-    num_edges_per_mesh = meshes.num_edges_per_mesh()  # N
+    edges_packed = meshes.edges_packed()    # (sum(E_n), 3)
+    verts_packed = meshes.verts_packed()    # (sum(V_n), 3)
+    edge_to_mesh_idx = meshes.edges_packed_to_mesh_idx()    # (sum(E_n), )
+    num_edges_per_mesh = meshes.num_edges_per_mesh()    # N
 
     # Determine the weight for each edge based on the number of edges in the
     # mesh it corresponds to.
@@ -170,30 +168,17 @@ def mesh_edge_loss(meshes, target_length: float = 0.0):
     return loss_all
 
 
-def remesh(obj_path, perc, device):
+def remesh(mesh, obj_path, device):
 
-    ms = pymeshlab.MeshSet()
-    ms.load_new_mesh(obj_path)
-    ms.laplacian_smooth()
-    ms.remeshing_isotropic_explicit_remeshing(targetlen=pymeshlab.Percentage(perc), adaptive=True)
-    ms.save_current_mesh(obj_path.replace("recon", "remesh"))
-    polished_mesh = trimesh.load_mesh(obj_path.replace("recon", "remesh"))
-    verts_pr = torch.tensor(polished_mesh.vertices).float().unsqueeze(0).to(device)
-    faces_pr = torch.tensor(polished_mesh.faces).long().unsqueeze(0).to(device)
+    mesh = mesh.simplify_quadratic_decimation(50000)
+    mesh = trimesh.smoothing.filter_humphrey(
+        mesh, alpha=0.1, beta=0.5, iterations=10, laplacian_operator=None
+    )
+    mesh.export(obj_path)
+    verts_pr = torch.tensor(mesh.vertices).float().unsqueeze(0).to(device)
+    faces_pr = torch.tensor(mesh.faces).long().unsqueeze(0).to(device)
 
     return verts_pr, faces_pr
-
-
-def possion(mesh, obj_path):
-
-    mesh.export(obj_path)
-    ms = pymeshlab.MeshSet()
-    ms.load_new_mesh(obj_path)
-    ms.surface_reconstruction_screened_poisson(depth=10)
-    ms.set_current_mesh(1)
-    ms.save_current_mesh(obj_path)
-
-    return trimesh.load(obj_path)
 
 
 def get_mask(tensor, dim):
@@ -217,12 +202,15 @@ def unwrap(image, data):
     img_uncrop = uncrop(
         np.array(Image.fromarray(image).resize(data['uncrop_param']['box_shape'][:2])),
         data['uncrop_param']['center'], data['uncrop_param']['scale'],
-        data['uncrop_param']['crop_shape'])
+        data['uncrop_param']['crop_shape']
+    )
 
-    img_orig = cv2.warpAffine(img_uncrop,
-                              np.linalg.inv(data['uncrop_param']['M'])[:2, :],
-                              data['uncrop_param']['ori_shape'][::-1][1:],
-                              flags=cv2.INTER_CUBIC)
+    img_orig = cv2.warpAffine(
+        img_uncrop,
+        np.linalg.inv(data['uncrop_param']['M'])[:2, :],
+        data['uncrop_param']['ori_shape'][::-1][1:],
+        flags=cv2.INTER_CUBIC
+    )
 
     return img_orig
 
@@ -259,9 +247,8 @@ def load_checkpoint(model, cfg):
 
         main_dict = {
             k: v
-            for k, v in main_dict.items()
-            if k in model_dict and v.shape == model_dict[k].shape and ('reconEngine' not in k) and
-            ("normal_filter" not in k) and ('voxelization' not in k)
+            for k, v in main_dict.items() if k in model_dict and v.shape == model_dict[k].shape and
+            ('reconEngine' not in k) and ("normal_filter" not in k) and ('voxelization' not in k)
         }
         print(colored(f"Resume MLP weights from {cfg.resume_path}", 'green'))
 
@@ -273,8 +260,7 @@ def load_checkpoint(model, cfg):
 
         normal_dict = {
             k: v
-            for k, v in normal_dict.items()
-            if k in model_dict and v.shape == model_dict[k].shape
+            for k, v in normal_dict.items() if k in model_dict and v.shape == model_dict[k].shape
         }
         print(colored(f"Resume normal model from {cfg.normal_path}", 'green'))
 
@@ -311,8 +297,10 @@ def read_smpl_constants(folder):
     smpl_vertex_code = np.float32(np.copy(smpl_vtx_std))
     """Load smpl faces & tetrahedrons"""
     smpl_faces = np.loadtxt(os.path.join(folder, 'faces.txt'), dtype=np.int32) - 1
-    smpl_face_code = (smpl_vertex_code[smpl_faces[:, 0]] + smpl_vertex_code[smpl_faces[:, 1]] +
-                      smpl_vertex_code[smpl_faces[:, 2]]) / 3.0
+    smpl_face_code = (
+        smpl_vertex_code[smpl_faces[:, 0]] + smpl_vertex_code[smpl_faces[:, 1]] +
+        smpl_vertex_code[smpl_faces[:, 2]]
+    ) / 3.0
     smpl_tetras = np.loadtxt(os.path.join(folder, 'tetrahedrons.txt'), dtype=np.int32) - 1
 
     return smpl_vertex_code, smpl_face_code, smpl_faces, smpl_tetras
@@ -428,7 +416,8 @@ def cal_sdf_batch(verts, faces, cmaps, vis, points):
     if verts.shape[1] == 10475:
         faces = faces[:, ~SMPLX().smplx_eyeball_fid]
         mouth_faces = torch.as_tensor(SMPLX().smplx_mouth_fid).unsqueeze(0).repeat(Bsize, 1, 1).to(
-            faces.device)
+            faces.device
+        )
         faces = torch.cat([faces, mouth_faces], dim=1)
 
     triangles = face_vertices(verts, faces)
@@ -450,7 +439,8 @@ def cal_sdf_batch(verts, faces, cmaps, vis, points):
     pts_cmap = (closest_cmaps * bary_weights[:, :, None]).sum(1).unsqueeze(0)
     pts_vis = (closest_vis * bary_weights[:, :, None]).sum(1).unsqueeze(0).ge(1e-1)
     pts_norm = (closest_normals * bary_weights[:, :, None]).sum(1).unsqueeze(0) * torch.tensor(
-        [-1.0, 1.0, -1.0]).type_as(normals)
+        [-1.0, 1.0, -1.0]
+    ).type_as(normals)
     pts_norm = F.normalize(pts_norm, dim=2)
     pts_dist = torch.sqrt(residues) / torch.sqrt(torch.tensor(3))
 
@@ -473,7 +463,7 @@ def orthogonal(points, calibrations, transforms=None):
     '''
     rot = calibrations[:, :3, :3]
     trans = calibrations[:, :3, 3:4]
-    pts = torch.baddbmm(trans, rot, points)  # [B, 3, N]
+    pts = torch.baddbmm(trans, rot, points)    # [B, 3, N]
     if transforms is not None:
         scale = transforms[:2, :2]
         shift = transforms[:2, 2:3]
@@ -747,16 +737,16 @@ def calculate_mIoU(outputs, labels):
     outputs = outputs.int()
     labels = labels.int()
 
-    intersection = (outputs & labels).float().sum()  # Will be zero if Truth=0 or Prediction=0
-    union = (outputs | labels).float().sum()  # Will be zzero if both are 0
+    intersection = (outputs & labels).float().sum()    # Will be zero if Truth=0 or Prediction=0
+    union = (outputs | labels).float().sum()    # Will be zzero if both are 0
 
-    iou = (intersection + SMOOTH) / (union + SMOOTH)  # We smooth our devision to avoid 0/0
+    iou = (intersection + SMOOTH) / (union + SMOOTH)    # We smooth our devision to avoid 0/0
 
     thresholded = torch.clamp(20 * (iou - 0.5), 0,
-                              10).ceil() / 10  # This is equal to comparing with thresolds
+                              10).ceil() / 10    # This is equal to comparing with thresolds
 
     return thresholded.mean().detach().cpu().numpy(
-    )  # Or thresholded.mean() if you are interested in average across the batch
+    )    # Or thresholded.mean() if you are interested in average across the batch
 
 
 def mask_filter(mask, number=1000):
@@ -793,7 +783,8 @@ def get_optim_grid_image(per_loop_lst, loss=None, nrow=4, type='smpl'):
     font = ImageFont.truetype(font_path, 30)
     grid_img = torchvision.utils.make_grid(torch.cat(per_loop_lst, dim=0), nrow=nrow)
     grid_img = Image.fromarray(
-        ((grid_img.permute(1, 2, 0).detach().cpu().numpy() + 1.0) * 0.5 * 255.0).astype(np.uint8))
+        ((grid_img.permute(1, 2, 0).detach().cpu().numpy() + 1.0) * 0.5 * 255.0).astype(np.uint8)
+    )
 
     # add text
     draw = ImageDraw.Draw(grid_img)
@@ -803,16 +794,18 @@ def get_optim_grid_image(per_loop_lst, loss=None, nrow=4, type='smpl'):
 
     if type == 'smpl':
         for col_id, col_txt in enumerate(
-            ['image', 'smpl-norm(render)', 'cloth-norm(pred)', 'diff-norm', 'diff-mask']):
+            ['image', 'smpl-norm(render)', 'cloth-norm(pred)', 'diff-norm', 'diff-mask']
+        ):
             draw.text((10 + (col_id * grid_size), 5), col_txt, (255, 0, 0), font=font)
     elif type == 'cloth':
         for col_id, col_txt in enumerate(
-            ['image', 'cloth-norm(recon)', 'cloth-norm(pred)', 'diff-norm']):
+            ['image', 'cloth-norm(recon)', 'cloth-norm(pred)', 'diff-norm']
+        ):
             draw.text((10 + (col_id * grid_size), 5), col_txt, (255, 0, 0), font=font)
         for col_id, col_txt in enumerate(['0', '90', '180', '270']):
-            draw.text((10 + (col_id * grid_size), grid_size * 2 + 5),
-                      col_txt, (255, 0, 0),
-                      font=font)
+            draw.text(
+                (10 + (col_id * grid_size), grid_size * 2 + 5), col_txt, (255, 0, 0), font=font
+            )
     else:
         print(f"{type} should be 'smpl' or 'cloth'")
 
@@ -838,10 +831,12 @@ def clean_mesh(verts, faces):
 
 def merge_mesh(verts_A, faces_A, verts_B, faces_B, color=False):
 
-    sep_mesh = trimesh.Trimesh(np.concatenate([verts_A, verts_B], axis=0),
-                               np.concatenate([faces_A, faces_B + faces_A.max() + 1], axis=0),
-                               maintain_order=True,
-                               process=False)
+    sep_mesh = trimesh.Trimesh(
+        np.concatenate([verts_A, verts_B], axis=0),
+        np.concatenate([faces_A, faces_B + faces_A.max() + 1], axis=0),
+        maintain_order=True,
+        process=False
+    )
     if color:
         colors = np.ones_like(sep_mesh.vertices)
         colors[:verts_A.shape[0]] *= np.array([255.0, 0.0, 0.0])
@@ -880,7 +875,6 @@ def rescale_smpl(fitted_path, scale=100, translate=(0, 0, 0)):
 
 
 class SMPLX():
-
     def __init__(self):
 
         self.current_dir = osp.join(osp.dirname(__file__), "../../data/smpl_related")

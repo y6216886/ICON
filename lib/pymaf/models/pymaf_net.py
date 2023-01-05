@@ -16,7 +16,6 @@ BN_MOMENTUM = 0.1
 
 
 class Regressor(nn.Module):
-
     def __init__(self, feat_dim, smpl_mean_params):
         super().__init__()
 
@@ -37,20 +36,15 @@ class Regressor(nn.Module):
 
         mean_params = np.load(smpl_mean_params)
         init_pose = torch.from_numpy(mean_params['pose'][:]).unsqueeze(0)
-        init_shape = torch.from_numpy(
-            mean_params['shape'][:].astype('float32')).unsqueeze(0)
+        init_shape = torch.from_numpy(mean_params['shape'][:].astype('float32')).unsqueeze(0)
         init_cam = torch.from_numpy(mean_params['cam']).unsqueeze(0)
         self.register_buffer('init_pose', init_pose)
         self.register_buffer('init_shape', init_shape)
         self.register_buffer('init_cam', init_cam)
 
-    def forward(self,
-                x,
-                init_pose=None,
-                init_shape=None,
-                init_cam=None,
-                n_iter=1,
-                J_regressor=None):
+    def forward(
+        self, x, init_pose=None, init_shape=None, init_cam=None, n_iter=1, J_regressor=None
+    ):
         batch_size = x.shape[0]
 
         if init_pose is None:
@@ -75,18 +69,18 @@ class Regressor(nn.Module):
 
         pred_rotmat = rot6d_to_rotmat(pred_pose).view(batch_size, 24, 3, 3)
 
-        pred_output = self.smpl(betas=pred_shape,
-                                body_pose=pred_rotmat[:, 1:],
-                                global_orient=pred_rotmat[:, 0].unsqueeze(1),
-                                pose2rot=False)
+        pred_output = self.smpl(
+            betas=pred_shape,
+            body_pose=pred_rotmat[:, 1:],
+            global_orient=pred_rotmat[:, 0].unsqueeze(1),
+            pose2rot=False
+        )
 
         pred_vertices = pred_output.vertices
         pred_joints = pred_output.joints
         pred_smpl_joints = pred_output.smpl_joints
         pred_keypoints_2d = projection(pred_joints, pred_cam)
-        pose = rotation_matrix_to_angle_axis(pred_rotmat.reshape(-1, 3,
-                                                                 3)).reshape(
-                                                                     -1, 72)
+        pose = rotation_matrix_to_angle_axis(pred_rotmat.reshape(-1, 3, 3)).reshape(-1, 72)
 
         if J_regressor is not None:
             pred_joints = torch.matmul(J_regressor, pred_vertices)
@@ -107,13 +101,9 @@ class Regressor(nn.Module):
         }
         return output
 
-    def forward_init(self,
-                     x,
-                     init_pose=None,
-                     init_shape=None,
-                     init_cam=None,
-                     n_iter=1,
-                     J_regressor=None):
+    def forward_init(
+        self, x, init_pose=None, init_shape=None, init_cam=None, n_iter=1, J_regressor=None
+    ):
         batch_size = x.shape[0]
 
         if init_pose is None:
@@ -127,21 +117,20 @@ class Regressor(nn.Module):
         pred_shape = init_shape
         pred_cam = init_cam
 
-        pred_rotmat = rot6d_to_rotmat(pred_pose.contiguous()).view(
-            batch_size, 24, 3, 3)
+        pred_rotmat = rot6d_to_rotmat(pred_pose.contiguous()).view(batch_size, 24, 3, 3)
 
-        pred_output = self.smpl(betas=pred_shape,
-                                body_pose=pred_rotmat[:, 1:],
-                                global_orient=pred_rotmat[:, 0].unsqueeze(1),
-                                pose2rot=False)
+        pred_output = self.smpl(
+            betas=pred_shape,
+            body_pose=pred_rotmat[:, 1:],
+            global_orient=pred_rotmat[:, 0].unsqueeze(1),
+            pose2rot=False
+        )
 
         pred_vertices = pred_output.vertices
         pred_joints = pred_output.joints
         pred_smpl_joints = pred_output.smpl_joints
         pred_keypoints_2d = projection(pred_joints, pred_cam)
-        pose = rotation_matrix_to_angle_axis(pred_rotmat.reshape(-1, 3,
-                                                                 3)).reshape(
-                                                                     -1, 72)
+        pose = rotation_matrix_to_angle_axis(pred_rotmat.reshape(-1, 3, 3)).reshape(-1, 72)
 
         if J_regressor is not None:
             pred_joints = torch.matmul(J_regressor, pred_vertices)
@@ -167,11 +156,11 @@ class PyMAF(nn.Module):
     """ PyMAF based Deep Regressor for Human Mesh Recovery
     PyMAF: 3D Human Pose and Shape Regression with Pyramidal Mesh Alignment Feedback Loop, in ICCV, 2021
     """
-
     def __init__(self, smpl_mean_params=SMPL_MEAN_PARAMS, pretrained=True):
         super().__init__()
         self.feature_extractor = ResNet_Backbone(
-            model=cfg.MODEL.PyMAF.BACKBONE, pretrained=pretrained)
+            model=cfg.MODEL.PyMAF.BACKBONE, pretrained=pretrained
+        )
 
         # deconv layers
         self.inplanes = self.feature_extractor.inplanes
@@ -185,16 +174,14 @@ class PyMAF(nn.Module):
         self.maf_extractor = nn.ModuleList()
         for _ in range(cfg.MODEL.PyMAF.N_ITER):
             self.maf_extractor.append(MAF_Extractor())
-        ma_feat_len = self.maf_extractor[-1].Dmap.shape[
-            0] * cfg.MODEL.PyMAF.MLP_DIM[-1]
+        ma_feat_len = self.maf_extractor[-1].Dmap.shape[0] * cfg.MODEL.PyMAF.MLP_DIM[-1]
 
         grid_size = 21
-        xv, yv = torch.meshgrid([
-            torch.linspace(-1, 1, grid_size),
-            torch.linspace(-1, 1, grid_size)
-        ])
-        points_grid = torch.stack([xv.reshape(-1),
-                                   yv.reshape(-1)]).unsqueeze(0)
+        xv, yv = torch.meshgrid(
+            [torch.linspace(-1, 1, grid_size),
+             torch.linspace(-1, 1, grid_size)]
+        )
+        points_grid = torch.stack([xv.reshape(-1), yv.reshape(-1)]).unsqueeze(0)
         self.register_buffer('points_grid', points_grid)
         grid_feat_len = grid_size * grid_size * cfg.MODEL.PyMAF.MLP_DIM[-1]
 
@@ -205,8 +192,8 @@ class PyMAF(nn.Module):
             else:
                 ref_infeat_dim = ma_feat_len
             self.regressor.append(
-                Regressor(feat_dim=ref_infeat_dim,
-                          smpl_mean_params=smpl_mean_params))
+                Regressor(feat_dim=ref_infeat_dim, smpl_mean_params=smpl_mean_params)
+            )
 
         dp_feat_dim = 256
         self.with_uv = cfg.LOSS.POINT_REGRESSION_WEIGHTS > 0
@@ -217,11 +204,13 @@ class PyMAF(nn.Module):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes,
-                          planes * block.expansion,
-                          kernel_size=1,
-                          stride=stride,
-                          bias=False),
+                nn.Conv2d(
+                    self.inplanes,
+                    planes * block.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False
+                ),
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
@@ -259,18 +248,20 @@ class PyMAF(nn.Module):
 
         layers = []
         for i in range(num_layers):
-            kernel, padding, output_padding = _get_deconv_cfg(
-                num_kernels[i], i)
+            kernel, padding, output_padding = _get_deconv_cfg(num_kernels[i], i)
 
             planes = num_filters[i]
             layers.append(
-                nn.ConvTranspose2d(in_channels=self.inplanes,
-                                   out_channels=planes,
-                                   kernel_size=kernel,
-                                   stride=2,
-                                   padding=padding,
-                                   output_padding=output_padding,
-                                   bias=self.deconv_with_bias))
+                nn.ConvTranspose2d(
+                    in_channels=self.inplanes,
+                    out_channels=planes,
+                    kernel_size=kernel,
+                    stride=2,
+                    padding=padding,
+                    output_padding=output_padding,
+                    bias=self.deconv_with_bias
+                )
+            )
             layers.append(nn.BatchNorm2d(planes, momentum=BN_MOMENTUM))
             layers.append(nn.ReLU(inplace=True))
             self.inplanes = planes
@@ -291,8 +282,7 @@ class PyMAF(nn.Module):
             deconv_blocks = [self.deconv_layers[0:6], self.deconv_layers[6:9]]
         elif cfg.MODEL.PyMAF.N_ITER == 3:
             deconv_blocks = [
-                self.deconv_layers[0:3], self.deconv_layers[3:6],
-                self.deconv_layers[6:9]
+                self.deconv_layers[0:3], self.deconv_layers[3:6], self.deconv_layers[6:9]
             ]
 
         out_list = {}
@@ -300,8 +290,7 @@ class PyMAF(nn.Module):
         # initial parameters
         # TODO: remove the initial mesh generation during forward to reduce runtime
         # by generating initial mesh the beforehand: smpl_output = self.init_smpl
-        smpl_output = self.regressor[0].forward_init(g_feat,
-                                                     J_regressor=J_regressor)
+        smpl_output = self.regressor[0].forward_init(g_feat, J_regressor=J_regressor)
 
         out_list['smpl_out'] = [smpl_output]
         out_list['dp_out'] = []
@@ -327,24 +316,19 @@ class PyMAF(nn.Module):
             self.maf_extractor[rf_i].cam = pred_cam
 
             if rf_i == 0:
-                sample_points = torch.transpose(
-                    self.points_grid.expand(batch_size, -1, -1), 1, 2)
+                sample_points = torch.transpose(self.points_grid.expand(batch_size, -1, -1), 1, 2)
                 ref_feature = self.maf_extractor[rf_i].sampling(sample_points)
             else:
                 pred_smpl_verts = smpl_output['verts'].detach()
                 # TODO: use a more sparse SMPL implementation (with 431 vertices) for acceleration
                 pred_smpl_verts_ds = torch.matmul(
-                    self.maf_extractor[rf_i].Dmap.unsqueeze(0),
-                    pred_smpl_verts)  # [B, 431, 3]
-                ref_feature = self.maf_extractor[rf_i](
-                    pred_smpl_verts_ds)  # [B, 431 * n_feat]
+                    self.maf_extractor[rf_i].Dmap.unsqueeze(0), pred_smpl_verts
+                )    # [B, 431, 3]
+                ref_feature = self.maf_extractor[rf_i](pred_smpl_verts_ds)    # [B, 431 * n_feat]
 
-            smpl_output = self.regressor[rf_i](ref_feature,
-                                               pred_pose,
-                                               pred_shape,
-                                               pred_cam,
-                                               n_iter=1,
-                                               J_regressor=J_regressor)
+            smpl_output = self.regressor[rf_i](
+                ref_feature, pred_pose, pred_shape, pred_cam, n_iter=1, J_regressor=J_regressor
+            )
             out_list['smpl_out'].append(smpl_output)
 
         if self.training and cfg.MODEL.PyMAF.AUX_SUPV_ON:

@@ -20,23 +20,19 @@ GLUT = None
 
 
 class CamRender(Render):
-
-    def __init__(self,
-                 width=1600,
-                 height=1200,
-                 name='Cam Renderer',
-                 program_files=['simple.fs', 'simple.vs'],
-                 color_size=1,
-                 ms_rate=1,
-                 egl=False):
-        Render.__init__(self,
-                        width,
-                        height,
-                        name,
-                        program_files,
-                        color_size,
-                        ms_rate=ms_rate,
-                        egl=egl)
+    def __init__(
+        self,
+        width=1600,
+        height=1200,
+        name='Cam Renderer',
+        program_files=['simple.fs', 'simple.vs'],
+        color_size=1,
+        ms_rate=1,
+        egl=False
+    ):
+        Render.__init__(
+            self, width, height, name, program_files, color_size, ms_rate=ms_rate, egl=egl
+        )
         self.camera = None
 
         if not egl:
@@ -72,8 +68,7 @@ class CamRender(Render):
             self.camera.near -= 0.1 * eps
             self.camera.far -= 0.1 * eps
 
-        self.projection_matrix, self.model_view_matrix = self.camera.get_gl_matrix(
-        )
+        self.projection_matrix, self.model_view_matrix = self.camera.get_gl_matrix()
 
     def show(self):
         if GLUT is not None:

@@ -25,11 +25,9 @@ MIN_NUM_FRAMES = 0
 
 
 class PARETester:
-
     def __init__(self, cfg, ckpt):
         self.model_cfg = update_hparams(cfg)
-        self.device = torch.device(
-            'cuda') if torch.cuda.is_available() else torch.device('cpu')
+        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.model = self._build_model()
         self._load_pretrained_model(ckpt)
         self.model.eval()
@@ -60,10 +58,8 @@ class PARETester:
                 USE_KEYPOINT_FEATURES_FOR_SMPL_REGRESSION,
                 use_heatmaps=model_cfg.DATASET.USE_HEATMAPS,
                 use_keypoint_attention=model_cfg.PARE.USE_KEYPOINT_ATTENTION,
-                use_postconv_keypoint_attention=model_cfg.PARE.
-                USE_POSTCONV_KEYPOINT_ATTENTION,
-                use_scale_keypoint_attention=model_cfg.PARE.
-                USE_SCALE_KEYPOINT_ATTENTION,
+                use_postconv_keypoint_attention=model_cfg.PARE.USE_POSTCONV_KEYPOINT_ATTENTION,
+                use_scale_keypoint_attention=model_cfg.PARE.USE_SCALE_KEYPOINT_ATTENTION,
                 keypoint_attention_act=model_cfg.PARE.KEYPOINT_ATTENTION_ACT,
                 use_final_nonlocal=model_cfg.PARE.USE_FINAL_NONLOCAL,
                 use_branch_nonlocal=model_cfg.PARE.USE_BRANCH_NONLOCAL,
@@ -94,8 +90,7 @@ class PARETester:
         # ========= Load pretrained weights ========= #
         logger.info(f'Loading pretrained model from {ckpt_path}')
         ckpt = torch.load(ckpt_path)['state_dict']
-        load_pretrained_model(self.model,
-                              ckpt,
-                              overwrite_shape_mismatch=True,
-                              remove_lightning=True)
+        load_pretrained_model(
+            self.model, ckpt, overwrite_shape_mismatch=True, remove_lightning=True
+        )
         logger.info(f'Loaded pretrained weights from \"{ckpt_path}\"')

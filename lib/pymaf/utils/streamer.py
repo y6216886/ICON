@@ -12,9 +12,7 @@ def aug_matrix(w1, h1, w2, h2):
 
     scale = np.min([float(w2) / w1, float(h2) / h1])
 
-    M = get_affine_matrix(center=(w2 / 2.0, h2 / 2.0),
-                          translate=(0, 0),
-                          scale=scale)
+    M = get_affine_matrix(center=(w2 / 2.0, h2 / 2.0), translate=(0, 0), scale=scale)
 
     M = np.array(M + [0., 0., 1.]).reshape(3, 3)
     M = M.dot(matrix_trans)
@@ -42,14 +40,9 @@ def get_affine_matrix(center, translate, scale):
 class BaseStreamer():
     """This streamer will return images at 512x512 size.
     """
-
-    def __init__(self,
-                 width=512,
-                 height=512,
-                 pad=True,
-                 mean=(0.5, 0.5, 0.5),
-                 std=(0.5, 0.5, 0.5),
-                 **kwargs):
+    def __init__(
+        self, width=512, height=512, pad=True, mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5), **kwargs
+    ):
         self.width = width
         self.height = height
         self.pad = pad
@@ -60,19 +53,17 @@ class BaseStreamer():
 
     def create_loader(self):
         raise NotImplementedError
-        yield np.zeros((600, 400, 3))  # in RGB (0, 255)
+        yield np.zeros((600, 400, 3))    # in RGB (0, 255)
 
     def __getitem__(self, index):
         image = next(self.loader)
         in_height, in_width, _ = image.shape
         M = aug_matrix(in_width, in_height, self.width, self.height, self.pad)
-        image = cv2.warpAffine(image,
-                               M[0:2, :], (self.width, self.height),
-                               flags=cv2.INTER_CUBIC)
+        image = cv2.warpAffine(image, M[0:2, :], (self.width, self.height), flags=cv2.INTER_CUBIC)
 
         input = np.float32(image)
-        input = (input / 255.0 - self.mean) / self.std  # TO [-1.0, 1.0]
-        input = input.transpose(2, 0, 1)  # TO [3 x H x W]
+        input = (input / 255.0 - self.mean) / self.std    # TO [-1.0, 1.0]
+        input = input.transpose(2, 0, 1)    # TO [3 x H x W]
         return torch.from_numpy(input).float()
 
     def __len__(self):
@@ -82,7 +73,6 @@ class BaseStreamer():
 class CaptureStreamer(BaseStreamer):
     """This streamer takes webcam as input.
     """
-
     def __init__(self, id=0, width=512, height=512, pad=True, **kwargs):
         super().__init__(width, height, pad, **kwargs)
         self.capture = cv2.VideoCapture(id)
@@ -90,7 +80,7 @@ class CaptureStreamer(BaseStreamer):
     def create_loader(self):
         while True:
             _, image = self.capture.read()
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # RGB
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)    # RGB
             yield image
 
     def __len__(self):
@@ -103,19 +93,15 @@ class CaptureStreamer(BaseStreamer):
 class VideoListStreamer(BaseStreamer):
     """This streamer takes a list of video files as input.
     """
-
     def __init__(self, files, width=512, height=512, pad=True, **kwargs):
         super().__init__(width, height, pad, **kwargs)
         self.files = files
         self.captures = [imageio.get_reader(f) for f in files]
-        self.nframes = sum([
-            int(cap._meta["fps"] * cap._meta["duration"])
-            for cap in self.captures
-        ])
+        self.nframes = sum([int(cap._meta["fps"] * cap._meta["duration"]) for cap in self.captures])
 
     def create_loader(self):
         for capture in self.captures:
-            for image in capture:  # RGB
+            for image in capture:    # RGB
                 yield image
 
     def __len__(self):
@@ -129,7 +115,6 @@ class VideoListStreamer(BaseStreamer):
 class ImageListStreamer(BaseStreamer):
     """This streamer takes a list of image files as input.
     """
-
     def __init__(self, files, width=512, height=512, pad=True, **kwargs):
         super().__init__(width, height, pad, **kwargs)
         self.files = files
@@ -137,7 +122,7 @@ class ImageListStreamer(BaseStreamer):
     def create_loader(self):
         for f in self.files:
             image = cv2.imread(f, cv2.IMREAD_UNCHANGED)[:, :, 0:3]
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # RGB
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)    # RGB
             yield image
 
     def __len__(self):

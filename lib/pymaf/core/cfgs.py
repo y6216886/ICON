@@ -86,9 +86,7 @@ def parse_args(args):
 def parse_args_extend(args):
     if args.resume:
         if not os.path.exists(args.log_dir):
-            raise ValueError(
-                'Experiment are set to resume mode, but log directory does not exist.'
-            )
+            raise ValueError('Experiment are set to resume mode, but log directory does not exist.')
 
         # load log's cfg
         cfg_file = os.path.join(args.log_dir, 'cfg.yaml')

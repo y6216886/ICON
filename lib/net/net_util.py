@@ -24,16 +24,16 @@ from torch.autograd import grad
 
 
 def gradient(inputs, outputs):
-    d_points = torch.ones_like(outputs,
-                               requires_grad=False,
-                               device=outputs.device)
-    points_grad = grad(outputs=outputs,
-                       inputs=inputs,
-                       grad_outputs=d_points,
-                       create_graph=True,
-                       retain_graph=True,
-                       only_inputs=True,
-                       allow_unused=True)[0]
+    d_points = torch.ones_like(outputs, requires_grad=False, device=outputs.device)
+    points_grad = grad(
+        outputs=outputs,
+        inputs=inputs,
+        grad_outputs=d_points,
+        create_graph=True,
+        retain_graph=True,
+        only_inputs=True,
+        allow_unused=True
+    )[0]
     return points_grad
 
 
@@ -43,30 +43,22 @@ def gradient(inputs, outputs):
 #                      stride=strd, padding=padding, bias=bias)
 
 
-def conv3x3(in_planes,
-            out_planes,
-            kernel=3,
-            strd=1,
-            dilation=1,
-            padding=1,
-            bias=False):
+def conv3x3(in_planes, out_planes, kernel=3, strd=1, dilation=1, padding=1, bias=False):
     "3x3 convolution with padding"
-    return nn.Conv2d(in_planes,
-                     out_planes,
-                     kernel_size=kernel,
-                     dilation=dilation,
-                     stride=strd,
-                     padding=padding,
-                     bias=bias)
+    return nn.Conv2d(
+        in_planes,
+        out_planes,
+        kernel_size=kernel,
+        dilation=dilation,
+        stride=strd,
+        padding=padding,
+        bias=bias
+    )
 
 
 def conv1x1(in_planes, out_planes, stride=1):
     """1x1 convolution"""
-    return nn.Conv2d(in_planes,
-                     out_planes,
-                     kernel_size=1,
-                     stride=stride,
-                     bias=False)
+    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
 
 def init_weights(net, init_type='normal', init_gain=0.02):
@@ -80,11 +72,10 @@ def init_weights(net, init_type='normal', init_gain=0.02):
     We use 'normal' in the original pix2pix and CycleGAN paper. But xavier and kaiming might
     work better for some applications. Feel free to try yourself.
     """
-
-    def init_func(m):  # define the initialization function
+    def init_func(m):    # define the initialization function
         classname = m.__class__.__name__
-        if hasattr(m, 'weight') and (classname.find('Conv') != -1
-                                     or classname.find('Linear') != -1):
+        if hasattr(m,
+                   'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1):
             if init_type == 'normal':
                 init.normal_(m.weight.data, 0.0, init_gain)
             elif init_type == 'xavier':
@@ -95,18 +86,18 @@ def init_weights(net, init_type='normal', init_gain=0.02):
                 init.orthogonal_(m.weight.data, gain=init_gain)
             else:
                 raise NotImplementedError(
-                    'initialization method [%s] is not implemented' %
-                    init_type)
+                    'initialization method [%s] is not implemented' % init_type
+                )
             if hasattr(m, 'bias') and m.bias is not None:
                 init.constant_(m.bias.data, 0.0)
         elif classname.find(
-                'BatchNorm2d'
-        ) != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
+            'BatchNorm2d'
+        ) != -1:    # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
             init.normal_(m.weight.data, 1.0, init_gain)
             init.constant_(m.bias.data, 0.0)
 
     # print('initialize network with %s' % init_type)
-    net.apply(init_func)  # apply the initialization function <init_func>
+    net.apply(init_func)    # apply the initialization function <init_func>
 
 
 def init_net(net, init_type='xavier', init_gain=0.02, gpu_ids=[]):
@@ -121,7 +112,7 @@ def init_net(net, init_type='xavier', init_gain=0.02, gpu_ids=[]):
     """
     if len(gpu_ids) > 0:
         assert (torch.cuda.is_available())
-        net = torch.nn.DataParallel(net)  # multi-GPUs
+        net = torch.nn.DataParallel(net)    # multi-GPUs
     init_weights(net, init_type, init_gain=init_gain)
     return net
 
@@ -138,13 +129,9 @@ def imageSpaceRotation(xy, rot):
     return (disp * xy).sum(dim=1)
 
 
-def cal_gradient_penalty(netD,
-                         real_data,
-                         fake_data,
-                         device,
-                         type='mixed',
-                         constant=1.0,
-                         lambda_gp=10.0):
+def cal_gradient_penalty(
+    netD, real_data, fake_data, device, type='mixed', constant=1.0, lambda_gp=10.0
+):
     """Calculate the gradient penalty loss, used in WGAN-GP paper https://arxiv.org/abs/1704.00028
 
     Arguments:
@@ -166,10 +153,9 @@ def cal_gradient_penalty(netD,
             interpolatesv = fake_data
         elif type == 'mixed':
             alpha = torch.rand(real_data.shape[0], 1)
-            alpha = alpha.expand(
-                real_data.shape[0],
-                real_data.nelement() //
-                real_data.shape[0]).contiguous().view(*real_data.shape)
+            alpha = alpha.expand(real_data.shape[0],
+                                 real_data.nelement() //
+                                 real_data.shape[0]).contiguous().view(*real_data.shape)
             alpha = alpha.to(device)
             interpolatesv = alpha * real_data + ((1 - alpha) * fake_data)
         else:
@@ -182,10 +168,11 @@ def cal_gradient_penalty(netD,
             grad_outputs=torch.ones(disc_interpolates.size()).to(device),
             create_graph=True,
             retain_graph=True,
-            only_inputs=True)
-        gradients = gradients[0].view(real_data.size(0), -1)  # flat the data
+            only_inputs=True
+        )
+        gradients = gradients[0].view(real_data.size(0), -1)    # flat the data
         gradient_penalty = (((gradients + 1e-16).norm(2, dim=1) - constant)**
-                            2).mean() * lambda_gp  # added eps
+                            2).mean() * lambda_gp    # added eps
         return gradient_penalty, gradients
     else:
         return 0.0, None
@@ -199,39 +186,30 @@ def get_norm_layer(norm_type='instance'):
     For InstanceNorm, we do not use learnable affine parameters. We do not track running statistics.
     """
     if norm_type == 'batch':
-        norm_layer = functools.partial(nn.BatchNorm2d,
-                                       affine=True,
-                                       track_running_stats=True)
+        norm_layer = functools.partial(nn.BatchNorm2d, affine=True, track_running_stats=True)
     elif norm_type == 'instance':
-        norm_layer = functools.partial(nn.InstanceNorm2d,
-                                       affine=False,
-                                       track_running_stats=False)
+        norm_layer = functools.partial(nn.InstanceNorm2d, affine=False, track_running_stats=False)
     elif norm_type == 'group':
         norm_layer = functools.partial(nn.GroupNorm, 32)
     elif norm_type == 'none':
         norm_layer = None
     else:
-        raise NotImplementedError('normalization layer [%s] is not found' %
-                                  norm_type)
+        raise NotImplementedError('normalization layer [%s] is not found' % norm_type)
     return norm_layer
 
 
 class Flatten(nn.Module):
-
     def forward(self, input):
         return input.view(input.size(0), -1)
 
 
 class ConvBlock(nn.Module):
-
     def __init__(self, in_planes, out_planes, opt):
         super(ConvBlock, self).__init__()
         [k, s, d, p] = opt.conv3x3
         self.conv1 = conv3x3(in_planes, int(out_planes / 2), k, s, d, p)
-        self.conv2 = conv3x3(int(out_planes / 2), int(out_planes / 4), k, s, d,
-                             p)
-        self.conv3 = conv3x3(int(out_planes / 4), int(out_planes / 4), k, s, d,
-                             p)
+        self.conv2 = conv3x3(int(out_planes / 2), int(out_planes / 4), k, s, d, p)
+        self.conv3 = conv3x3(int(out_planes / 4), int(out_planes / 4), k, s, d, p)
 
         if opt.norm == 'batch':
             self.bn1 = nn.BatchNorm2d(in_planes)
@@ -248,11 +226,7 @@ class ConvBlock(nn.Module):
             self.downsample = nn.Sequential(
                 self.bn4,
                 nn.ReLU(True),
-                nn.Conv2d(in_planes,
-                          out_planes,
-                          kernel_size=1,
-                          stride=1,
-                          bias=False),
+                nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=1, bias=False),
             )
         else:
             self.downsample = None
@@ -283,7 +257,6 @@ class ConvBlock(nn.Module):
 
 
 class Vgg19(torch.nn.Module):
-
     def __init__(self, requires_grad=False):
         super(Vgg19, self).__init__()
         vgg_pretrained_features = models.vgg19(pretrained=True).features
@@ -317,7 +290,6 @@ class Vgg19(torch.nn.Module):
 
 
 class VGGLoss(nn.Module):
-
     def __init__(self):
         super(VGGLoss, self).__init__()
         self.vgg = Vgg19().cuda()
@@ -328,6 +300,5 @@ class VGGLoss(nn.Module):
         x_vgg, y_vgg = self.vgg(x), self.vgg(y)
         loss = 0
         for i in range(len(x_vgg)):
-            loss += self.weights[i] * self.criterion(x_vgg[i],
-                                                     y_vgg[i].detach())
+            loss += self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())
         return loss

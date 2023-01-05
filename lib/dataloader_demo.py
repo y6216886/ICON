@@ -5,22 +5,12 @@ from lib.dataset.PIFuDataset import PIFuDataset
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-v',
-                        '--show',
-                        action='store_true',
-                        help='vis sampler 3D')
-    parser.add_argument('-s',
-                        '--speed',
-                        action='store_true',
-                        help='vis sampler 3D')
-    parser.add_argument('-l',
-                        '--list',
-                        action='store_true',
-                        help='vis sampler 3D')
-    parser.add_argument('-c',
-                        '--config',
-                        default='./configs/train/icon-filter.yaml',
-                        help='vis sampler 3D')
+    parser.add_argument('-v', '--show', action='store_true', help='vis sampler 3D')
+    parser.add_argument('-s', '--speed', action='store_true', help='vis sampler 3D')
+    parser.add_argument('-l', '--list', action='store_true', help='vis sampler 3D')
+    parser.add_argument(
+        '-c', '--config', default='./configs/train/icon-filter.yaml', help='vis sampler 3D'
+    )
     parser.add_argument('-d', '--dataset', default='thuman2')
     args_c = parser.parse_args()
 
@@ -31,8 +21,8 @@ if __name__ == '__main__':
 
         # for cape test set
         cfg_test_mode = [
-            "test_mode", True, "dataset.types", ["cape"], "dataset.scales",
-            [100.0], "dataset.rotation_num", 3
+            "test_mode", True, "dataset.types", ["cape"], "dataset.scales", [100.0],
+            "dataset.rotation_num", 3
         ]
         args.merge_from_list(cfg_test_mode)
 

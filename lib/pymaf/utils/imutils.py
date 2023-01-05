@@ -32,8 +32,8 @@ def load_img(img_file):
 def get_bbox(img, det):
 
     input = np.float32(img)
-    input = (input / 255.0 - (0.5, 0.5, 0.5)) / (0.5, 0.5, 0.5)  # TO [-1.0, 1.0]
-    input = input.transpose(2, 0, 1)  # TO [3 x H x W]
+    input = (input / 255.0 - (0.5, 0.5, 0.5)) / (0.5, 0.5, 0.5)    # TO [-1.0, 1.0]
+    input = input.transpose(2, 0, 1)    # TO [3 x H x W]
     bboxes, probs = det(torch.from_numpy(input).float().unsqueeze(0))
 
     probs = probs.unsqueeze(3)
@@ -45,21 +45,28 @@ def get_bbox(img, det):
 
 def get_transformer(input_res):
 
-    image_to_tensor = transforms.Compose([
-        transforms.Resize(input_res),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ])
+    image_to_tensor = transforms.Compose(
+        [
+            transforms.Resize(input_res),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ]
+    )
 
     mask_to_tensor = transforms.Compose(
-        [transforms.Resize(input_res),
-         transforms.ToTensor(),
-         transforms.Normalize((0.0,), (1.0,))])
+        [
+            transforms.Resize(input_res),
+            transforms.ToTensor(),
+            transforms.Normalize((0.0, ), (1.0, ))
+        ]
+    )
 
-    image_to_pymaf_tensor = transforms.Compose([
-        transforms.Resize(size=224),
-        transforms.Normalize(mean=constants.IMG_NORM_MEAN, std=constants.IMG_NORM_STD)
-    ])
+    image_to_pymaf_tensor = transforms.Compose(
+        [
+            transforms.Resize(size=224),
+            transforms.Normalize(mean=constants.IMG_NORM_MEAN, std=constants.IMG_NORM_STD)
+        ]
+    )
 
     image_to_pixie_tensor = transforms.Compose([transforms.Resize(224)])
 
@@ -98,16 +105,17 @@ def process_image(img_file, hps_type, input_res=512, device=None, seg_path=None)
     M = aug_matrix(in_width, in_height, input_res * 2, input_res * 2)
 
     # from rectangle to square
-    img_for_crop = cv2.warpAffine(img_ori,
-                                  M[0:2, :], (input_res * 2, input_res * 2),
-                                  flags=cv2.INTER_CUBIC)
+    img_for_crop = cv2.warpAffine(
+        img_ori, M[0:2, :], (input_res * 2, input_res * 2), flags=cv2.INTER_CUBIC
+    )
 
     # detection for bbox
     detector = detection.maskrcnn_resnet50_fpn(pretrained=True)
     detector.eval()
     predictions = detector([torch.from_numpy(img_for_crop).permute(2, 0, 1) / 255.])[0]
     human_ids = torch.where(
-        predictions["scores"] == predictions["scores"][predictions['labels'] == 1].max())
+        predictions["scores"] == predictions["scores"][predictions['labels'] == 1].max()
+    )
     bbox = predictions["boxes"][human_ids, :].flatten().detach().cpu().numpy()
 
     width = bbox[2] - bbox[0]
@@ -163,8 +171,9 @@ def process_image(img_file, hps_type, input_res=512, device=None, seg_path=None)
                 warped_indeces.resize((warped_indeces.shape[:2]))
 
                 # cropped_indeces = crop_segmentation(warped_indeces, center, scale, (input_res, input_res), img_np.shape)
-                cropped_indeces = crop_segmentation(warped_indeces, (input_res, input_res),
-                                                    cropping_parameters)
+                cropped_indeces = crop_segmentation(
+                    warped_indeces, (input_res, input_res), cropping_parameters
+                )
 
                 indices = np.vstack((cropped_indeces[:, 0], cropped_indeces[:, 1])).T
 
@@ -258,13 +267,9 @@ def crop_for_hybrik(img, center, scale):
     return new_img
 
 
-def get_affine_transform(center,
-                         scale,
-                         rot,
-                         output_size,
-                         shift=np.array([0, 0], dtype=np.float32),
-                         inv=0):
-
+def get_affine_transform(
+    center, scale, rot, output_size, shift=np.array([0, 0], dtype=np.float32), inv=0
+):
     def get_dir(src_point, rot_rad):
         """Rotate the point by `rot_rad` degree."""
         sn, cs = np.sin(rot_rad), np.cos(rot_rad)
@@ -355,8 +360,12 @@ def uncrop(img, center, scale, orig_shape):
 def rot_aa(aa, rot):
     """Rotate axis angle parameters."""
     # pose parameters
-    R = np.array([[np.cos(np.deg2rad(-rot)), -np.sin(np.deg2rad(-rot)), 0],
-                  [np.sin(np.deg2rad(-rot)), np.cos(np.deg2rad(-rot)), 0], [0, 0, 1]])
+    R = np.array(
+        [
+            [np.cos(np.deg2rad(-rot)), -np.sin(np.deg2rad(-rot)), 0],
+            [np.sin(np.deg2rad(-rot)), np.cos(np.deg2rad(-rot)), 0], [0, 0, 1]
+        ]
+    )
     # find the rotation of the body in camera frame
     per_rdg, _ = cv2.Rodrigues(aa)
     # apply the global rotation to the global orientation
@@ -430,9 +439,9 @@ def generate_heatmap(joints, heatmap_size, sigma=1, joints_vis=None):
     target_weight = np.ones((num_joints, 1), dtype=np.float32)
     if joints_vis is not None:
         target_weight[:, 0] = joints_vis[:, 0]
-    target = torch.zeros((num_joints, heatmap_size[1], heatmap_size[0]),
-                         dtype=torch.float32,
-                         device=cur_device)
+    target = torch.zeros(
+        (num_joints, heatmap_size[1], heatmap_size[0]), dtype=torch.float32, device=cur_device
+    )
 
     tmp_size = sigma * 3
 

@@ -34,23 +34,24 @@ def point_mesh_distance(meshes, pcls):
     N = len(meshes)
 
     # packed representation for pointclouds
-    points = pcls.points_packed()  # (P, 3)
+    points = pcls.points_packed()    # (P, 3)
     points_first_idx = pcls.cloud_to_packed_first_idx()
     max_points = pcls.num_points_per_cloud().max().item()
 
     # packed representation for faces
     verts_packed = meshes.verts_packed()
     faces_packed = meshes.faces_packed()
-    tris = verts_packed[faces_packed]  # (T, 3, 3)
+    tris = verts_packed[faces_packed]    # (T, 3, 3)
     tris_first_idx = meshes.mesh_to_faces_packed_first_idx()
 
     # point to face distance: shape (P,)
-    point_to_face = _PointFaceDistance.apply(points, points_first_idx, tris,
-                                             tris_first_idx, max_points, 5e-3)
+    point_to_face = _PointFaceDistance.apply(
+        points, points_first_idx, tris, tris_first_idx, max_points, 5e-3
+    )
 
     # weight each example by the inverse of number of points in the example
-    point_to_cloud_idx = pcls.packed_to_cloud_idx()  # (sum(P_i),)
-    num_points_per_cloud = pcls.num_points_per_cloud()  # (N,)
+    point_to_cloud_idx = pcls.packed_to_cloud_idx()    # (sum(P_i),)
+    num_points_per_cloud = pcls.num_points_per_cloud()    # (N,)
     weights_p = num_points_per_cloud.gather(0, point_to_cloud_idx)
     weights_p = 1.0 / weights_p.float()
     point_to_face = torch.sqrt(point_to_face) * weights_p
@@ -60,7 +61,6 @@ def point_mesh_distance(meshes, pcls):
 
 
 class Evaluator:
-
     def __init__(self, device):
 
         self.render = Render(size=512, device=device)
@@ -82,23 +82,25 @@ class Evaluator:
     def calculate_normal_consist(self, normal_path):
 
         self.render.meshes = self.src_mesh
-        src_normal_imgs = self.render.get_rgb_image(cam_ids=[0, 1, 2, 3],
-                                                    bg='black')
+        src_normal_imgs = self.render.get_rgb_image(cam_ids=[0, 1, 2, 3], bg='black')
         self.render.meshes = self.tgt_mesh
-        tgt_normal_imgs = self.render.get_rgb_image(cam_ids=[0, 1, 2, 3],
-                                                    bg='black')
+        tgt_normal_imgs = self.render.get_rgb_image(cam_ids=[0, 1, 2, 3], bg='black')
 
-        src_normal_arr = (make_grid(torch.cat(src_normal_imgs, dim=0), nrow=4)
-                          + 1.0) * 0.5  # [0,1]
-        tgt_normal_arr = (make_grid(torch.cat(tgt_normal_imgs, dim=0), nrow=4)
-                          + 1.0) * 0.5  # [0,1]
+        src_normal_arr = (
+            make_grid(torch.cat(src_normal_imgs, dim=0), nrow=4) + 1.0
+        ) * 0.5    # [0,1]
+        tgt_normal_arr = (
+            make_grid(torch.cat(tgt_normal_imgs, dim=0), nrow=4) + 1.0
+        ) * 0.5    # [0,1]
 
-        error = ((
-            (src_normal_arr - tgt_normal_arr)**2).sum(dim=0).mean()) * 4.0
+        error = (((src_normal_arr - tgt_normal_arr)**2).sum(dim=0).mean()) * 4.0
 
         normal_img = Image.fromarray(
-            (torch.cat([src_normal_arr, tgt_normal_arr], dim=1).permute(
-                1, 2, 0).detach().cpu().numpy() * 255.0).astype(np.uint8))
+            (
+                torch.cat([src_normal_arr, tgt_normal_arr],
+                          dim=1).permute(1, 2, 0).detach().cpu().numpy() * 255.0
+            ).astype(np.uint8)
+        )
         normal_img.save(normal_path)
 
         return error
@@ -110,13 +112,10 @@ class Evaluator:
 
     def calculate_chamfer_p2s(self, num_samples=1000):
 
-        tgt_points = Pointclouds(
-            sample_points_from_meshes(self.tgt_mesh, num_samples))
-        src_points = Pointclouds(
-            sample_points_from_meshes(self.src_mesh, num_samples))
+        tgt_points = Pointclouds(sample_points_from_meshes(self.tgt_mesh, num_samples))
+        src_points = Pointclouds(sample_points_from_meshes(self.src_mesh, num_samples))
         p2s_dist = point_mesh_distance(self.src_mesh, tgt_points) * 100.0
-        chamfer_dist = (point_mesh_distance(self.tgt_mesh, src_points) * 100.0
-                        + p2s_dist) * 0.5
+        chamfer_dist = (point_mesh_distance(self.tgt_mesh, src_points) * 100.0 + p2s_dist) * 0.5
 
         return chamfer_dist, p2s_dist
 

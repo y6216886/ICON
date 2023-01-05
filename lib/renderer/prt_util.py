@@ -70,11 +70,11 @@ def AssociatedLegendre(M, L, x):
 
 def SphericalHarmonic(M, L, theta, phi):
     if M > 0:
-        return math.sqrt(2.0) * KVal(M, L) * np.cos(
-            M * phi) * AssociatedLegendre(M, L, np.cos(theta))
+        return math.sqrt(2.0) * KVal(M, L) * np.cos(M * phi
+                                                   ) * AssociatedLegendre(M, L, np.cos(theta))
     elif M < 0:
-        return math.sqrt(2.0) * KVal(-M, L) * np.sin(
-            -M * phi) * AssociatedLegendre(-M, L, np.cos(theta))
+        return math.sqrt(2.0) * KVal(-M, L) * np.sin(-M * phi
+                                                    ) * AssociatedLegendre(-M, L, np.cos(theta))
     else:
         return KVal(0, L) * AssociatedLegendre(0, L, np.cos(theta))
 
@@ -129,10 +129,7 @@ def computePRT(mesh_path, scale, n, order):
 
     else:
 
-        mesh = trimesh.load(mesh_path,
-                            skip_materials=True,
-                            process=False,
-                            maintain_order=True)
+        mesh = trimesh.load(mesh_path, skip_materials=True, process=False, maintain_order=True)
         mesh.vertices *= scale
 
         vectors_orig, phi, theta = sampleSphericalDirections(n)
@@ -150,8 +147,7 @@ def computePRT(mesh_path, scale, n, order):
         for i in range(n):
             SH = np.repeat(SH_orig[None, (i * n):((i + 1) * n)], n_v,
                            axis=0).reshape(-1, SH_orig.shape[1])
-            vectors = np.repeat(vectors_orig[None, (i * n):((i + 1) * n)],
-                                n_v,
+            vectors = np.repeat(vectors_orig[None, (i * n):((i + 1) * n)], n_v,
                                 axis=0).reshape(-1, 3)
 
             dots = (vectors * normals).sum(1)
@@ -183,16 +179,19 @@ def computePRT(mesh_path, scale, n, order):
 
 def testPRT(obj_path, n=40):
 
-    os.makedirs(os.path.join(os.path.dirname(obj_path),
-                             f'../bounce/{os.path.basename(obj_path)[:-4]}'),
-                exist_ok=True)
+    os.makedirs(
+        os.path.join(os.path.dirname(obj_path), f'../bounce/{os.path.basename(obj_path)[:-4]}'),
+        exist_ok=True
+    )
 
     PRT, F = computePRT(obj_path, n, 2)
     np.savetxt(
-        os.path.join(os.path.dirname(obj_path),
-                     f'../bounce/{os.path.basename(obj_path)[:-4]}',
-                     'bounce.npy'), PRT)
+        os.path.join(
+            os.path.dirname(obj_path), f'../bounce/{os.path.basename(obj_path)[:-4]}', 'bounce.npy'
+        ), PRT
+    )
     np.save(
-        os.path.join(os.path.dirname(obj_path),
-                     f'../bounce/{os.path.basename(obj_path)[:-4]}',
-                     'face.npy'), F)
+        os.path.join(
+            os.path.dirname(obj_path), f'../bounce/{os.path.basename(obj_path)[:-4]}', 'face.npy'
+        ), F
+    )

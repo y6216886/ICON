@@ -26,9 +26,10 @@ from lib.common.render import query_color, image2vid
 from lib.renderer.mesh import compute_normal_batch
 from lib.common.config import cfg
 from lib.common.cloth_extraction import extract_cloth
-from lib.dataset.mesh_util import (load_checkpoint, update_mesh_shape_prior_losses,
-                                   get_optim_grid_image, blend_rgb_norm, unwrap, remesh,
-                                   tensor2variable, rot6d_to_rotmat)
+from lib.dataset.mesh_util import (
+    load_checkpoint, update_mesh_shape_prior_losses, get_optim_grid_image, blend_rgb_norm, unwrap,
+    remesh, tensor2variable, rot6d_to_rotmat
+)
 
 from lib.dataset.TestDataset import TestDataset
 from lib.net.local_affine import LocalAffine
@@ -90,9 +91,9 @@ if __name__ == "__main__":
         'image_dir': args.in_dir,
         'seg_dir': args.seg_dir,
         'colab': args.colab,
-        'has_det': True,  # w/ or w/o detection
+        'has_det': True,    # w/ or w/o detection
         'hps_type':
-            args.hps_type  # pymaf/pare/pixie
+            args.hps_type    # pymaf/pare/pixie
     }
 
     if args.hps_type == "pixie" and "pamir" in args.config:
@@ -112,12 +113,14 @@ if __name__ == "__main__":
         in_tensor = {"smpl_faces": data["smpl_faces"], "image": data["image"]}
 
         # The optimizer and variables
-        optimed_pose = torch.tensor(data["body_pose"], device=device,
-                                    requires_grad=True)  # [1,23,3,3]
-        optimed_trans = torch.tensor(data["trans"], device=device, requires_grad=True)  # [3]
-        optimed_betas = torch.tensor(data["betas"], device=device, requires_grad=True)  # [1,10]
-        optimed_orient = torch.tensor(data["global_orient"], device=device,
-                                      requires_grad=True)  # [1,1,3,3]
+        optimed_pose = torch.tensor(
+            data["body_pose"], device=device, requires_grad=True
+        )    # [1,23,3,3]
+        optimed_trans = torch.tensor(data["trans"], device=device, requires_grad=True)    # [3]
+        optimed_betas = torch.tensor(data["betas"], device=device, requires_grad=True)    # [1,10]
+        optimed_orient = torch.tensor(
+            data["global_orient"], device=device, requires_grad=True
+        )    # [1,1,3,3]
 
         optimizer_smpl = torch.optim.Adam(
             [optimed_pose, optimed_trans, optimed_betas, optimed_orient],
@@ -137,35 +140,35 @@ if __name__ == "__main__":
             "cloth": {
                 "weight": 1e1,
                 "value": 0.0
-            },  # Cloth: Normal_recon - Normal_pred
+            },    # Cloth: Normal_recon - Normal_pred
             "stiffness": {
                 "weight": 1e5,
                 "value": 0.0
-            },  # Cloth: [RT]_v1 - [RT]_v2 (v1-edge-v2)
+            },    # Cloth: [RT]_v1 - [RT]_v2 (v1-edge-v2)
             "rigid": {
                 "weight": 1e5,
                 "value": 0.0
-            },  # Cloth: det(R) = 1
+            },    # Cloth: det(R) = 1
             "edge": {
                 "weight": 0,
                 "value": 0.0
-            },  # Cloth: edge length
+            },    # Cloth: edge length
             "nc": {
                 "weight": 0,
                 "value": 0.0
-            },  # Cloth: normal consistency
+            },    # Cloth: normal consistency
             "laplacian": {
                 "weight": 1e2,
                 "value": 0.0
-            },  # Cloth: laplacian smoonth
+            },    # Cloth: laplacian smoonth
             "normal": {
                 "weight": 1e0,
                 "value": 0.0
-            },  # Body: Normal_pred - Normal_smpl
+            },    # Body: Normal_pred - Normal_smpl
             "silhouette": {
                 "weight": 1e0,
                 "value": 0.0
-            },  # Body: Silhouette_pred - Silhouette_smpl
+            },    # Body: Silhouette_pred - Silhouette_smpl
         }
 
         # smpl optimization
@@ -220,7 +223,8 @@ if __name__ == "__main__":
 
             # render optimized mesh (normal, T_normal, image [-1,1])
             in_tensor["T_normal_F"], in_tensor["T_normal_B"] = dataset.render_normal(
-                smpl_verts * torch.tensor([1.0, -1.0, -1.0]).to(device), in_tensor["smpl_faces"])
+                smpl_verts * torch.tensor([1.0, -1.0, -1.0]).to(device), in_tensor["smpl_faces"]
+            )
             T_mask_F, T_mask_B = dataset.render.get_silhouette_image()
 
             with torch.no_grad():
@@ -252,20 +256,24 @@ if __name__ == "__main__":
 
             if i % args.vis_freq == 0:
 
-                per_loop_lst.extend([
-                    in_tensor["image"],
-                    in_tensor["T_normal_F"],
-                    in_tensor["normal_F"],
-                    diff_F_smpl / 2.0,
-                    diff_S[:, :512].unsqueeze(0).unsqueeze(0).repeat(1, 3, 1, 1),
-                ])
-                per_loop_lst.extend([
-                    in_tensor["image"],
-                    in_tensor["T_normal_B"],
-                    in_tensor["normal_B"],
-                    diff_B_smpl / 2.0,
-                    diff_S[:, 512:].unsqueeze(0).unsqueeze(0).repeat(1, 3, 1, 1),
-                ])
+                per_loop_lst.extend(
+                    [
+                        in_tensor["image"],
+                        in_tensor["T_normal_F"],
+                        in_tensor["normal_F"],
+                        diff_F_smpl / 2.0,
+                        diff_S[:, :512].unsqueeze(0).unsqueeze(0).repeat(1, 3, 1, 1),
+                    ]
+                )
+                per_loop_lst.extend(
+                    [
+                        in_tensor["image"],
+                        in_tensor["T_normal_B"],
+                        in_tensor["normal_B"],
+                        diff_B_smpl / 2.0,
+                        diff_S[:, 512:].unsqueeze(0).unsqueeze(0).repeat(1, 3, 1, 1),
+                    ]
+                )
                 per_data_lst.append(get_optim_grid_image(per_loop_lst, None, nrow=5, type="smpl"))
 
             smpl_loss.backward()
@@ -316,10 +324,13 @@ if __name__ == "__main__":
                 )
 
             per_data_lst[-1].save(
-                os.path.join(args.out_dir, cfg.name, f"png/{data['name']}_smpl.png"))
+                os.path.join(args.out_dir, cfg.name, f"png/{data['name']}_smpl.png")
+            )
 
-        norm_pred = (((in_tensor["normal_F"][0].permute(1, 2, 0) + 1.0) * 255.0 /
-                      2.0).detach().cpu().numpy().astype(np.uint8))
+        norm_pred = (
+            ((in_tensor["normal_F"][0].permute(1, 2, 0) + 1.0) * 255.0 /
+             2.0).detach().cpu().numpy().astype(np.uint8)
+        )
 
         norm_orig = unwrap(norm_pred, data)
         mask_orig = unwrap(
@@ -329,16 +340,16 @@ if __name__ == "__main__":
         )
         rgb_norm = blend_rgb_norm(data["ori_image"], norm_orig, mask_orig)
 
-        Image.fromarray(np.concatenate([data["ori_image"].astype(np.uint8), rgb_norm],
-                                       axis=1)).save(
-                                           os.path.join(args.out_dir, cfg.name,
-                                                        f"png/{data['name']}_overlap.png"))
+        Image.fromarray(
+            np.concatenate([data["ori_image"].astype(np.uint8), rgb_norm], axis=1)
+        ).save(os.path.join(args.out_dir, cfg.name, f"png/{data['name']}_overlap.png"))
 
-        smpl_obj = trimesh.Trimesh(in_tensor["smpl_verts"].detach().cpu()[0] *
-                                   torch.tensor([1.0, -1.0, 1.0]),
-                                   in_tensor['smpl_faces'].detach().cpu()[0],
-                                   process=False,
-                                   maintains_order=True)
+        smpl_obj = trimesh.Trimesh(
+            in_tensor["smpl_verts"].detach().cpu()[0] * torch.tensor([1.0, -1.0, 1.0]),
+            in_tensor['smpl_faces'].detach().cpu()[0],
+            process=False,
+            maintains_order=True
+        )
         smpl_obj.export(f"{args.out_dir}/{cfg.name}/obj/{data['name']}_smpl.obj")
 
         smpl_info = {
@@ -348,9 +359,9 @@ if __name__ == "__main__":
             'trans': optimed_trans
         }
 
-        np.save(f"{args.out_dir}/{cfg.name}/obj/{data['name']}_smpl.npy",
-                smpl_info,
-                allow_pickle=True)
+        np.save(
+            f"{args.out_dir}/{cfg.name}/obj/{data['name']}_smpl.npy", smpl_info, allow_pickle=True
+        )
 
         # ------------------------------------------------------------------------------------------------------------------
 
@@ -360,10 +371,12 @@ if __name__ == "__main__":
 
         # cloth recon
         in_tensor.update(
-            dataset.compute_vis_cmap(in_tensor["smpl_verts"][0], in_tensor["smpl_faces"][0]))
+            dataset.compute_vis_cmap(in_tensor["smpl_verts"][0], in_tensor["smpl_faces"][0])
+        )
 
         in_tensor.update(
-            {"smpl_norm": compute_normal_batch(in_tensor["smpl_verts"], in_tensor["smpl_faces"])})
+            {"smpl_norm": compute_normal_batch(in_tensor["smpl_verts"], in_tensor["smpl_faces"])}
+        )
 
         if cfg.net.prior_type == "pamir":
             in_tensor.update(
@@ -373,7 +386,8 @@ if __name__ == "__main__":
                     optimed_betas,
                     optimed_trans,
                     data["scale"],
-                ))
+                )
+            )
 
         with torch.no_grad():
             verts_pr, faces_pr, _ = model.test_single(in_tensor)
@@ -383,18 +397,21 @@ if __name__ == "__main__":
 
         # Isotropic Explicit Remeshing for better geometry topology
         verts_refine, faces_refine = remesh(
-            os.path.join(args.out_dir, cfg.name, f"obj/{data['name']}_recon.obj"), 0.5, device)
+            recon_obj, os.path.join(args.out_dir, cfg.name, f"obj/{data['name']}_remesh.obj"),
+            device
+        )
 
         # define local_affine deform verts
         mesh_pr = Meshes(verts_refine, faces_refine).to(device)
-        local_affine_model = LocalAffine(mesh_pr.verts_padded().shape[1],
-                                         mesh_pr.verts_padded().shape[0],
-                                         mesh_pr.edges_packed()).to(device)
-        optimizer_cloth = torch.optim.Adam([{
-            'params': local_affine_model.parameters()
-        }],
-                                           lr=1e-4,
-                                           amsgrad=True)
+        local_affine_model = LocalAffine(
+            mesh_pr.verts_padded().shape[1],
+            mesh_pr.verts_padded().shape[0], mesh_pr.edges_packed()
+        ).to(device)
+        optimizer_cloth = torch.optim.Adam(
+            [{
+                'params': local_affine_model.parameters()
+            }], lr=1e-4, amsgrad=True
+        )
 
         scheduler_cloth = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer_cloth,
@@ -423,15 +440,17 @@ if __name__ == "__main__":
 
                 optimizer_cloth.zero_grad()
 
-                deformed_verts, stiffness, rigid = local_affine_model(verts_refine.to(device),
-                                                                      return_stiff=True)
+                deformed_verts, stiffness, rigid = local_affine_model(
+                    verts_refine.to(device), return_stiff=True
+                )
                 mesh_pr = mesh_pr.update_padded(deformed_verts)
 
                 # losses for laplacian, edge, normal consistency
                 update_mesh_shape_prior_losses(mesh_pr, losses)
 
                 in_tensor["P_normal_F"], in_tensor["P_normal_B"] = dataset.render_normal(
-                    mesh_pr.verts_padded(), mesh_pr.faces_padded())
+                    mesh_pr.verts_padded(), mesh_pr.faces_padded()
+                )
 
                 diff_F_cloth = torch.abs(in_tensor["P_normal_F"] - in_tensor["normal_F"])
                 diff_B_cloth = torch.abs(in_tensor["P_normal_B"] - in_tensor["normal_B"])
@@ -464,18 +483,22 @@ if __name__ == "__main__":
 
                         rotate_recon_lst = dataset.render.get_rgb_image(cam_ids=[0, 1, 2, 3])
 
-                        per_loop_lst.extend([
-                            in_tensor["image"],
-                            in_tensor["P_normal_F"],
-                            in_tensor["normal_F"],
-                            diff_F_cloth / 2.0,
-                        ])
-                        per_loop_lst.extend([
-                            in_tensor["image"],
-                            in_tensor["P_normal_B"],
-                            in_tensor["normal_B"],
-                            diff_B_cloth / 2.0,
-                        ])
+                        per_loop_lst.extend(
+                            [
+                                in_tensor["image"],
+                                in_tensor["P_normal_F"],
+                                in_tensor["normal_F"],
+                                diff_F_cloth / 2.0,
+                            ]
+                        )
+                        per_loop_lst.extend(
+                            [
+                                in_tensor["image"],
+                                in_tensor["P_normal_B"],
+                                in_tensor["normal_B"],
+                                diff_B_cloth / 2.0,
+                            ]
+                        )
                         per_loop_lst.extend(rotate_recon_lst)
                         per_data_lst.append(get_optim_grid_image(per_loop_lst, None, type="cloth"))
 
@@ -494,10 +517,12 @@ if __name__ == "__main__":
                     os.path.join(args.out_dir, cfg.name, f"refinement/{data['name']}_cloth.avi"),
                 )
 
-            final = trimesh.Trimesh(mesh_pr.verts_packed().detach().squeeze(0).cpu(),
-                                    mesh_pr.faces_packed().detach().squeeze(0).cpu(),
-                                    process=False,
-                                    maintains_order=True)
+            final = trimesh.Trimesh(
+                mesh_pr.verts_packed().detach().squeeze(0).cpu(),
+                mesh_pr.faces_packed().detach().squeeze(0).cpu(),
+                process=False,
+                maintains_order=True
+            )
             final_colors = query_color(
                 mesh_pr.verts_packed().detach().squeeze(0).cpu(),
                 mesh_pr.faces_packed().detach().squeeze(0).cpu(),
@@ -535,9 +560,12 @@ if __name__ == "__main__":
             os.makedirs(os.path.join(args.out_dir, cfg.name, "clothes", "info"), exist_ok=True)
             for seg in data['segmentations']:
                 # These matrices work for PyMaf, not sure about the other hps type
-                K = np.array([[1.0000, 0.0000, 0.0000, 0.0000], [0.0000, 1.0000, 0.0000, 0.0000],
-                              [0.0000, 0.0000, -0.5000, 0.0000], [-0.0000, -0.0000, 0.5000,
-                                                                  1.0000]]).T
+                K = np.array(
+                    [
+                        [1.0000, 0.0000, 0.0000, 0.0000], [0.0000, 1.0000, 0.0000, 0.0000],
+                        [0.0000, 0.0000, -0.5000, 0.0000], [-0.0000, -0.0000, 0.5000, 1.0000]
+                    ]
+                ).T
 
                 R = np.array([[-1., 0., 0.], [0., 1., 0.], [0., 0., -1.]])
 
@@ -555,12 +583,15 @@ if __name__ == "__main__":
 
                     file_id = f"{data['name']}_{cloth_type}"
                     with open(
-                            os.path.join(args.out_dir, cfg.name, "clothes", "info",
-                                         f"{file_id}_info.pkl"), 'wb') as fp:
+                        os.path.join(
+                            args.out_dir, cfg.name, "clothes", "info", f"{file_id}_info.pkl"
+                        ), 'wb'
+                    ) as fp:
                         pickle.dump(cloth_info, fp)
 
                     clothing_obj.export(
-                        os.path.join(args.out_dir, cfg.name, "clothes", f"{file_id}.obj"))
+                        os.path.join(args.out_dir, cfg.name, "clothes", f"{file_id}.obj")
+                    )
                 else:
                     print(
                         f"Unable to extract clothing of type {seg['type']} from image {data['name']}"

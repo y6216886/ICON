@@ -23,7 +23,6 @@ import pytorch_lightning as pl
 
 
 class NormalModule(pl.LightningDataModule):
-
     def __init__(self, cfg):
         super(NormalModule, self).__init__()
         self.cfg = cfg
@@ -49,22 +48,21 @@ class NormalModule(pl.LightningDataModule):
         if stage == 'fit' or stage is None:
             self.train_dataset = NormalDataset(cfg=self.cfg, split="train")
             self.val_dataset = NormalDataset(cfg=self.cfg, split="val")
-            self.data_size = {
-                'train': len(self.train_dataset),
-                'val': len(self.val_dataset)
-            }
+            self.data_size = {'train': len(self.train_dataset), 'val': len(self.val_dataset)}
 
         if stage == 'test' or stage is None:
             self.test_dataset = NormalDataset(cfg=self.cfg, split="test")
 
     def train_dataloader(self):
 
-        train_data_loader = DataLoader(self.train_dataset,
-                                       batch_size=self.batch_size,
-                                       shuffle=not self.overfit,
-                                       num_workers=self.cfg.num_threads,
-                                       pin_memory=True,
-                                       worker_init_fn=self.worker_init_fn)
+        train_data_loader = DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=not self.overfit,
+            num_workers=self.cfg.num_threads,
+            pin_memory=True,
+            worker_init_fn=self.worker_init_fn
+        )
 
         return train_data_loader
 
@@ -75,20 +73,24 @@ class NormalModule(pl.LightningDataModule):
         else:
             current_dataset = self.val_dataset
 
-        val_data_loader = DataLoader(current_dataset,
-                                     batch_size=self.batch_size,
-                                     shuffle=False,
-                                     num_workers=self.cfg.num_threads,
-                                     pin_memory=True)
+        val_data_loader = DataLoader(
+            current_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.cfg.num_threads,
+            pin_memory=True
+        )
 
         return val_data_loader
 
     def test_dataloader(self):
 
-        test_data_loader = DataLoader(self.test_dataset,
-                                      batch_size=1,
-                                      shuffle=False,
-                                      num_workers=self.cfg.num_threads,
-                                      pin_memory=True)
+        test_data_loader = DataLoader(
+            self.test_dataset,
+            batch_size=1,
+            shuffle=False,
+            num_workers=self.cfg.num_threads,
+            pin_memory=True
+        )
 
         return test_data_loader

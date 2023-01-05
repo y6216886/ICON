@@ -40,11 +40,9 @@ def auto_lr_finder(model, trainer):
     model.hparams.lr = new_lr
 
 
-def load_pretrained_model(model,
-                          state_dict,
-                          strict=False,
-                          overwrite_shape_mismatch=True,
-                          remove_lightning=False):
+def load_pretrained_model(
+    model, state_dict, strict=False, overwrite_shape_mismatch=True, remove_lightning=False
+):
     if remove_lightning:
         logger.warning(f'Removing "model." keyword from state_dict keys..')
         pretrained_keys = state_dict.keys()
@@ -76,8 +74,8 @@ def load_pretrained_model(model,
 
                         if pk == 'model.head.fc1.weight':
                             updated_pretrained_state_dict[pk] = torch.cat(
-                                [state_dict[pk], state_dict[pk][:, -7:]],
-                                dim=-1)
+                                [state_dict[pk], state_dict[pk][:, -7:]], dim=-1
+                            )
                             logger.warning(
                                 f'Updated \"{pk}\" param to {updated_pretrained_state_dict[pk].shape} '
                             )
@@ -145,7 +143,6 @@ def parse_datasets_ratios(datasets_and_ratios):
 
 
 class CheckBatchGradient(pl.Callback):
-
     def on_train_start(self, trainer, model):
         n = 0
 
@@ -162,9 +159,7 @@ class CheckBatchGradient(pl.Callback):
             zero_grad_inds.pop(n)
 
             if example_input.grad[zero_grad_inds].abs().sum().item() > 0:
-                raise RuntimeError(
-                    f'Model mixes data across the batch dimension for {key} output!'
-                )
+                raise RuntimeError(f'Model mixes data across the batch dimension for {key} output!')
 
             break
 
@@ -181,8 +176,7 @@ def set_seed(seed_value):
 def add_init_smpl_params_to_dict(state_dict):
     mean_params = np.load(SMPL_MEAN_PARAMS)
     init_pose = torch.from_numpy(mean_params['pose'][:]).unsqueeze(0)
-    init_shape = torch.from_numpy(
-        mean_params['shape'][:].astype('float32')).unsqueeze(0)
+    init_shape = torch.from_numpy(mean_params['shape'][:].astype('float32')).unsqueeze(0)
     init_cam = torch.from_numpy(mean_params['cam']).unsqueeze(0)
     state_dict['model.head.init_pose'] = init_pose
     state_dict['model.head.init_shape'] = init_shape

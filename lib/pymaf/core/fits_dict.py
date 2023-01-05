@@ -16,34 +16,28 @@ logger = logging.getLogger(__name__)
 
 class FitsDict():
     """ Dictionary keeping track of the best fit per image in the training set """
-
     def __init__(self, options, train_dataset):
         self.options = options
         self.train_dataset = train_dataset
         self.fits_dict = {}
         self.valid_fit_state = {}
         # array used to flip SMPL pose parameters
-        self.flipped_parts = torch.tensor(constants.SMPL_POSE_FLIP_PERM,
-                                          dtype=torch.int64)
+        self.flipped_parts = torch.tensor(constants.SMPL_POSE_FLIP_PERM, dtype=torch.int64)
         # Load dictionary state
         for ds_name, ds in train_dataset.dataset_dict.items():
             if ds_name in ['h36m']:
-                dict_file = os.path.join(path_config.FINAL_FITS_DIR,
-                                         ds_name + '.npy')
+                dict_file = os.path.join(path_config.FINAL_FITS_DIR, ds_name + '.npy')
                 self.fits_dict[ds_name] = torch.from_numpy(np.load(dict_file))
-                self.valid_fit_state[ds_name] = torch.ones(len(
-                    self.fits_dict[ds_name]),
-                                                           dtype=torch.uint8)
+                self.valid_fit_state[ds_name] = torch.ones(
+                    len(self.fits_dict[ds_name]), dtype=torch.uint8
+                )
             else:
-                dict_file = os.path.join(path_config.FINAL_FITS_DIR,
-                                         ds_name + '.npz')
+                dict_file = os.path.join(path_config.FINAL_FITS_DIR, ds_name + '.npz')
                 fits_dict = np.load(dict_file)
                 opt_pose = torch.from_numpy(fits_dict['pose'])
                 opt_betas = torch.from_numpy(fits_dict['betas'])
-                opt_valid_fit = torch.from_numpy(fits_dict['valid_fit']).to(
-                    torch.uint8)
-                self.fits_dict[ds_name] = torch.cat([opt_pose, opt_betas],
-                                                    dim=1)
+                opt_valid_fit = torch.from_numpy(fits_dict['valid_fit']).to(torch.uint8)
+                self.fits_dict[ds_name] = torch.cat([opt_pose, opt_betas], dim=1)
                 self.valid_fit_state[ds_name] = opt_valid_fit
 
         if not options.single_dataset:
@@ -56,8 +50,7 @@ class FitsDict():
     def save(self):
         """ Save dictionary state to disk """
         for ds_name in self.train_dataset.dataset_dict.keys():
-            dict_file = os.path.join(self.options.checkpoint_dir,
-                                     ds_name + '_fits.npy')
+            dict_file = os.path.join(self.options.checkpoint_dir, ds_name + '_fits.npy')
             np.save(dict_file, self.fits_dict[ds_name].cpu().numpy())
 
     def __getitem__(self, x):
@@ -114,11 +107,13 @@ class FitsDict():
         zeros = torch.zeros_like(cos)
         r3 = torch.zeros(cos.shape[0], 1, 3, device=cos.device)
         r3[:, 0, -1] = 1
-        R = torch.cat([
-            torch.stack([cos, -sin, zeros], dim=-1).unsqueeze(1),
-            torch.stack([sin, cos, zeros], dim=-1).unsqueeze(1), r3
-        ],
-                      dim=1)
+        R = torch.cat(
+            [
+                torch.stack([cos, -sin, zeros], dim=-1).unsqueeze(1),
+                torch.stack([sin, cos, zeros], dim=-1).unsqueeze(1), r3
+            ],
+            dim=1
+        )
         global_pose = pose[:, :3]
         global_pose_rotmat = angle_axis_to_rotation_matrix(global_pose)
         global_pose_rotmat_3b3 = global_pose_rotmat[:, :3, :3]

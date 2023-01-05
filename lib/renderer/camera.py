@@ -21,7 +21,6 @@ from .glm import ortho
 
 
 class Camera:
-
     def __init__(self, width=1600, height=1200):
         # Focal Length
         # equivalent 50mm
@@ -167,11 +166,11 @@ class Camera:
             ndc = ortho(0, self.width, 0, self.height, z_near, z_far)
             perspective = np.matmul(ndc, projective)
         else:
-            perspective = ortho(-self.width * self.ortho_ratio / 2,
-                                self.width * self.ortho_ratio / 2,
-                                -self.height * self.ortho_ratio / 2,
-                                self.height * self.ortho_ratio / 2, z_near,
-                                z_far)
+            perspective = ortho(
+                -self.width * self.ortho_ratio / 2, self.width * self.ortho_ratio / 2,
+                -self.height * self.ortho_ratio / 2, self.height * self.ortho_ratio / 2, z_near,
+                z_far
+            )
 
         return perspective, model_view
 

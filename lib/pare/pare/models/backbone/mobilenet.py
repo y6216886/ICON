@@ -4,8 +4,7 @@ from torch.hub import load_state_dict_from_url
 __all__ = ['MobileNetV2', 'mobilenet_v2']
 
 model_urls = {
-    'mobilenet_v2':
-    'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth',
+    'mobilenet_v2': 'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth',
 }
 
 
@@ -30,30 +29,18 @@ def _make_divisible(v, divisor, min_value=None):
 
 
 class ConvBNReLU(nn.Sequential):
-
-    def __init__(self,
-                 in_planes,
-                 out_planes,
-                 kernel_size=3,
-                 stride=1,
-                 groups=1,
-                 norm_layer=None):
+    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, groups=1, norm_layer=None):
         padding = (kernel_size - 1) // 2
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         super(ConvBNReLU, self).__init__(
-            nn.Conv2d(in_planes,
-                      out_planes,
-                      kernel_size,
-                      stride,
-                      padding,
-                      groups=groups,
-                      bias=False), norm_layer(out_planes),
-            nn.ReLU6(inplace=True))
+            nn.Conv2d(
+                in_planes, out_planes, kernel_size, stride, padding, groups=groups, bias=False
+            ), norm_layer(out_planes), nn.ReLU6(inplace=True)
+        )
 
 
 class InvertedResidual(nn.Module):
-
     def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None):
         super(InvertedResidual, self).__init__()
         self.stride = stride
@@ -68,22 +55,18 @@ class InvertedResidual(nn.Module):
         layers = []
         if expand_ratio != 1:
             # pw
-            layers.append(
-                ConvBNReLU(inp,
-                           hidden_dim,
-                           kernel_size=1,
-                           norm_layer=norm_layer))
-        layers.extend([
-            # dw
-            ConvBNReLU(hidden_dim,
-                       hidden_dim,
-                       stride=stride,
-                       groups=hidden_dim,
-                       norm_layer=norm_layer),
-            # pw-linear
-            nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
-            norm_layer(oup),
-        ])
+            layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer))
+        layers.extend(
+            [
+        # dw
+                ConvBNReLU(
+                    hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer
+                ),
+        # pw-linear
+                nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+                norm_layer(oup),
+            ]
+        )
         self.conv = nn.Sequential(*layers)
 
     def forward(self, x):
@@ -94,14 +77,15 @@ class InvertedResidual(nn.Module):
 
 
 class MobileNetV2(nn.Module):
-
-    def __init__(self,
-                 num_classes=1000,
-                 width_mult=1.0,
-                 inverted_residual_setting=None,
-                 round_nearest=8,
-                 block=None,
-                 norm_layer=None):
+    def __init__(
+        self,
+        num_classes=1000,
+        width_mult=1.0,
+        inverted_residual_setting=None,
+        round_nearest=8,
+        block=None,
+        norm_layer=None
+    ):
         """
         MobileNet V2 main class
 
@@ -128,7 +112,7 @@ class MobileNetV2(nn.Module):
 
         if inverted_residual_setting is None:
             inverted_residual_setting = [
-                # t, c, n, s
+            # t, c, n, s
                 [1, 16, 1, 1],
                 [6, 24, 2, 2],
                 [6, 32, 3, 2],
@@ -139,38 +123,35 @@ class MobileNetV2(nn.Module):
             ]
 
         # only check the first element, assuming user knows t,c,n,s are required
-        if len(inverted_residual_setting) == 0 or len(
-                inverted_residual_setting[0]) != 4:
-            raise ValueError("inverted_residual_setting should be non-empty "
-                             "or a 4-element list, got {}".format(
-                                 inverted_residual_setting))
+        if len(inverted_residual_setting) == 0 or len(inverted_residual_setting[0]) != 4:
+            raise ValueError(
+                "inverted_residual_setting should be non-empty "
+                "or a 4-element list, got {}".format(inverted_residual_setting)
+            )
 
         # building first layer
-        input_channel = _make_divisible(input_channel * width_mult,
-                                        round_nearest)
-        self.last_channel = _make_divisible(
-            last_channel * max(1.0, width_mult), round_nearest)
-        features = [
-            ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)
-        ]
+        input_channel = _make_divisible(input_channel * width_mult, round_nearest)
+        self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
+        features = [ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)]
         # building inverted residual blocks
         for t, c, n, s in inverted_residual_setting:
             output_channel = _make_divisible(c * width_mult, round_nearest)
             for i in range(n):
                 stride = s if i == 0 else 1
                 features.append(
-                    block(input_channel,
-                          output_channel,
-                          stride,
-                          expand_ratio=t,
-                          norm_layer=norm_layer))
+                    block(
+                        input_channel,
+                        output_channel,
+                        stride,
+                        expand_ratio=t,
+                        norm_layer=norm_layer
+                    )
+                )
                 input_channel = output_channel
         # building last several layers
         features.append(
-            ConvBNReLU(input_channel,
-                       self.last_channel,
-                       kernel_size=1,
-                       norm_layer=norm_layer))
+            ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer)
+        )
         # make it nn.Sequential
         self.features = nn.Sequential(*features)
 
@@ -217,7 +198,6 @@ def mobilenet_v2(pretrained=False, progress=True, **kwargs):
     """
     model = MobileNetV2(**kwargs)
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls['mobilenet_v2'],
-                                              progress=progress)
+        state_dict = load_state_dict_from_url(model_urls['mobilenet_v2'], progress=progress)
         model.load_state_dict(state_dict, strict=False)
     return model

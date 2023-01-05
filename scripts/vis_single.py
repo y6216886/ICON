@@ -26,10 +26,7 @@ dataset = save_folder.split("/")[-1].split("_")[0]
 mesh_file = os.path.join(f'./data/{dataset}/scans/{subject}', f'{subject}.obj')
 fit_file = f'./data/{dataset}/smplx/{subject}.pkl'
 
-rescale_fitted_body, _ = load_fit_body(fit_file,
-                                       180.0,
-                                       smpl_type='smplx',
-                                       smpl_gender='male')
+rescale_fitted_body, _ = load_fit_body(fit_file, 180.0, smpl_type='smplx', smpl_gender='male')
 
 smpl_verts = torch.from_numpy(rescale_fitted_body.vertices).cuda().float()
 smpl_faces = torch.from_numpy(rescale_fitted_body.faces).cuda().long()
@@ -49,9 +46,9 @@ for y in range(0, 360, 360 // rotation):
         smpl_vis = get_visibility(xy, z, smpl_faces)
 
         if args.mode == 'debug':
-            mesh = trimesh.Trimesh(smpl_verts.cpu().numpy(),
-                                   smpl_faces.cpu().numpy(),
-                                   process=False)
+            mesh = trimesh.Trimesh(
+                smpl_verts.cpu().numpy(), smpl_faces.cpu().numpy(), process=False
+            )
             mesh.visual.vertex_colors = torch.tile(smpl_vis, (1, 3)).numpy()
             mesh.export(vis_file.replace("pt", "obj"))
 

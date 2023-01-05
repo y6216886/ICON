@@ -22,6 +22,7 @@ pytorch_lightning==1.2.5
 PyMCubes
 kornia
 chumpy
+open3d
 tinyobjloader==2.0.0rc7
 cython==0.29.20
 opencv-python
@@ -30,7 +31,6 @@ scikit-learn
 ipykernel==5.3.4
 ipywidgets==7.6.5
 protobuf==3.20.0
-pymeshlab
 dataclasses>=0.6
 numpy==1.22.4
 https://download.is.tue.mpg.de/icon/colab/pytorch3d-0.7.0-cp38-cp38-linux_x86_64.whl

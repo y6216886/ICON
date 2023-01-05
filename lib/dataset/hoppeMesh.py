@@ -38,8 +38,7 @@ def save_obj_mesh_with_color(mesh_path, verts, faces, colors):
 
     for idx, v in enumerate(verts):
         c = colors[idx]
-        file.write('v %.4f %.4f %.4f %.4f %.4f %.4f\n' %
-                   (v[0], v[1], v[2], c[0], c[1], c[2]))
+        file.write('v %.4f %.4f %.4f %.4f %.4f %.4f\n' % (v[0], v[1], v[2], c[0], c[1], c[2]))
     for f in faces:
         f_plus = f + 1
         file.write('f %d %d %d\n' % (f_plus[0], f_plus[1], f_plus[2]))
@@ -65,12 +64,12 @@ def save_ply(mesh_path, points, rgb):
         header=(
             'ply\nformat ascii 1.0\nelement vertex {:d}\n' +
             'property float x\nproperty float y\nproperty float z\n' +
-            'property uchar red\nproperty uchar green\nproperty uchar blue\n' +
-            'end_header').format(points.shape[0]))
+            'property uchar red\nproperty uchar green\nproperty uchar blue\n' + 'end_header'
+        ).format(points.shape[0])
+    )
 
 
 class HoppeMesh:
-
     def __init__(self, verts, faces, vert_normals, face_normals):
         '''
         The HoppeSDF calculates signed distance towards a predefined oriented point cloud
@@ -79,10 +78,10 @@ class HoppeMesh:
         :param points: pts
         :param normals: normals
         '''
-        self.verts = verts  # [n, 3]
-        self.faces = faces  # [m, 3]
-        self.vert_normals = vert_normals  # [n, 3]
-        self.face_normals = face_normals  # [m, 3]
+        self.verts = verts    # [n, 3]
+        self.faces = faces    # [m, 3]
+        self.vert_normals = vert_normals    # [n, 3]
+        self.face_normals = face_normals    # [m, 3]
 
         self.kd_tree = cKDTree(self.verts)
         self.len = len(self.verts)
@@ -98,14 +97,12 @@ class HoppeMesh:
 
     def contains(self, points):
 
-        labels = trimesh.Trimesh(vertices=self.verts,
-                                 faces=self.faces).contains(points)
+        labels = trimesh.Trimesh(vertices=self.verts, faces=self.faces).contains(points)
         return labels
 
     def export(self, path):
         if self.colors is not None:
-            save_obj_mesh_with_color(path, self.verts, self.faces,
-                                     self.colors[:, 0:3] / 255.0)
+            save_obj_mesh_with_color(path, self.verts, self.faces, self.colors[:, 0:3] / 255.0)
         else:
             save_obj_mesh(path, self.verts, self.faces)
 
@@ -113,4 +110,4 @@ class HoppeMesh:
         save_ply(path, self.verts, self.colors[:, 0:3] / 255.0)
 
     def triangles(self):
-        return self.verts[self.faces]  # [n, 3, 3]
+        return self.verts[self.faces]    # [n, 3, 3]

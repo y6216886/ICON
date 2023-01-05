@@ -11,7 +11,6 @@ import torch.sparse as sp
 
 # reference: https://github.com/wuhaozhe/pytorch-nicp
 class LocalAffine(nn.Module):
-
     def __init__(self, num_points, batch_size=1, edges=None):
         '''
             specify the number of points, the number of points should be constant across the batch
@@ -22,11 +21,13 @@ class LocalAffine(nn.Module):
         '''
         super(LocalAffine, self).__init__()
         self.A = nn.Parameter(
-            torch.eye(3).unsqueeze(0).unsqueeze(0).repeat(
-                batch_size, num_points, 1, 1))
+            torch.eye(3).unsqueeze(0).unsqueeze(0).repeat(batch_size, num_points, 1, 1)
+        )
         self.b = nn.Parameter(
             torch.zeros(3).unsqueeze(0).unsqueeze(0).unsqueeze(3).repeat(
-                batch_size, num_points, 1, 1))
+                batch_size, num_points, 1, 1
+            )
+        )
         self.edges = edges
         self.num_points = num_points
 

@@ -5,13 +5,12 @@ import torch.nn.functional as F
 
 
 class ResnetEncoder(nn.Module):
-
     def __init__(self, append_layers=None):
         super(ResnetEncoder, self).__init__()
         from . import resnet
         # feature_size = 2048
         self.feature_dim = 2048
-        self.encoder = resnet.load_ResNet50Model()  # out: 2048
+        self.encoder = resnet.load_ResNet50Model()    # out: 2048
         # regressor
         self.append_layers = append_layers
         # for normalize input images
@@ -31,7 +30,6 @@ class ResnetEncoder(nn.Module):
 
 
 class MLP(nn.Module):
-
     def __init__(self, channels=[2048, 1024, 1], last_op=None):
         super(MLP, self).__init__()
         layers = []
@@ -51,12 +49,11 @@ class MLP(nn.Module):
 
 
 class HRNEncoder(nn.Module):
-
     def __init__(self, append_layers=None):
         super(HRNEncoder, self).__init__()
         from . import hrnet
         self.feature_dim = 2048
-        self.encoder = hrnet.load_HRNet(pretrained=True)  # out: 2048
+        self.encoder = hrnet.load_HRNet(pretrained=True)    # out: 2048
         # regressor
         self.append_layers = append_layers
         # for normalize input images

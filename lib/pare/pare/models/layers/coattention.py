@@ -22,11 +22,10 @@ from ..backbone.resnet import conv1x1, conv3x3
 
 
 class CoAttention(nn.Module):
-
     def __init__(
-            self,
-            n_channel,
-            final_conv='simple',  # 'double_1', 'double_3', 'single_1', 'single_3', 'simple'
+        self,
+        n_channel,
+        final_conv='simple',    # 'double_1', 'double_3', 'single_1', 'single_3', 'simple'
     ):
         super(CoAttention, self).__init__()
         self.linear_e = nn.Linear(n_channel, n_channel, bias=False)
@@ -92,12 +91,11 @@ class CoAttention(nn.Module):
         b, c, h, w = input_1.shape
         exemplar, query = input_1, input_2
 
-        exemplar_flat = exemplar.reshape(-1, c, h * w)  # N,C,H*W
+        exemplar_flat = exemplar.reshape(-1, c, h * w)    # N,C,H*W
         query_flat = query.reshape(-1, c, h * w)
 
         # Compute coattention scores, S in the paper
-        exemplar_t = torch.transpose(exemplar_flat, 1,
-                                     2).contiguous()  # batch size x dim x num
+        exemplar_t = torch.transpose(exemplar_flat, 1, 2).contiguous()    # batch size x dim x num
         exemplar_corr = self.linear_e(exemplar_t)
         A = torch.bmm(exemplar_corr, query_flat)
         A1 = F.softmax(A.clone(), dim=1)

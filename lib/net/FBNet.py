@@ -44,38 +44,41 @@ def get_norm_layer(norm_type='instance'):
     elif norm_type == 'instance':
         norm_layer = functools.partial(nn.InstanceNorm2d, affine=False)
     else:
-        raise NotImplementedError('normalization layer [%s] is not found' %
-                                  norm_type)
+        raise NotImplementedError('normalization layer [%s] is not found' % norm_type)
     return norm_layer
 
 
-def define_G(input_nc,
-             output_nc,
-             ngf,
-             netG,
-             n_downsample_global=3,
-             n_blocks_global=9,
-             n_local_enhancers=1,
-             n_blocks_local=3,
-             norm='instance',
-             gpu_ids=[],
-             last_op=nn.Tanh()):
+def define_G(
+    input_nc,
+    output_nc,
+    ngf,
+    netG,
+    n_downsample_global=3,
+    n_blocks_global=9,
+    n_local_enhancers=1,
+    n_blocks_local=3,
+    norm='instance',
+    gpu_ids=[],
+    last_op=nn.Tanh()
+):
     norm_layer = get_norm_layer(norm_type=norm)
     if netG == 'global':
-        netG = GlobalGenerator(input_nc,
-                               output_nc,
-                               ngf,
-                               n_downsample_global,
-                               n_blocks_global,
-                               norm_layer,
-                               last_op=last_op)
+        netG = GlobalGenerator(
+            input_nc,
+            output_nc,
+            ngf,
+            n_downsample_global,
+            n_blocks_global,
+            norm_layer,
+            last_op=last_op
+        )
     elif netG == 'local':
-        netG = LocalEnhancer(input_nc, output_nc, ngf, n_downsample_global,
-                             n_blocks_global, n_local_enhancers,
-                             n_blocks_local, norm_layer)
+        netG = LocalEnhancer(
+            input_nc, output_nc, ngf, n_downsample_global, n_blocks_global, n_local_enhancers,
+            n_blocks_local, norm_layer
+        )
     elif netG == 'encoder':
-        netG = Encoder(input_nc, output_nc, ngf, n_downsample_global,
-                       norm_layer)
+        netG = Encoder(input_nc, output_nc, ngf, n_downsample_global, norm_layer)
     else:
         raise ('generator not implemented!')
     # print(netG)
@@ -100,27 +103,29 @@ def print_network(net):
 # Generator
 ##############################################################################
 class LocalEnhancer(pl.LightningModule):
-
-    def __init__(self,
-                 input_nc,
-                 output_nc,
-                 ngf=32,
-                 n_downsample_global=3,
-                 n_blocks_global=9,
-                 n_local_enhancers=1,
-                 n_blocks_local=3,
-                 norm_layer=nn.BatchNorm2d,
-                 padding_type='reflect'):
+    def __init__(
+        self,
+        input_nc,
+        output_nc,
+        ngf=32,
+        n_downsample_global=3,
+        n_blocks_global=9,
+        n_local_enhancers=1,
+        n_blocks_local=3,
+        norm_layer=nn.BatchNorm2d,
+        padding_type='reflect'
+    ):
         super(LocalEnhancer, self).__init__()
         self.n_local_enhancers = n_local_enhancers
 
         ###### global generator model #####
         ngf_global = ngf * (2**n_local_enhancers)
-        model_global = GlobalGenerator(input_nc, output_nc, ngf_global,
-                                       n_downsample_global, n_blocks_global,
-                                       norm_layer).model
-        model_global = [model_global[i] for i in range(len(model_global) - 3)
-                        ]  # get rid of final convolution layers
+        model_global = GlobalGenerator(
+            input_nc, output_nc, ngf_global, n_downsample_global, n_blocks_global, norm_layer
+        ).model
+        model_global = [
+            model_global[i] for i in range(len(model_global) - 3)
+        ]    # get rid of final convolution layers
         self.model = nn.Sequential(*model_global)
 
         ###### local enhancer layers #####
@@ -132,11 +137,7 @@ class LocalEnhancer(pl.LightningModule):
                 nn.Conv2d(input_nc, ngf_global, kernel_size=7, padding=0),
                 norm_layer(ngf_global),
                 nn.ReLU(True),
-                nn.Conv2d(ngf_global,
-                          ngf_global * 2,
-                          kernel_size=3,
-                          stride=2,
-                          padding=1),
+                nn.Conv2d(ngf_global, ngf_global * 2, kernel_size=3, stride=2, padding=1),
                 norm_layer(ngf_global * 2),
                 nn.ReLU(True)
             ]
@@ -144,19 +145,19 @@ class LocalEnhancer(pl.LightningModule):
             model_upsample = []
             for i in range(n_blocks_local):
                 model_upsample += [
-                    ResnetBlock(ngf_global * 2,
-                                padding_type=padding_type,
-                                norm_layer=norm_layer)
+                    ResnetBlock(ngf_global * 2, padding_type=padding_type, norm_layer=norm_layer)
                 ]
 
             # upsample
             model_upsample += [
-                nn.ConvTranspose2d(ngf_global * 2,
-                                   ngf_global,
-                                   kernel_size=3,
-                                   stride=2,
-                                   padding=1,
-                                   output_padding=1),
+                nn.ConvTranspose2d(
+                    ngf_global * 2,
+                    ngf_global,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                    output_padding=1
+                ),
                 norm_layer(ngf_global),
                 nn.ReLU(True)
             ]
@@ -169,15 +170,10 @@ class LocalEnhancer(pl.LightningModule):
                     nn.Tanh()
                 ]
 
-            setattr(self, 'model' + str(n) + '_1',
-                    nn.Sequential(*model_downsample))
-            setattr(self, 'model' + str(n) + '_2',
-                    nn.Sequential(*model_upsample))
+            setattr(self, 'model' + str(n) + '_1', nn.Sequential(*model_downsample))
+            setattr(self, 'model' + str(n) + '_2', nn.Sequential(*model_upsample))
 
-        self.downsample = nn.AvgPool2d(3,
-                                       stride=2,
-                                       padding=[1, 1],
-                                       count_include_pad=False)
+        self.downsample = nn.AvgPool2d(3, stride=2, padding=[1, 1], count_include_pad=False)
 
     def forward(self, input):
         # create input pyramid
@@ -189,28 +185,25 @@ class LocalEnhancer(pl.LightningModule):
         output_prev = self.model(input_downsampled[-1])
         # build up one layer at a time
         for n_local_enhancers in range(1, self.n_local_enhancers + 1):
-            model_downsample = getattr(self,
-                                       'model' + str(n_local_enhancers) + '_1')
-            model_upsample = getattr(self,
-                                     'model' + str(n_local_enhancers) + '_2')
-            input_i = input_downsampled[self.n_local_enhancers -
-                                        n_local_enhancers]
-            output_prev = model_upsample(
-                model_downsample(input_i) + output_prev)
+            model_downsample = getattr(self, 'model' + str(n_local_enhancers) + '_1')
+            model_upsample = getattr(self, 'model' + str(n_local_enhancers) + '_2')
+            input_i = input_downsampled[self.n_local_enhancers - n_local_enhancers]
+            output_prev = model_upsample(model_downsample(input_i) + output_prev)
         return output_prev
 
 
 class GlobalGenerator(pl.LightningModule):
-
-    def __init__(self,
-                 input_nc,
-                 output_nc,
-                 ngf=64,
-                 n_downsampling=3,
-                 n_blocks=9,
-                 norm_layer=nn.BatchNorm2d,
-                 padding_type='reflect',
-                 last_op=nn.Tanh()):
+    def __init__(
+        self,
+        input_nc,
+        output_nc,
+        ngf=64,
+        n_downsampling=3,
+        n_blocks=9,
+        norm_layer=nn.BatchNorm2d,
+        padding_type='reflect',
+        last_op=nn.Tanh()
+    ):
         assert (n_blocks >= 0)
         super(GlobalGenerator, self).__init__()
         activation = nn.ReLU(True)
@@ -224,11 +217,7 @@ class GlobalGenerator(pl.LightningModule):
         for i in range(n_downsampling):
             mult = 2**i
             model += [
-                nn.Conv2d(ngf * mult,
-                          ngf * mult * 2,
-                          kernel_size=3,
-                          stride=2,
-                          padding=1),
+                nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1),
                 norm_layer(ngf * mult * 2), activation
             ]
 
@@ -236,28 +225,29 @@ class GlobalGenerator(pl.LightningModule):
         mult = 2**n_downsampling
         for i in range(n_blocks):
             model += [
-                ResnetBlock(ngf * mult,
-                            padding_type=padding_type,
-                            activation=activation,
-                            norm_layer=norm_layer)
+                ResnetBlock(
+                    ngf * mult,
+                    padding_type=padding_type,
+                    activation=activation,
+                    norm_layer=norm_layer
+                )
             ]
 
         # upsample
         for i in range(n_downsampling):
             mult = 2**(n_downsampling - i)
             model += [
-                nn.ConvTranspose2d(ngf * mult,
-                                   int(ngf * mult / 2),
-                                   kernel_size=3,
-                                   stride=2,
-                                   padding=1,
-                                   output_padding=1),
+                nn.ConvTranspose2d(
+                    ngf * mult,
+                    int(ngf * mult / 2),
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                    output_padding=1
+                ),
                 norm_layer(int(ngf * mult / 2)), activation
             ]
-        model += [
-            nn.ReflectionPad2d(3),
-            nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0)
-        ]
+        model += [nn.ReflectionPad2d(3), nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0)]
         if last_op is not None:
             model += [last_op]
         self.model = nn.Sequential(*model)
@@ -268,19 +258,13 @@ class GlobalGenerator(pl.LightningModule):
 
 # Define a resnet block
 class ResnetBlock(pl.LightningModule):
-
-    def __init__(self,
-                 dim,
-                 padding_type,
-                 norm_layer,
-                 activation=nn.ReLU(True),
-                 use_dropout=False):
+    def __init__(self, dim, padding_type, norm_layer, activation=nn.ReLU(True), use_dropout=False):
         super(ResnetBlock, self).__init__()
-        self.conv_block = self.build_conv_block(dim, padding_type, norm_layer,
-                                                activation, use_dropout)
+        self.conv_block = self.build_conv_block(
+            dim, padding_type, norm_layer, activation, use_dropout
+        )
 
-    def build_conv_block(self, dim, padding_type, norm_layer, activation,
-                         use_dropout):
+    def build_conv_block(self, dim, padding_type, norm_layer, activation, use_dropout):
         conv_block = []
         p = 0
         if padding_type == 'reflect':
@@ -290,13 +274,9 @@ class ResnetBlock(pl.LightningModule):
         elif padding_type == 'zero':
             p = 1
         else:
-            raise NotImplementedError('padding [%s] is not implemented' %
-                                      padding_type)
+            raise NotImplementedError('padding [%s] is not implemented' % padding_type)
 
-        conv_block += [
-            nn.Conv2d(dim, dim, kernel_size=3, padding=p),
-            norm_layer(dim), activation
-        ]
+        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p), norm_layer(dim), activation]
         if use_dropout:
             conv_block += [nn.Dropout(0.5)]
 
@@ -308,12 +288,8 @@ class ResnetBlock(pl.LightningModule):
         elif padding_type == 'zero':
             p = 1
         else:
-            raise NotImplementedError('padding [%s] is not implemented' %
-                                      padding_type)
-        conv_block += [
-            nn.Conv2d(dim, dim, kernel_size=3, padding=p),
-            norm_layer(dim)
-        ]
+            raise NotImplementedError('padding [%s] is not implemented' % padding_type)
+        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p), norm_layer(dim)]
 
         return nn.Sequential(*conv_block)
 
@@ -323,13 +299,7 @@ class ResnetBlock(pl.LightningModule):
 
 
 class Encoder(pl.LightningModule):
-
-    def __init__(self,
-                 input_nc,
-                 output_nc,
-                 ngf=32,
-                 n_downsampling=4,
-                 norm_layer=nn.BatchNorm2d):
+    def __init__(self, input_nc, output_nc, ngf=32, n_downsampling=4, norm_layer=nn.BatchNorm2d):
         super(Encoder, self).__init__()
         self.output_nc = output_nc
 
@@ -343,11 +313,7 @@ class Encoder(pl.LightningModule):
         for i in range(n_downsampling):
             mult = 2**i
             model += [
-                nn.Conv2d(ngf * mult,
-                          ngf * mult * 2,
-                          kernel_size=3,
-                          stride=2,
-                          padding=1),
+                nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1),
                 norm_layer(ngf * mult * 2),
                 nn.ReLU(True)
             ]
@@ -356,12 +322,14 @@ class Encoder(pl.LightningModule):
         for i in range(n_downsampling):
             mult = 2**(n_downsampling - i)
             model += [
-                nn.ConvTranspose2d(ngf * mult,
-                                   int(ngf * mult / 2),
-                                   kernel_size=3,
-                                   stride=2,
-                                   padding=1,
-                                   output_padding=1),
+                nn.ConvTranspose2d(
+                    ngf * mult,
+                    int(ngf * mult / 2),
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                    output_padding=1
+                ),
                 norm_layer(int(ngf * mult / 2)),
                 nn.ReLU(True)
             ]
@@ -381,11 +349,11 @@ class Encoder(pl.LightningModule):
         inst_list = np.unique(inst.cpu().numpy().astype(int))
         for i in inst_list:
             for b in range(input.size()[0]):
-                indices = (inst[b:b + 1] == int(i)).nonzero()  # n x 4
+                indices = (inst[b:b + 1] == int(i)).nonzero()    # n x 4
                 for j in range(self.output_nc):
-                    output_ins = outputs[indices[:, 0] + b, indices[:, 1] + j,
-                                         indices[:, 2], indices[:, 3]]
+                    output_ins = outputs[indices[:, 0] + b, indices[:, 1] + j, indices[:, 2],
+                                         indices[:, 3]]
                     mean_feat = torch.mean(output_ins).expand_as(output_ins)
-                    outputs_mean[indices[:, 0] + b, indices[:, 1] + j,
-                                 indices[:, 2], indices[:, 3]] = mean_feat
+                    outputs_mean[indices[:, 0] + b, indices[:, 1] + j, indices[:, 2],
+                                 indices[:, 3]] = mean_feat
         return outputs_mean

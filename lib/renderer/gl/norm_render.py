@@ -27,16 +27,16 @@ from .render2 import Render
 
 
 class NormRender(Render):
-
-    def __init__(self,
-                 width=1600,
-                 height=1200,
-                 name='Cam Renderer',
-                 program_files=['simple.fs', 'simple.vs'],
-                 color_size=1,
-                 ms_rate=1):
-        Render.__init__(self, width, height, name, program_files, color_size,
-                        ms_rate)
+    def __init__(
+        self,
+        width=1600,
+        height=1200,
+        name='Cam Renderer',
+        program_files=['simple.fs', 'simple.vs'],
+        color_size=1,
+        ms_rate=1
+    ):
+        Render.__init__(self, width, height, name, program_files, color_size, ms_rate)
         self.camera = None
 
         glutDisplayFunc(self.display)
@@ -73,8 +73,7 @@ class NormRender(Render):
             self.camera.near -= 0.1 * eps
             self.camera.far -= 0.1 * eps
 
-        self.projection_matrix, self.model_view_matrix = self.camera.get_gl_matrix(
-        )
+        self.projection_matrix, self.model_view_matrix = self.camera.get_gl_matrix()
 
     def show(self):
         glutMainLoop()

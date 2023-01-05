@@ -6,13 +6,7 @@ import pytorch_lightning as pl
 
 
 class MLP(pl.LightningModule):
-
-    def __init__(self,
-                 filter_channels,
-                 name=None,
-                 res_layers=[],
-                 norm='group',
-                 last_op=None):
+    def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None):
 
         super(MLP, self).__init__()
 
@@ -27,11 +21,10 @@ class MLP(pl.LightningModule):
         for l in range(0, len(filter_channels) - 1):
             if l in self.res_layers:
                 self.filters.append(
-                    nn.Conv1d(filter_channels[l] + filter_channels[0],
-                              filter_channels[l + 1], 1))
+                    nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
+                )
             else:
-                self.filters.append(
-                    nn.Conv1d(filter_channels[l], filter_channels[l + 1], 1))
+                self.filters.append(nn.Conv1d(filter_channels[l], filter_channels[l + 1], 1))
 
             if l != len(filter_channels) - 2:
                 if norm == 'group':
@@ -39,11 +32,9 @@ class MLP(pl.LightningModule):
                 elif norm == 'batch':
                     self.norms.append(nn.BatchNorm1d(filter_channels[l + 1]))
                 elif norm == 'instance':
-                    self.norms.append(nn.InstanceNorm1d(filter_channels[l +
-                                                                        1]))
+                    self.norms.append(nn.InstanceNorm1d(filter_channels[l + 1]))
                 elif norm == 'weight':
-                    self.filters[l] = nn.utils.weight_norm(self.filters[l],
-                                                           name='weight')
+                    self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
                     # print(self.filters[l].weight_g.size(),
                     #       self.filters[l].weight_v.size())
 

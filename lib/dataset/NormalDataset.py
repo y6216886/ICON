@@ -23,7 +23,6 @@ import torchvision.transforms as transforms
 
 
 class NormalDataset():
-
     def __init__(self, cfg, split='train'):
 
         self.split = split
@@ -45,8 +44,7 @@ class NormalDataset():
         if self.split != 'train':
             self.rotations = range(0, 360, 120)
         else:
-            self.rotations = np.arange(0, 360, 360 //
-                                       self.opt.rotation_num).astype(np.int)
+            self.rotations = np.arange(0, 360, 360 // self.opt.rotation_num).astype(np.int)
 
         self.datasets_dict = {}
 
@@ -55,26 +53,29 @@ class NormalDataset():
             dataset_dir = osp.join(self.root, dataset)
 
             self.datasets_dict[dataset] = {
-                "subjects": np.loadtxt(osp.join(dataset_dir, "all.txt"),
-                                       dtype=str),
+                "subjects": np.loadtxt(osp.join(dataset_dir, "all.txt"), dtype=str),
                 "scale": self.scales[dataset_id]
             }
 
         self.subject_list = self.get_subject_list(split)
 
         # PIL to tensor
-        self.image_to_tensor = transforms.Compose([
-            transforms.Resize(self.input_size),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-        ])
+        self.image_to_tensor = transforms.Compose(
+            [
+                transforms.Resize(self.input_size),
+                transforms.ToTensor(),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ]
+        )
 
         # PIL to tensor
-        self.mask_to_tensor = transforms.Compose([
-            transforms.Resize(self.input_size),
-            transforms.ToTensor(),
-            transforms.Normalize((0.0, ), (1.0, ))
-        ])
+        self.mask_to_tensor = transforms.Compose(
+            [
+                transforms.Resize(self.input_size),
+                transforms.ToTensor(),
+                transforms.Normalize((0.0, ), (1.0, ))
+            ]
+        )
 
     def get_subject_list(self, split):
 
@@ -93,15 +94,12 @@ class NormalDataset():
 
                 full_lst = np.loadtxt(full_txt, dtype=str)
                 full_lst = [dataset + "/" + item for item in full_lst]
-                [train_lst, test_lst,
-                 val_lst] = np.split(full_lst, [
-                     500,
-                     500 + 5,
-                 ])
+                [train_lst, test_lst, val_lst] = np.split(full_lst, [
+                    500,
+                    500 + 5,
+                ])
 
-                np.savetxt(full_txt.replace("all", "train"),
-                           train_lst,
-                           fmt="%s")
+                np.savetxt(full_txt.replace("all", "train"), train_lst, fmt="%s")
                 np.savetxt(full_txt.replace("all", "test"), test_lst, fmt="%s")
                 np.savetxt(full_txt.replace("all", "val"), val_lst, fmt="%s")
 
@@ -109,8 +107,7 @@ class NormalDataset():
                 subject_list += np.loadtxt(split_txt, dtype=str).tolist()
 
         if self.split != 'test':
-            subject_list += subject_list[:self.bsize -
-                                         len(subject_list) % self.bsize]
+            subject_list += subject_list[:self.bsize - len(subject_list) % self.bsize]
             print(colored(f"total: {len(subject_list)}", "yellow"))
             random.shuffle(subject_list)
 
@@ -132,44 +129,34 @@ class NormalDataset():
         rotation = self.rotations[rid]
         subject = self.subject_list[mid].split("/")[1]
         dataset = self.subject_list[mid].split("/")[0]
-        render_folder = "/".join(
-            [dataset + f"_{self.opt.rotation_num}views", subject])
+        render_folder = "/".join([dataset + f"_{self.opt.rotation_num}views", subject])
 
         # setup paths
         data_dict = {
-            'dataset':
-            dataset,
-            'subject':
-            subject,
-            'rotation':
-            rotation,
-            'scale':
-            self.datasets_dict[dataset]["scale"],
-            'image_path':
-            osp.join(self.root, render_folder, 'render', f'{rotation:03d}.png')
+            'dataset': dataset,
+            'subject': subject,
+            'rotation': rotation,
+            'scale': self.datasets_dict[dataset]["scale"],
+            'image_path': osp.join(self.root, render_folder, 'render', f'{rotation:03d}.png')
         }
 
         # image/normal/depth loader
         for name, channel in zip(self.in_total, self.in_total_dim):
 
             if f'{name}_path' not in data_dict.keys():
-                data_dict.update({
-                    f'{name}_path':
-                    osp.join(self.root, render_folder, name,
-                             f'{rotation:03d}.png')
-                })
+                data_dict.update(
+                    {
+                        f'{name}_path':
+                            osp.join(self.root, render_folder, name, f'{rotation:03d}.png')
+                    }
+                )
 
             # tensor update
-            data_dict.update({
-                name:
-                self.imagepath2tensor(data_dict[f'{name}_path'],
-                                      channel,
-                                      inv=False)
-            })
+            data_dict.update(
+                {name: self.imagepath2tensor(data_dict[f'{name}_path'], channel, inv=False)}
+            )
 
-        path_keys = [
-            key for key in data_dict.keys() if '_path' in key or '_dir' in key
-        ]
+        path_keys = [key for key in data_dict.keys() if '_path' in key or '_dir' in key]
 
         for key in path_keys:
             del data_dict[key]

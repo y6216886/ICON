@@ -26,7 +26,6 @@ from ..utils.train_utils import load_pretrained_model
 
 
 class PARE(nn.Module):
-
     def __init__(
         self,
         num_joints=24,
@@ -39,8 +38,8 @@ class PARE(nn.Module):
         iterative_regression=False,
         iter_residual=False,
         num_iterations=3,
-        shape_input_type='feats',  # 'feats.all_pose.shape.cam',
-        # 'feats.neighbor_pose_feats.all_pose.self_pose.neighbor_pose.shape.cam'
+        shape_input_type='feats',    # 'feats.all_pose.shape.cam',
+    # 'feats.neighbor_pose_feats.all_pose.self_pose.neighbor_pose.shape.cam'
         pose_input_type='feats',
         pose_mlp_num_layers=1,
         shape_mlp_num_layers=1,
@@ -76,17 +75,16 @@ class PARE(nn.Module):
         if backbone.startswith('hrnet'):
             backbone, use_conv = backbone.split('-')
             # hrnet_w32-conv, hrnet_w32-interp
-            self.backbone = eval(backbone)(pretrained=True,
-                                           downsample=False,
-                                           use_conv=(use_conv == 'conv'))
+            self.backbone = eval(backbone)(
+                pretrained=True, downsample=False, use_conv=(use_conv == 'conv')
+            )
         else:
             self.backbone = eval(backbone)(pretrained=True)
 
         # self.backbone = eval(backbone)(pretrained=True)
         self.head = PareHead(
             num_joints=num_joints,
-            num_input_features=get_backbone_info(
-                backbone)['n_output_channels'],
+            num_input_features=get_backbone_info(backbone)['n_output_channels'],
             softmax_temp=softmax_temp,
             num_deconv_layers=num_deconv_layers,
             num_deconv_filters=[num_deconv_filters] * num_deconv_layers,
@@ -102,16 +100,15 @@ class PARE(nn.Module):
             shape_mlp_num_layers=shape_mlp_num_layers,
             pose_mlp_hidden_size=pose_mlp_hidden_size,
             shape_mlp_hidden_size=shape_mlp_hidden_size,
-            use_keypoint_features_for_smpl_regression=
-            use_keypoint_features_for_smpl_regression,
+            use_keypoint_features_for_smpl_regression=use_keypoint_features_for_smpl_regression,
             use_heatmaps=use_heatmaps,
             use_keypoint_attention=use_keypoint_attention,
             use_postconv_keypoint_attention=use_postconv_keypoint_attention,
             keypoint_attention_act=keypoint_attention_act,
             use_scale_keypoint_attention=use_scale_keypoint_attention,
-            # 'concatenation', 'dot_product', 'embedded_gaussian', 'gaussian'
+        # 'concatenation', 'dot_product', 'embedded_gaussian', 'gaussian'
             use_branch_nonlocal=use_branch_nonlocal,
-            # 'concatenation', 'dot_product', 'embedded_gaussian', 'gaussian'
+        # 'concatenation', 'dot_product', 'embedded_gaussian', 'gaussian'
             use_final_nonlocal=use_final_nonlocal,
             backbone=backbone,
             use_hmr_regression=use_hmr_regression,
@@ -199,10 +196,9 @@ class PARE(nn.Module):
         logger.warning(f'Loading pretrained weights from {file}')
         state_dict = torch.load(file)
         self.backbone.load_state_dict(state_dict, strict=False)
-        load_pretrained_model(self.head,
-                              state_dict=state_dict,
-                              strict=False,
-                              overwrite_shape_mismatch=True)
+        load_pretrained_model(
+            self.head, state_dict=state_dict, strict=False, overwrite_shape_mismatch=True
+        )
 
     # def load_backbone_pretrained(self, file):
     #     # This is usually used to load pretrained 2d keypoint detector weights
@@ -242,8 +238,7 @@ def get_pare_model(device):
         USE_KEYPOINT_FEATURES_FOR_SMPL_REGRESSION,
         use_heatmaps=model_cfg.DATASET.USE_HEATMAPS,
         use_keypoint_attention=model_cfg.PARE.USE_KEYPOINT_ATTENTION,
-        use_postconv_keypoint_attention=model_cfg.PARE.
-        USE_POSTCONV_KEYPOINT_ATTENTION,
+        use_postconv_keypoint_attention=model_cfg.PARE.USE_POSTCONV_KEYPOINT_ATTENTION,
         use_final_nonlocal=model_cfg.PARE.USE_FINAL_NONLOCAL,
         use_branch_nonlocal=model_cfg.PARE.USE_BRANCH_NONLOCAL,
         use_hmr_regression=model_cfg.PARE.USE_HMR_REGRESSION,
@@ -260,9 +255,6 @@ def get_pare_model(device):
 
     logger.info(f'Loading pretrained model from {PARE_CKPT}')
     ckpt = torch.load(PARE_CKPT)['state_dict']
-    load_pretrained_model(model,
-                          ckpt,
-                          overwrite_shape_mismatch=True,
-                          remove_lightning=True)
+    load_pretrained_model(model, ckpt, overwrite_shape_mismatch=True, remove_lightning=True)
 
     return model

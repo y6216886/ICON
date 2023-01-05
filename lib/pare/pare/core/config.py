@@ -35,18 +35,16 @@ PW3D_ROOT = 'data/dataset_folders/3dpw'
 OH3D_ROOT = 'data/dataset_folders/3doh'
 
 # pare
-pare_data_dir = os.path.join(os.path.dirname(__file__),
-                             "../../../../data/pare_data")
+pare_data_dir = os.path.join(os.path.dirname(__file__), "../../../../data/pare_data")
 
-JOINT_REGRESSOR_TRAIN_EXTRA = os.path.join(pare_data_dir,
-                                           'J_regressor_extra.npy')
+JOINT_REGRESSOR_TRAIN_EXTRA = os.path.join(pare_data_dir, 'J_regressor_extra.npy')
 JOINT_REGRESSOR_H36M = os.path.join(pare_data_dir, 'J_regressor_h36m.npy')
 SMPL_MEAN_PARAMS = os.path.join(pare_data_dir, 'smpl_mean_params.npz')
 SMPL_MODEL_DIR = os.path.join(pare_data_dir, '../smpl_related/models/smpl')
 COCO_OCCLUDERS_FILE = os.path.join(
-    pare_data_dir, 'occlusion_augmentation/coco_train2014_occluders.pkl')
-PASCAL_OCCLUDERS_FILE = os.path.join(
-    pare_data_dir, 'occlusion_augmentation/pascal_occluders.pkl')
+    pare_data_dir, 'occlusion_augmentation/coco_train2014_occluders.pkl'
+)
+PASCAL_OCCLUDERS_FILE = os.path.join(pare_data_dir, 'occlusion_augmentation/pascal_occluders.pkl')
 
 DATASET_FOLDERS = {
     '3dpw': PW3D_ROOT,
@@ -108,7 +106,7 @@ hparams.DATASET.NUM_IMAGES = -1
 hparams.DATASET.TRAIN_NUM_IMAGES = -1
 hparams.DATASET.TEST_NUM_IMAGES = -1
 hparams.DATASET.IMG_RES = 224
-hparams.DATASET.USE_HEATMAPS = ''  # 'hm', 'hm_soft', 'part_segm', 'attention'
+hparams.DATASET.USE_HEATMAPS = ''    # 'hm', 'hm_soft', 'part_segm', 'attention'
 hparams.DATASET.RENDER_RES = 480
 hparams.DATASET.MESH_COLOR = 'pinkish'
 hparams.DATASET.FOCAL_LENGTH = 5000.
@@ -127,7 +125,7 @@ hparams.DATASET.NONPARAMETRIC = False
 # optimizer config
 hparams.OPTIMIZER = CN()
 hparams.OPTIMIZER.TYPE = 'adam'
-hparams.OPTIMIZER.LR = 0.0001  # 0.00003
+hparams.OPTIMIZER.LR = 0.0001    # 0.00003
 hparams.OPTIMIZER.WD = 0.0
 
 # Training process hparams
@@ -140,7 +138,7 @@ hparams.TRAINING.LOG_SAVE_INTERVAL = 50
 hparams.TRAINING.LOG_FREQ_TB_IMAGES = 500
 hparams.TRAINING.CHECK_VAL_EVERY_N_EPOCH = 1
 hparams.TRAINING.RELOAD_DATALOADERS_EVERY_EPOCH = True
-hparams.TRAINING.NUM_SMPLIFY_ITERS = 100  # 50
+hparams.TRAINING.NUM_SMPLIFY_ITERS = 100    # 50
 hparams.TRAINING.RUN_SMPLIFY = False
 hparams.TRAINING.SMPLIFY_THRESHOLD = 100
 hparams.TRAINING.DROPOUT_P = 0.2
@@ -162,7 +160,7 @@ hparams.TESTING.USE_GT_CAM = False
 
 # PARE method hparams
 hparams.PARE = CN()
-hparams.PARE.BACKBONE = 'resnet50'  # hrnet_w32-conv, hrnet_w32-interp
+hparams.PARE.BACKBONE = 'resnet50'    # hrnet_w32-conv, hrnet_w32-interp
 hparams.PARE.NUM_JOINTS = 24
 hparams.PARE.SOFTMAX_TEMP = 1.
 hparams.PARE.NUM_FEATURES_SMPL = 64
@@ -243,7 +241,6 @@ def get_grid_search_configs(config, excluded_keys=[]):
     :param config: dictionary with the configurations
     :return: The different configurations
     """
-
     def bool_to_string(x: Union[List[bool], bool]) -> Union[List[str], str]:
         """
         boolean to string conversion
@@ -285,11 +282,8 @@ def get_grid_search_configs(config, excluded_keys=[]):
             exp[param] = exp[param].strip().split('+')
         for param_name, param_value in exp.items():
             # print(param_name,type(param_value))
-            if isinstance(param_value, list) and (param_value[0]
-                                                  in ['True', 'False']):
-                exp[param_name] = [
-                    True if x == 'True' else False for x in param_value
-                ]
+            if isinstance(param_value, list) and (param_value[0] in ['True', 'False']):
+                exp[param_name] = [True if x == 'True' else False for x in param_value]
             if param_value in ['True', 'False']:
                 if param_value == 'True':
                     exp[param_name] = True
@@ -302,15 +296,15 @@ def get_grid_search_configs(config, excluded_keys=[]):
 
 
 def run_grid_search_experiments(
-        cfg_id,
-        cfg_file,
-        use_cluster,
-        bid,
-        memory,
-        script='main.py',
-        cmd_opts=[],
-        gpu_min_mem=10000,
-        gpu_arch=('tesla', 'quadro', 'rtx'),
+    cfg_id,
+    cfg_file,
+    use_cluster,
+    bid,
+    memory,
+    script='main.py',
+    cmd_opts=[],
+    gpu_min_mem=10000,
+    gpu_arch=('tesla', 'quadro', 'rtx'),
 ):
     cfg = yaml.load(open(cfg_file))
     # parse config file to get a list of configs and related hyperparameters
@@ -320,12 +314,8 @@ def run_grid_search_experiments(
     )
     logger.info(f'Grid search hparams: \n {hyperparams}')
 
-    different_configs = [
-        update_hparams_from_dict(c) for c in different_configs
-    ]
-    logger.info(
-        f'======> Number of experiment configurations is {len(different_configs)}'
-    )
+    different_configs = [update_hparams_from_dict(c) for c in different_configs]
+    logger.info(f'======> Number of experiment configurations is {len(different_configs)}')
 
     config_to_run = CN(different_configs[cfg_id])
     config_to_run.merge_from_list(cmd_opts)
@@ -378,13 +368,13 @@ def run_grid_search_experiments(
             logdir = config_to_run.LOG_DIR + \
                 '/evaluation_mesh_j24_' + config_to_run.DATASET.VAL_DS
     else:
-        logdir = os.path.join(config_to_run.LOG_DIR,
-                              config_to_run.PROJECT_NAME,
-                              config_to_run.EXP_NAME, logdir + '_train')
+        logdir = os.path.join(
+            config_to_run.LOG_DIR, config_to_run.PROJECT_NAME, config_to_run.EXP_NAME,
+            logdir + '_train'
+        )
 
     os.makedirs(logdir, exist_ok=True)
-    shutil.copy(src=cfg_file,
-                dst=os.path.join(config_to_run.LOG_DIR, 'config.yaml'))
+    shutil.copy(src=cfg_file, dst=os.path.join(config_to_run.LOG_DIR, 'config.yaml'))
 
     config_to_run.LOG_DIR = logdir
 
@@ -395,6 +385,7 @@ def run_grid_search_experiments(
     # save config
     save_dict_to_yaml(
         unflatten(flatten(config_to_run)),
-        os.path.join(config_to_run.LOG_DIR, 'config_to_run.yaml'))
+        os.path.join(config_to_run.LOG_DIR, 'config_to_run.yaml')
+    )
 
     return config_to_run

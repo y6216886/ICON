@@ -28,34 +28,33 @@ from ...utils.geometry import perspective_projection, convert_weak_perspective_t
 
 class SMPL(_SMPL):
     """ Extension of the official SMPL implementation to support more joints """
-
     def __init__(self, *args, **kwargs):
         super(SMPL, self).__init__(*args, **kwargs)
         joints = [constants.JOINT_MAP[i] for i in constants.JOINT_NAMES]
         J_regressor_extra = np.load(config.JOINT_REGRESSOR_TRAIN_EXTRA)
         self.register_buffer(
-            'J_regressor_extra',
-            torch.tensor(J_regressor_extra, dtype=torch.float32))
+            'J_regressor_extra', torch.tensor(J_regressor_extra, dtype=torch.float32)
+        )
         self.joint_map = torch.tensor(joints, dtype=torch.long)
 
     def forward(self, *args, **kwargs):
         kwargs['get_skin'] = True
         smpl_output = super(SMPL, self).forward(*args, **kwargs)
-        extra_joints = vertices2joints(self.J_regressor_extra,
-                                       smpl_output.vertices)
+        extra_joints = vertices2joints(self.J_regressor_extra, smpl_output.vertices)
         joints = torch.cat([smpl_output.joints, extra_joints], dim=1)
         joints = joints[:, self.joint_map, :]
-        output = SMPLOutput(vertices=smpl_output.vertices,
-                            global_orient=smpl_output.global_orient,
-                            body_pose=smpl_output.body_pose,
-                            joints=joints,
-                            betas=smpl_output.betas,
-                            full_pose=smpl_output.full_pose)
+        output = SMPLOutput(
+            vertices=smpl_output.vertices,
+            global_orient=smpl_output.global_orient,
+            body_pose=smpl_output.body_pose,
+            joints=joints,
+            betas=smpl_output.betas,
+            full_pose=smpl_output.full_pose
+        )
         return output
 
 
 class SMPLHead(nn.Module):
-
     def __init__(self, focal_length=5000., img_res=224):
         super(SMPLHead, self).__init__()
         self.smpl = SMPL(config.SMPL_MODEL_DIR, create_transl=False)
@@ -93,11 +92,11 @@ class SMPLHead(nn.Module):
             )
             joints2d = perspective_projection(
                 joints3d,
-                rotation=torch.eye(3, device=device).unsqueeze(0).expand(
-                    batch_size, -1, -1),
+                rotation=torch.eye(3, device=device).unsqueeze(0).expand(batch_size, -1, -1),
                 translation=cam_t,
                 focal_length=self.focal_length,
-                camera_center=torch.zeros(batch_size, 2, device=device))
+                camera_center=torch.zeros(batch_size, 2, device=device)
+            )
             if normalize_joints2d:
                 # Normalize keypoints to [-1,1]
                 joints2d = joints2d / (self.img_res / 2.)

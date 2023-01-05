@@ -29,20 +29,11 @@ from .cam_render import CamRender
 
 
 class ColorRender(CamRender):
-
-    def __init__(self,
-                 width=1600,
-                 height=1200,
-                 name='Color Renderer',
-                 egl=False):
+    def __init__(self, width=1600, height=1200, name='Color Renderer', egl=False):
         program_files = ['color.vs', 'color.fs']
-        CamRender.__init__(self,
-                           width,
-                           height,
-                           name,
-                           program_files=program_files,
-                           color_size=3,
-                           egl=egl)
+        CamRender.__init__(
+            self, width, height, name, program_files=program_files, color_size=3, egl=egl
+        )
 
         # WARNING: this differs from vertex_buffer and vertex_data in Render
         self.vert_buffer = {}
@@ -87,8 +78,7 @@ class ColorRender(CamRender):
         if mat_name not in self.color_buffer.keys():
             self.color_buffer[mat_name] = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, self.color_buffer[mat_name])
-        glBufferData(GL_ARRAY_BUFFER, self.color_data[mat_name],
-                     GL_STATIC_DRAW)
+        glBufferData(GL_ARRAY_BUFFER, self.color_data[mat_name], GL_STATIC_DRAW)
 
         if mat_name not in self.norm_buffer.keys():
             self.norm_buffer[mat_name] = glGenBuffers(1)
@@ -126,22 +116,17 @@ class ColorRender(CamRender):
         glEnable(GL_MULTISAMPLE)
 
         glUseProgram(self.program)
-        glUniformMatrix4fv(self.norm_mat_unif, 1, GL_FALSE,
-                           self.normalize_matrix.transpose())
-        glUniformMatrix4fv(self.model_mat_unif, 1, GL_FALSE,
-                           self.model_view_matrix.transpose())
-        glUniformMatrix4fv(self.persp_mat_unif, 1, GL_FALSE,
-                           self.projection_matrix.transpose())
-        glUniformMatrix3fv(self.rot_mat_unif, 1, GL_FALSE,
-                           self.rot_matrix.transpose())
+        glUniformMatrix4fv(self.norm_mat_unif, 1, GL_FALSE, self.normalize_matrix.transpose())
+        glUniformMatrix4fv(self.model_mat_unif, 1, GL_FALSE, self.model_view_matrix.transpose())
+        glUniformMatrix4fv(self.persp_mat_unif, 1, GL_FALSE, self.projection_matrix.transpose())
+        glUniformMatrix3fv(self.rot_mat_unif, 1, GL_FALSE, self.rot_matrix.transpose())
 
         for mat in self.vert_buffer:
 
             # Handle vertex buffer
             glBindBuffer(GL_ARRAY_BUFFER, self.vert_buffer[mat])
             glEnableVertexAttribArray(0)
-            glVertexAttribPointer(0, self.vertex_dim[mat], GL_DOUBLE, GL_FALSE,
-                                  0, None)
+            glVertexAttribPointer(0, self.vertex_dim[mat], GL_DOUBLE, GL_FALSE, 0, None)
 
             # Handle color buffer
             glBindBuffer(GL_ARRAY_BUFFER, self.color_buffer[mat])

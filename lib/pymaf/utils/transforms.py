@@ -20,12 +20,9 @@ def transform_preds(coords, center, scale, output_size):
     return target_coords
 
 
-def get_affine_transform(center,
-                         scale,
-                         rot,
-                         output_size,
-                         shift=np.array([0, 0], dtype=np.float32),
-                         inv=0):
+def get_affine_transform(
+    center, scale, rot, output_size, shift=np.array([0, 0], dtype=np.float32), inv=0
+):
     if not isinstance(scale, np.ndarray) and not isinstance(scale, list):
         # print(scale)
         scale = np.array([scale, scale])

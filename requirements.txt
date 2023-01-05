@@ -28,7 +28,7 @@ opencv_contrib_python
 scikit-learn
 simple-romp==1.0.4
 protobuf==3.20.0
-pymeshlab
+open3d
 dataclasses>=0.6
 numpy==1.22.4
 git+https://github.com/facebookresearch/pytorch3d.git@stable

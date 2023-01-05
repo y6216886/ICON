@@ -74,26 +74,25 @@ def query_color(verts, faces, image, device):
 
     (xy, z) = verts.split([2, 1], dim=1)
     visibility = get_visibility(xy, z, faces[:, [0, 2, 1]]).flatten()
-    uv = xy.unsqueeze(0).unsqueeze(2)  # [B, N, 2]
+    uv = xy.unsqueeze(0).unsqueeze(2)    # [B, N, 2]
     uv = uv * torch.tensor([1.0, -1.0]).type_as(uv)
-    colors = (torch.nn.functional.grid_sample(
-        image, uv, align_corners=True)[0, :, :, 0].permute(1, 0) +
-              1.0) * 0.5 * 255.0
+    colors = (
+        torch.nn.functional.grid_sample(image, uv, align_corners=True)[0, :, :, 0].permute(1, 0) +
+        1.0
+    ) * 0.5 * 255.0
     colors[visibility == 0.0] = (
-        (Meshes(verts.unsqueeze(0),
-                faces.unsqueeze(0)).verts_normals_padded().squeeze(0) + 1.0) *
-        0.5 * 255.0)[visibility == 0.0]
+        (Meshes(verts.unsqueeze(0), faces.unsqueeze(0)).verts_normals_padded().squeeze(0) + 1.0) *
+        0.5 * 255.0
+    )[visibility == 0.0]
 
     return colors.detach().cpu()
 
 
 class cleanShader(torch.nn.Module):
-
     def __init__(self, device="cpu", cameras=None, blend_params=None):
         super().__init__()
         self.cameras = cameras
-        self.blend_params = blend_params if blend_params is not None else BlendParams(
-        )
+        self.blend_params = blend_params if blend_params is not None else BlendParams()
 
     def forward(self, fragments, meshes, **kwargs):
         cameras = kwargs.get("cameras", self.cameras)
@@ -106,17 +105,12 @@ class cleanShader(torch.nn.Module):
         # get renderer output
         blend_params = kwargs.get("blend_params", self.blend_params)
         texels = meshes.sample_textures(fragments)
-        images = blending.softmax_rgb_blend(texels,
-                                            fragments,
-                                            blend_params,
-                                            znear=-256,
-                                            zfar=256)
+        images = blending.softmax_rgb_blend(texels, fragments, blend_params, znear=-256, zfar=256)
 
         return images
 
 
 class Render:
-
     def __init__(self, size=512, device=torch.device("cuda:0")):
         self.device = device
         self.size = size
@@ -180,8 +174,7 @@ class Render:
                 blur_radius=np.log(1.0 / 1e-4) * 1e-7,
                 faces_per_pixel=30,
             )
-            self.meshRas = MeshRasterizer(
-                cameras=camera, raster_settings=self.raster_settings_mesh)
+            self.meshRas = MeshRasterizer(cameras=camera, raster_settings=self.raster_settings_mesh)
 
         if bg == "black":
             blendparam = BlendParams(1e-4, 1e-4, (0.0, 0.0, 0.0))
@@ -219,17 +212,18 @@ class Render:
             )
 
             self.silhouetteRas = MeshRasterizer(
-                cameras=camera,
-                raster_settings=self.raster_settings_silhouette)
-            self.renderer = MeshRenderer(rasterizer=self.silhouetteRas,
-                                         shader=SoftSilhouetteShader())
+                cameras=camera, raster_settings=self.raster_settings_silhouette
+            )
+            self.renderer = MeshRenderer(
+                rasterizer=self.silhouetteRas, shader=SoftSilhouetteShader()
+            )
 
         if type == "pointcloud":
             self.raster_settings_pcd = PointsRasterizationSettings(
-                image_size=self.size, radius=0.006, points_per_pixel=10)
+                image_size=self.size, radius=0.006, points_per_pixel=10
+            )
 
-            self.pcdRas = PointsRasterizer(
-                cameras=camera, raster_settings=self.raster_settings_pcd)
+            self.pcdRas = PointsRasterizer(cameras=camera, raster_settings=self.raster_settings_pcd)
             self.renderer = PointsRenderer(
                 rasterizer=self.pcdRas,
                 compositor=AlphaCompositor(background_color=(0, 0, 0)),
@@ -239,9 +233,7 @@ class Render:
 
             self.renderer = MeshRenderer(
                 rasterizer=self.meshRas,
-                shader=cleanShader(device=self.device,
-                                   cameras=camera,
-                                   blend_params=blendparam),
+                shader=cleanShader(device=self.device, cameras=camera, blend_params=blendparam),
             )
 
     def VF2Mesh(self, verts, faces):
@@ -261,8 +253,7 @@ class Render:
 
         mesh = Meshes(verts, faces).to(self.device)
 
-        mesh.textures = TexturesVertex(
-            verts_features=(mesh.verts_normals_padded() + 1.0) * 0.5)
+        mesh.textures = TexturesVertex(verts_features=(mesh.verts_normals_padded() + 1.0) * 0.5)
 
         return mesh
 
@@ -302,13 +293,13 @@ class Render:
             if cam_id in cam_ids:
                 self.init_renderer(self.get_camera(cam_id), "clean_mesh", bg)
                 if len(cam_ids) == 4:
-                    rendered_img = (self.renderer(
-                        self.meshes[0])[0:1, :, :, :3].permute(0, 3, 1, 2) -
-                                    0.5) * 2.0
+                    rendered_img = (
+                        self.renderer(self.meshes[0])[0:1, :, :, :3].permute(0, 3, 1, 2) - 0.5
+                    ) * 2.0
                 else:
-                    rendered_img = (self.renderer(
-                        self.meshes[0])[0:1, :, :, :3].permute(0, 3, 1, 2) -
-                                    0.5) * 2.0
+                    rendered_img = (
+                        self.renderer(self.meshes[0])[0:1, :, :, :3].permute(0, 3, 1, 2) - 0.5
+                    ) * 2.0
                 if cam_id == 2 and len(cam_ids) == 2:
                     rendered_img = torch.flip(rendered_img, dims=[3])
                 images.append(rendered_img)
@@ -319,37 +310,40 @@ class Render:
 
         self.cam_pos = []
         for angle in range(360):
-            self.cam_pos.append((
-                100.0 * math.cos(np.pi / 180 * angle),
-                self.mesh_y_center,
-                100.0 * math.sin(np.pi / 180 * angle),
-            ))
+            self.cam_pos.append(
+                (
+                    100.0 * math.cos(np.pi / 180 * angle),
+                    self.mesh_y_center,
+                    100.0 * math.sin(np.pi / 180 * angle),
+                )
+            )
 
         old_shape = np.array(images[0].shape[:2])
-        new_shape = np.around(
-            (self.size / old_shape[0]) * old_shape).astype(np.int)
+        new_shape = np.around((self.size / old_shape[0]) * old_shape).astype(np.int)
 
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        video = cv2.VideoWriter(save_path, fourcc, 10,
-                                (self.size * len(self.meshes) +
-                                 new_shape[1] * len(images), self.size))
+        video = cv2.VideoWriter(
+            save_path, fourcc, 10,
+            (self.size * len(self.meshes) + new_shape[1] * len(images), self.size)
+        )
 
         pbar = tqdm(range(len(self.cam_pos)))
-        pbar.set_description(
-            colored(f"exporting video {os.path.basename(save_path)}...",
-                    "blue"))
+        pbar.set_description(colored(f"exporting video {os.path.basename(save_path)}...", "blue"))
         for cam_id in pbar:
             self.init_renderer(self.get_camera(cam_id), "clean_mesh", "gray")
 
             img_lst = [
-                np.array(Image.fromarray(img).resize(new_shape[::-1])).astype(
-                    np.uint8)[:, :, [2, 1, 0]] for img in images
+                np.array(Image.fromarray(img).resize(new_shape[::-1])).astype(np.uint8)[:, :,
+                                                                                        [2, 1, 0]]
+                for img in images
             ]
 
             for mesh in self.meshes:
-                rendered_img = ((self.renderer(mesh)[0, :, :, :3] *
-                                 255.0).detach().cpu().numpy().astype(
-                                     np.uint8))
+                rendered_img = (
+                    (self.renderer(mesh)[0, :, :, :3] * 255.0).detach().cpu().numpy().astype(
+                        np.uint8
+                    )
+                )
 
                 img_lst.append(rendered_img)
             final_img = np.concatenate(img_lst, axis=1)

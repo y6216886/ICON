@@ -26,7 +26,6 @@ from ..utils.train_utils import load_pretrained_model
 
 
 class HMR(nn.Module):
-
     def __init__(
         self,
         backbone='resnet50',
@@ -45,17 +44,16 @@ class HMR(nn.Module):
         if backbone.startswith('hrnet'):
             backbone, use_conv = backbone.split('-')
             # hrnet_w32-conv, hrnet_w32-interp
-            self.backbone = eval(backbone)(pretrained=True,
-                                           downsample=True,
-                                           use_conv=(use_conv == 'conv'))
+            self.backbone = eval(backbone)(
+                pretrained=True, downsample=True, use_conv=(use_conv == 'conv')
+            )
         else:
             self.backbone = eval(backbone)(pretrained=True)
 
         self.use_cam_feats = use_cam_feats
 
         self.head = HMRHead(
-            num_input_features=get_backbone_info(backbone)
-            ['n_output_channels'],
+            num_input_features=get_backbone_info(backbone)['n_output_channels'],
             estimate_var=estimate_var,
             use_separate_var_branch=use_separate_var_branch,
             uncertainty_activation=uncertainty_activation,
@@ -90,9 +88,7 @@ class HMR(nn.Module):
 
         if self.use_cam_feats:
             cam_vfov = 2 * torch.atan(img_h / (2 * cam_intrinsics[:, 0, 0]))
-            hmr_output = self.head(features,
-                                   cam_rotmat=cam_rotmat,
-                                   cam_vfov=cam_vfov)
+            hmr_output = self.head(features, cam_rotmat=cam_rotmat, cam_vfov=cam_vfov)
         else:
             hmr_output = self.head(features)
 
@@ -124,10 +120,9 @@ class HMR(nn.Module):
         logger.warning(f'Loading pretrained weights from {file}')
         state_dict = torch.load(file)
         self.backbone.load_state_dict(state_dict, strict=False)
-        load_pretrained_model(self.head,
-                              state_dict=state_dict,
-                              strict=False,
-                              overwrite_shape_mismatch=True)
+        load_pretrained_model(
+            self.head, state_dict=state_dict, strict=False, overwrite_shape_mismatch=True
+        )
 
     def load_pretrained_spin(self, file):
         # file = '/ps/scratch/mkocabas/developments/SPIN/logs/h36m_training/checkpoints/2020_06_28-11_14_46.pt'

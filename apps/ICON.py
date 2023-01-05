@@ -31,7 +31,6 @@ torch.backends.cudnn.benchmark = True
 
 
 class ICON(pl.LightningModule):
-
     def __init__(self, cfg):
         super(ICON, self).__init__()
 
@@ -50,30 +49,25 @@ class ICON(pl.LightningModule):
             error_term=nn.SmoothL1Loss() if self.use_sdf else nn.MSELoss(),
         )
 
-        self.evaluator = Evaluator(
-            device=torch.device(f"cuda:{self.cfg.gpus[0]}"))
+        self.evaluator = Evaluator(device=torch.device(f"cuda:{self.cfg.gpus[0]}"))
 
-        self.resolutions = (np.logspace(
-            start=5,
-            stop=np.log2(self.mcube_res),
-            base=2,
-            num=int(np.log2(self.mcube_res) - 4),
-            endpoint=True,
-        ) + 1.0)
+        self.resolutions = (
+            np.logspace(
+                start=5,
+                stop=np.log2(self.mcube_res),
+                base=2,
+                num=int(np.log2(self.mcube_res) - 4),
+                endpoint=True,
+            ) + 1.0
+        )
         self.resolutions = self.resolutions.astype(np.int16).tolist()
 
         self.base_keys = ["smpl_verts", "smpl_faces"]
         self.feat_names = self.cfg.net.smpl_feats
 
-        self.icon_keys = self.base_keys + [
-            f"smpl_{feat_name}" for feat_name in self.feat_names
-        ]
-        self.keypoint_keys = self.base_keys + [
-            f"smpl_{feat_name}" for feat_name in self.feat_names
-        ]
-        self.pamir_keys = [
-            "voxel_verts", "voxel_faces", "pad_v_num", "pad_f_num"
-        ]
+        self.icon_keys = self.base_keys + [f"smpl_{feat_name}" for feat_name in self.feat_names]
+        self.keypoint_keys = self.base_keys + [f"smpl_{feat_name}" for feat_name in self.feat_names]
+        self.pamir_keys = ["voxel_verts", "voxel_faces", "pad_v_num", "pad_f_num"]
         self.pifu_keys = []
 
         self.reconEngine = Seg3dLossless(
@@ -90,8 +84,7 @@ class ICON(pl.LightningModule):
             faster=True,
         )
 
-        self.render = Render(
-            size=512, device=torch.device(f"cuda:{self.cfg.test_gpus[0]}"))
+        self.render = Render(size=512, device=torch.device(f"cuda:{self.cfg.test_gpus[0]}"))
         self.smpl_data = SMPLX()
 
         self.get_smpl_model = lambda smpl_type, gender, age, v_template: smplx.create(
@@ -130,34 +123,23 @@ class ICON(pl.LightningModule):
         weight_decay = self.cfg.weight_decay
         momentum = self.cfg.momentum
 
-        optim_params_G = [{
-            "params": self.netG.if_regressor.parameters(),
-            "lr": self.lr_G
-        }]
+        optim_params_G = [{"params": self.netG.if_regressor.parameters(), "lr": self.lr_G}]
 
         if self.cfg.net.use_filter:
-            optim_params_G.append({
-                "params": self.netG.F_filter.parameters(),
-                "lr": self.lr_G
-            })
+            optim_params_G.append({"params": self.netG.F_filter.parameters(), "lr": self.lr_G})
 
         if self.cfg.net.prior_type == "pamir":
-            optim_params_G.append({
-                "params": self.netG.ve.parameters(),
-                "lr": self.lr_G
-            })
+            optim_params_G.append({"params": self.netG.ve.parameters(), "lr": self.lr_G})
 
         if self.cfg.optim == "Adadelta":
 
-            optimizer_G = torch.optim.Adadelta(optim_params_G,
-                                               lr=self.lr_G,
-                                               weight_decay=weight_decay)
+            optimizer_G = torch.optim.Adadelta(
+                optim_params_G, lr=self.lr_G, weight_decay=weight_decay
+            )
 
         elif self.cfg.optim == "Adam":
 
-            optimizer_G = torch.optim.Adam(optim_params_G,
-                                           lr=self.lr_G,
-                                           weight_decay=weight_decay)
+            optimizer_G = torch.optim.Adam(optim_params_G, lr=self.lr_G, weight_decay=weight_decay)
 
         elif self.cfg.optim == "RMSprop":
 
@@ -173,7 +155,8 @@ class ICON(pl.LightningModule):
 
         # set scheduler
         scheduler_G = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer_G, milestones=self.cfg.schedule, gamma=self.cfg.gamma)
+            optimizer_G, milestones=self.cfg.schedule, gamma=self.cfg.gamma
+        )
 
         return [optimizer_G], [scheduler_G]
 
@@ -193,10 +176,12 @@ class ICON(pl.LightningModule):
         for name in self.in_total:
             in_tensor_dict.update({name: batch[name]})
 
-        in_tensor_dict.update({
-            k: batch[k] if k in batch.keys() else None
-            for k in getattr(self, f"{self.prior_type}_keys")
-        })
+        in_tensor_dict.update(
+            {
+                k: batch[k] if k in batch.keys() else None
+                for k in getattr(self, f"{self.prior_type}_keys")
+            }
+        )
 
         preds_G, error_G = self.netG(in_tensor_dict)
 
@@ -224,16 +209,9 @@ class ICON(pl.LightningModule):
             with torch.no_grad():
                 self.render_func(in_tensor_dict, dataset="train")
 
-        metrics_return = {
-            k.replace("train_", ""): torch.tensor(v)
-            for k, v in metrics_log.items()
-        }
+        metrics_return = {k.replace("train_", ""): torch.tensor(v) for k, v in metrics_log.items()}
 
-        metrics_return.update({
-            "loss": error_G,
-            "log": tf_log,
-            "progress_bar": bar_log
-        })
+        metrics_return.update({"loss": error_G, "log": tf_log, "progress_bar": bar_log})
 
         return metrics_return
 
@@ -269,11 +247,13 @@ class ICON(pl.LightningModule):
         for name in self.in_total:
             in_tensor_dict.update({name: batch[name]})
 
-        in_tensor_dict.update({
-            k: batch[k] if k in batch.keys() else None
-            for k in getattr(self, f"{self.prior_type}_keys")
-        })
-        
+        in_tensor_dict.update(
+            {
+                k: batch[k] if k in batch.keys() else None
+                for k in getattr(self, f"{self.prior_type}_keys")
+            }
+        )
+
         preds_G, error_G = self.netG(in_tensor_dict)
 
         acc, iou, prec, recall = self.evaluator.calc_acc(
@@ -327,25 +307,26 @@ class ICON(pl.LightningModule):
     @torch.enable_grad()
     def optim_body(self, in_tensor_dict, batch):
 
-        smpl_model = self.get_smpl_model(batch["type"][0], batch["gender"][0],
-                                         batch["age"][0], None).to(self.device)
-        in_tensor_dict["smpl_faces"] = (torch.tensor(
-            smpl_model.faces.astype(np.int)).long().unsqueeze(0).to(
-                self.device))
+        smpl_model = self.get_smpl_model(
+            batch["type"][0], batch["gender"][0], batch["age"][0], None
+        ).to(self.device)
+        in_tensor_dict["smpl_faces"] = (
+            torch.tensor(smpl_model.faces.astype(np.int)).long().unsqueeze(0).to(self.device)
+        )
 
         # The optimizer and variables
-        optimed_pose = torch.tensor(batch["body_pose"][0],
-                                    device=self.device,
-                                    requires_grad=True)  # [1,23,3,3]
-        optimed_trans = torch.tensor(batch["transl"][0],
-                                     device=self.device,
-                                     requires_grad=True)  # [3]
-        optimed_betas = torch.tensor(batch["betas"][0],
-                                     device=self.device,
-                                     requires_grad=True)  # [1,10]
-        optimed_orient = torch.tensor(batch["global_orient"][0],
-                                      device=self.device,
-                                      requires_grad=True)  # [1,1,3,3]
+        optimed_pose = torch.tensor(
+            batch["body_pose"][0], device=self.device, requires_grad=True
+        )    # [1,23,3,3]
+        optimed_trans = torch.tensor(
+            batch["transl"][0], device=self.device, requires_grad=True
+        )    # [3]
+        optimed_betas = torch.tensor(
+            batch["betas"][0], device=self.device, requires_grad=True
+        )    # [1,10]
+        optimed_orient = torch.tensor(
+            batch["global_orient"][0], device=self.device, requires_grad=True
+        )    # [1,1,3,3]
 
         optimizer_smpl = torch.optim.SGD(
             [optimed_pose, optimed_trans, optimed_betas, optimed_orient],
@@ -353,12 +334,8 @@ class ICON(pl.LightningModule):
             momentum=0.9,
         )
         scheduler_smpl = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer_smpl,
-            mode="min",
-            factor=0.5,
-            verbose=0,
-            min_lr=1e-5,
-            patience=5)
+            optimizer_smpl, mode="min", factor=0.5, verbose=0, min_lr=1e-5, patience=5
+        )
         loop_smpl = range(50)
         for i in loop_smpl:
 
@@ -374,9 +351,7 @@ class ICON(pl.LightningModule):
             )
 
             smpl_verts = smpl_out.vertices[0] * 100.0
-            smpl_verts = projection(smpl_verts,
-                                    batch["calib"][0],
-                                    format="tensor")
+            smpl_verts = projection(smpl_verts, batch["calib"][0], format="tensor")
             smpl_verts[:, 1] *= -1
             # render optimized mesh (normal, T_normal, image [-1,1])
             self.render.load_meshes(smpl_verts, in_tensor_dict["smpl_faces"])
@@ -394,20 +369,17 @@ class ICON(pl.LightningModule):
                 ) = self.netG.normal_filter(in_tensor_dict)
 
             # mask = torch.abs(in_tensor['T_normal_F']).sum(dim=0, keepdims=True) > 0.0
-            diff_F_smpl = torch.abs(in_tensor_dict["T_normal_F"] -
-                                    in_tensor_dict["normal_F"])
-            diff_B_smpl = torch.abs(in_tensor_dict["T_normal_B"] -
-                                    in_tensor_dict["normal_B"])
+            diff_F_smpl = torch.abs(in_tensor_dict["T_normal_F"] - in_tensor_dict["normal_F"])
+            diff_B_smpl = torch.abs(in_tensor_dict["T_normal_B"] - in_tensor_dict["normal_B"])
             loss = (diff_F_smpl + diff_B_smpl).mean()
 
             # silhouette loss
             smpl_arr = torch.cat([T_mask_F, T_mask_B], dim=-1)[0]
             gt_arr = torch.cat(
-                [in_tensor_dict["normal_F"][0], in_tensor_dict["normal_B"][0]],
-                dim=2).permute(1, 2, 0)
+                [in_tensor_dict["normal_F"][0], in_tensor_dict["normal_B"][0]], dim=2
+            ).permute(1, 2, 0)
             gt_arr = ((gt_arr + 1.0) * 0.5).to(self.device)
-            bg_color = (torch.Tensor(
-                [0.5, 0.5, 0.5]).unsqueeze(0).unsqueeze(0).to(self.device))
+            bg_color = (torch.Tensor([0.5, 0.5, 0.5]).unsqueeze(0).unsqueeze(0).to(self.device))
             gt_arr = ((gt_arr - bg_color).sum(dim=-1) != 0.0).float()
             loss += torch.abs(smpl_arr - gt_arr).mean()
 
@@ -425,7 +397,8 @@ class ICON(pl.LightningModule):
                 batch["type"][0],
                 in_tensor_dict["smpl_verts"][0],
                 in_tensor_dict["smpl_faces"][0],
-            ))
+            )
+        )
 
         features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
 
@@ -465,20 +438,11 @@ class ICON(pl.LightningModule):
             },
         }
 
-        deform_verts = torch.full(verts_pr.shape,
-                                  0.0,
-                                  device=self.device,
-                                  requires_grad=True)
-        optimizer_cloth = torch.optim.SGD([deform_verts],
-                                          lr=1e-1,
-                                          momentum=0.9)
+        deform_verts = torch.full(verts_pr.shape, 0.0, device=self.device, requires_grad=True)
+        optimizer_cloth = torch.optim.SGD([deform_verts], lr=1e-1, momentum=0.9)
         scheduler_cloth = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer_cloth,
-            mode="min",
-            factor=0.1,
-            verbose=0,
-            min_lr=1e-3,
-            patience=5)
+            optimizer_cloth, mode="min", factor=0.1, verbose=0, min_lr=1e-3, patience=5
+        )
         # cloth optimization
         loop_cloth = range(100)
 
@@ -497,8 +461,7 @@ class ICON(pl.LightningModule):
             diff_F_cloth = torch.abs(P_normal_F[0] - inter[:3])
             diff_B_cloth = torch.abs(P_normal_B[0] - inter[3:])
             losses["cloth"]["value"] = (diff_F_cloth + diff_B_cloth).mean()
-            losses["deform"]["value"] = torch.topk(
-                torch.abs(deform_verts.flatten()), 30)[0].mean()
+            losses["deform"]["value"] = torch.topk(torch.abs(deform_verts.flatten()), 30)[0].mean()
 
             # Weighted sum of the losses
             cloth_loss = torch.tensor(0.0, device=self.device)
@@ -518,8 +481,7 @@ class ICON(pl.LightningModule):
 
         # convert from GT to SDF
         deform_verts = deform_verts.flatten().detach()
-        deform_verts[torch.topk(torch.abs(deform_verts),
-                                30)[1]] = deform_verts.mean()
+        deform_verts[torch.topk(torch.abs(deform_verts), 30)[1]] = deform_verts.mean()
         deform_verts = deform_verts.view(-1, 3).cpu()
 
         verts_pr += deform_verts
@@ -538,8 +500,9 @@ class ICON(pl.LightningModule):
         mesh_name = batch["subject"][0]
         mesh_rot = batch["rotation"][0].item()
 
-        self.export_dir = osp.join(self.cfg.results_path, self.cfg.name,
-                                   "-".join(self.cfg.dataset.types), mesh_name)
+        self.export_dir = osp.join(
+            self.cfg.results_path, self.cfg.name, "-".join(self.cfg.dataset.types), mesh_name
+        )
 
         os.makedirs(self.export_dir, exist_ok=True)
 
@@ -547,46 +510,42 @@ class ICON(pl.LightningModule):
             if name in batch.keys():
                 in_tensor_dict.update({name: batch[name]})
 
-        in_tensor_dict.update({
-            k: batch[k] if k in batch.keys() else None
-            for k in getattr(self, f"{self.prior_type}_keys")
-        })
+        in_tensor_dict.update(
+            {
+                k: batch[k] if k in batch.keys() else None
+                for k in getattr(self, f"{self.prior_type}_keys")
+            }
+        )
 
-        if "T_normal_F" not in in_tensor_dict.keys(
-        ) or "T_normal_B" not in in_tensor_dict.keys():
+        if "T_normal_F" not in in_tensor_dict.keys() or "T_normal_B" not in in_tensor_dict.keys():
 
             # update the new T_normal_F/B
             self.render.load_meshes(
-                batch["smpl_verts"] *
-                torch.tensor([1.0, -1.0, 1.0]).to(self.device),
-                batch["smpl_faces"])
+                batch["smpl_verts"] * torch.tensor([1.0, -1.0, 1.0]).to(self.device),
+                batch["smpl_faces"]
+            )
             T_normal_F, T_noraml_B = self.render.get_rgb_image()
-            in_tensor_dict.update({
-                'T_normal_F': T_normal_F,
-                'T_normal_B': T_noraml_B
-            })
+            in_tensor_dict.update({'T_normal_F': T_normal_F, 'T_normal_B': T_noraml_B})
 
         with torch.no_grad():
-            features, inter = self.netG.filter(in_tensor_dict,
-                                               return_inter=True)
-            sdf = self.reconEngine(opt=self.cfg,
-                                   netG=self.netG,
-                                   features=features,
-                                   proj_matrix=None)
+            features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
+            sdf = self.reconEngine(
+                opt=self.cfg, netG=self.netG, features=features, proj_matrix=None
+            )
 
         def tensor2arr(x):
-            return (x[0].permute(1, 2, 0).detach().cpu().numpy() +
-                    1.0) * 0.5 * 255.0
+            return (x[0].permute(1, 2, 0).detach().cpu().numpy() + 1.0) * 0.5 * 255.0
 
         # save inter results
         image = tensor2arr(in_tensor_dict["image"])
         smpl_F = tensor2arr(in_tensor_dict["T_normal_F"])
         smpl_B = tensor2arr(in_tensor_dict["T_normal_B"])
-        image_inter = np.concatenate(self.tensor2image(512, inter[0]) +
-                                     [smpl_F, smpl_B, image],
-                                     axis=1)
+        image_inter = np.concatenate(
+            self.tensor2image(512, inter[0]) + [smpl_F, smpl_B, image], axis=1
+        )
         Image.fromarray((image_inter).astype(np.uint8)).save(
-            osp.join(self.export_dir, f"{mesh_rot}_inter.png"))
+            osp.join(self.export_dir, f"{mesh_rot}_inter.png")
+        )
 
         verts_pr, faces_pr = self.reconEngine.export_mesh(sdf)
 
@@ -596,19 +555,22 @@ class ICON(pl.LightningModule):
         verts_gt = batch["verts"][0]
         faces_gt = batch["faces"][0]
 
-        self.result_eval.update({
-            "verts_gt": verts_gt,
-            "faces_gt": faces_gt,
-            "verts_pr": verts_pr,
-            "faces_pr": faces_pr,
-            "recon_size": (self.resolutions[-1] - 1.0),
-            "calib": batch["calib"][0],
-        })
+        self.result_eval.update(
+            {
+                "verts_gt": verts_gt,
+                "faces_gt": faces_gt,
+                "verts_pr": verts_pr,
+                "faces_pr": faces_pr,
+                "recon_size": (self.resolutions[-1] - 1.0),
+                "calib": batch["calib"][0],
+            }
+        )
 
         self.evaluator.set_mesh(self.result_eval)
         chamfer, p2s = self.evaluator.calculate_chamfer_p2s(num_samples=1000)
         normal_consist = self.evaluator.calculate_normal_consist(
-            osp.join(self.export_dir, f"{mesh_rot}_nc.png"))
+            osp.join(self.export_dir, f"{mesh_rot}_nc.png")
+        )
 
         test_log = {"chamfer": chamfer, "p2s": p2s, "NC": normal_consist}
 
@@ -652,8 +614,7 @@ class ICON(pl.LightningModule):
         for dim in self.in_geo_dim:
             img = resize(
                 np.tile(
-                    ((inter[:dim].cpu().numpy() + 1.0) / 2.0 *
-                     255.0).transpose(1, 2, 0),
+                    ((inter[:dim].cpu().numpy() + 1.0) / 2.0 * 255.0).transpose(1, 2, 0),
                     (1, 1, int(3 / dim)),
                 ),
                 (height, height),
@@ -673,10 +634,7 @@ class ICON(pl.LightningModule):
 
         self.netG.eval()
         features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
-        sdf = self.reconEngine(opt=self.cfg,
-                               netG=self.netG,
-                               features=features,
-                               proj_matrix=None)
+        sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None)
 
         if sdf is not None:
             render = self.reconEngine.display(sdf)
@@ -685,14 +643,12 @@ class ICON(pl.LightningModule):
             height = image_pred.shape[0]
 
             image_gt = resize(
-                ((in_tensor_dict["image"].cpu().numpy()[0] + 1.0) / 2.0 *
-                 255.0).transpose(1, 2, 0),
+                ((in_tensor_dict["image"].cpu().numpy()[0] + 1.0) / 2.0 * 255.0).transpose(1, 2, 0),
                 (height, height),
                 anti_aliasing=True,
             )
             image_inter = self.tensor2image(height, inter[0])
-            image = np.concatenate([image_pred, image_gt] + image_inter,
-                                   axis=1)
+            image = np.concatenate([image_pred, image_gt] + image_inter, axis=1)
 
             step_id = self.global_step if dataset == "train" else self.global_step + idx
             self.logger.experiment.add_image(
@@ -711,18 +667,18 @@ class ICON(pl.LightningModule):
             if name in batch.keys():
                 in_tensor_dict.update({name: batch[name]})
 
-        in_tensor_dict.update({
-            k: batch[k] if k in batch.keys() else None
-            for k in getattr(self, f"{self.prior_type}_keys")
-        })
+        in_tensor_dict.update(
+            {
+                k: batch[k] if k in batch.keys() else None
+                for k in getattr(self, f"{self.prior_type}_keys")
+            }
+        )
 
         with torch.no_grad():
-            features, inter = self.netG.filter(in_tensor_dict,
-                                               return_inter=True)
-            sdf = self.reconEngine(opt=self.cfg,
-                                   netG=self.netG,
-                                   features=features,
-                                   proj_matrix=None)
+            features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
+            sdf = self.reconEngine(
+                opt=self.cfg, netG=self.netG, features=features, proj_matrix=None
+            )
 
         verts_pr, faces_pr = self.reconEngine.export_mesh(sdf)
 

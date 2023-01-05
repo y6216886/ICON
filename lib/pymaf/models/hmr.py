@@ -24,12 +24,7 @@ class Bottleneck(nn.Module):
         super().__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes,
-                               planes,
-                               kernel_size=3,
-                               stride=stride,
-                               padding=1,
-                               bias=False)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * 4)
@@ -63,22 +58,16 @@ class Bottleneck(nn.Module):
 class ResNet_Backbone(nn.Module):
     """ Feature Extrator with ResNet backbone
     """
-
     def __init__(self, model='res50', pretrained=True):
         if model == 'res50':
             block, layers = Bottleneck, [3, 4, 6, 3]
         else:
-            pass  # TODO
+            pass    # TODO
 
         self.inplanes = 64
         super().__init__()
         npose = 24 * 6
-        self.conv1 = nn.Conv2d(3,
-                               64,
-                               kernel_size=7,
-                               stride=2,
-                               padding=3,
-                               bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
@@ -97,11 +86,13 @@ class ResNet_Backbone(nn.Module):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes,
-                          planes * block.expansion,
-                          kernel_size=1,
-                          stride=stride,
-                          bias=False),
+                nn.Conv2d(
+                    self.inplanes,
+                    planes * block.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False
+                ),
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
@@ -134,18 +125,20 @@ class ResNet_Backbone(nn.Module):
 
         layers = []
         for i in range(num_layers):
-            kernel, padding, output_padding = _get_deconv_cfg(
-                num_kernels[i], i)
+            kernel, padding, output_padding = _get_deconv_cfg(num_kernels[i], i)
 
             planes = num_filters[i]
             layers.append(
-                nn.ConvTranspose2d(in_channels=self.inplanes,
-                                   out_channels=planes,
-                                   kernel_size=kernel,
-                                   stride=2,
-                                   padding=padding,
-                                   output_padding=output_padding,
-                                   bias=self.deconv_with_bias))
+                nn.ConvTranspose2d(
+                    in_channels=self.inplanes,
+                    out_channels=planes,
+                    kernel_size=kernel,
+                    stride=2,
+                    padding=padding,
+                    output_padding=output_padding,
+                    bias=self.deconv_with_bias
+                )
+            )
             layers.append(nn.BatchNorm2d(planes, momentum=BN_MOMENTUM))
             layers.append(nn.ReLU(inplace=True))
             self.inplanes = planes
@@ -177,17 +170,11 @@ class ResNet_Backbone(nn.Module):
 class HMR(nn.Module):
     """ SMPL Iterative Regressor with ResNet50 backbone
     """
-
     def __init__(self, block, layers, smpl_mean_params):
         self.inplanes = 64
         super().__init__()
         npose = 24 * 6
-        self.conv1 = nn.Conv2d(3,
-                               64,
-                               kernel_size=7,
-                               stride=2,
-                               padding=3,
-                               bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
@@ -217,8 +204,7 @@ class HMR(nn.Module):
 
         mean_params = np.load(smpl_mean_params)
         init_pose = torch.from_numpy(mean_params['pose'][:]).unsqueeze(0)
-        init_shape = torch.from_numpy(
-            mean_params['shape'][:].astype('float32')).unsqueeze(0)
+        init_shape = torch.from_numpy(mean_params['shape'][:].astype('float32')).unsqueeze(0)
         init_cam = torch.from_numpy(mean_params['cam']).unsqueeze(0)
         self.register_buffer('init_pose', init_pose)
         self.register_buffer('init_shape', init_shape)
@@ -228,11 +214,13 @@ class HMR(nn.Module):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes,
-                          planes * block.expansion,
-                          kernel_size=1,
-                          stride=stride,
-                          bias=False),
+                nn.Conv2d(
+                    self.inplanes,
+                    planes * block.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False
+                ),
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
@@ -244,12 +232,7 @@ class HMR(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self,
-                x,
-                init_pose=None,
-                init_shape=None,
-                init_cam=None,
-                n_iter=3):
+    def forward(self, x, init_pose=None, init_shape=None, init_cam=None, n_iter=3):
 
         batch_size = x.shape[0]
 
