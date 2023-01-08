@@ -37,8 +37,9 @@
 <br />
 
 ## News :triangular_flag_on_post:
+
 - [2022/12/15] ICON belongs to the past, [ECON](https://github.com/YuliangXiu/ECON) is the future!
-- [2022/09/12] Apply [KeypointNeRF](https://markomih.github.io/KeypointNeRF/) on ICON, quantitative numbers in [evaluation](docs/evaluation.md#benchmark-train-on-thuman20-test-on-cape)  
+- [2022/09/12] Apply [KeypointNeRF](https://markomih.github.io/KeypointNeRF/) on ICON, quantitative numbers in [evaluation](docs/evaluation.md#benchmark-train-on-thuman20-test-on-cape)
 - [2022/07/30] <a href="https://huggingface.co/spaces/Yuliang/ICON"  style='padding-left: 0.5rem;'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-orange'></a> <a href='https://colab.research.google.com/drive/1-AWeWhPvCTBX0KfMtgtMk10uPU05ihoA?usp=sharing' style='padding-left: 0.5rem;'><img src='https://colab.research.google.com/assets/colab-badge.svg' alt='Google Colab'></a> are both available
 - [2022/07/26] New cloth-refinement module is released, try `-loop_cloth`
 - [2022/06/13] ETH Zürich students from 3DV course create an add-on for [garment-extraction](docs/garment-extraction.md)
@@ -65,18 +66,6 @@
     <li>
       <a href="#citation">Citation</a>
     </li>
-    <li>
-      <a href="#acknowledgments">Acknowledgments</a>
-    </li>
-    <li>
-      <a href="#license">License</a>
-    </li>
-    <li>
-      <a href="#disclosure">Disclosure</a>
-    </li>
-    <li>
-      <a href="#contact">Contact</a>
-    </li>
   </ol>
 </details>
 <br />
@@ -86,30 +75,27 @@
 
 - If you want to **Train & Evaluate** on **PIFu / PaMIR / ICON** using your own data, please check [dataset.md](./docs/dataset.md) to prepare dataset, [training.md](./docs/training.md) for training, and [evaluation.md](./docs/evaluation.md) for benchmark evaluation.
 
-
 - Given a raw RGB image, you could get:
-  - image (png): 
+  - image (png):
     - segmented human RGB
     - normal maps of body and cloth
     - pixel-aligned normal-RGB overlap
   - mesh (obj):
-    - SMPL-(X) body from *PyMAF, PIXIE, PARE, HybrIK, BEV*
+    - SMPL-(X) body from _PyMAF, PIXIE, PARE, HybrIK, BEV_
     - 3D clothed human reconstruction
     - 3D garments (requires 2D mask)
-  - video (mp4): 
+  - video (mp4):
     - self-rotated clothed human
 
-|          ![Intermediate Results](assets/intermediate_results.png)          |
-| :------------------------------------------------------------------------: |
-|                       _ICON's intermediate results_                        |
-|               ![Iterative Refinement](assets/refinement.gif)               |
-|                       _ICON's SMPL Pose Refinement_                        |
-|                   _![Final Results](assets/overlap.gif)_                   |
-|      _Image -- overlapped normal prediction -- ICON -- refined ICON_       |
-|                      ![3D Garment](assets/garment.gif)                     |
-|              _3D Garment extracted from ICON using 2D mask_                |
-
-
+|    ![Intermediate Results](assets/intermediate_results.png)     |
+| :-------------------------------------------------------------: |
+|                  _ICON's intermediate results_                  |
+|         ![Iterative Refinement](assets/refinement.gif)          |
+|                  _ICON's SMPL Pose Refinement_                  |
+|             _![Final Results](assets/overlap.gif)_              |
+| _Image -- overlapped normal prediction -- ICON -- refined ICON_ |
+|                ![3D Garment](assets/garment.gif)                |
+|         _3D Garment extracted from ICON using 2D mask_          |
 
 <br>
 
@@ -128,7 +114,7 @@
 ```bash
 cd ICON
 
-# model_type: 
+# model_type:
 #   "pifu"            reimplemented PIFu
 #   "pamir"           reimplemented PaMIR
 #   "icon-filter"     ICON w/ global encoder (continous local wrinkles)
@@ -184,9 +170,17 @@ Some images used in the qualitative examples come from [pinterest.com](https://w
 
 This project has received funding from the European Union’s Horizon 2020 research and innovation programme under the Marie Skłodowska-Curie grant agreement No.860768 ([CLIPE Project](https://www.clipe-itn.eu)).
 
-<br>
+## Contributors
 
---------------
+Kudos to all of our amazing contributors! ICON thrives through open-source. In that spirit, we welcome all kinds of contributions from the community.
+
+<a href="https://github.com/yuliangxiu/ICON/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=yuliangxiu/ICON" />
+</a>
+
+_Contributor avatars are randomly shuffled._
+
+---
 
 <br>
 

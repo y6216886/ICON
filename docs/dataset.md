@@ -3,7 +3,7 @@
   * freeglut (`sudo apt-get install freeglut3-dev`)
   * (optional) **EGL** used for headless rendering (`apt install libgl1-mesa-dri libegl1-mesa libgbm1`)
 
-:warning: For **EGL** headless rendering (without screen, such as clusters), please `export PYOPENGL_PLATFORM=egl` before running these scripts, also set `egl=True` in `scripts/render_single.py`, otherwise, set `egl=False` and `unset PYOPENGL_PLATFORM`.
+:warning: For **EGL** headless rendering (without screen, such as clusters), please `export PYOPENGL_PLATFORM=egl` before running these scripts, otherwise, `unset PYOPENGL_PLATFORM`.
 
 :warning: If the program runs so slowly and is stuck in `mesh.ray.intersects_any`, uninstall and reinstall `pyembree` and `trimesh`, more details in [issue #62](https://github.com/YuliangXiu/ICON/issues/62).
 
@@ -14,9 +14,9 @@ Please refer to [THuman2.0-Dataset](https://github.com/ytrock/THuman2.0-Dataset)
 The SMPL and SMPLX fits could be downloaded as follows: 
 
 ```bash
-wget https://download.is.tue.mpg.de/icon/SMPL+X.zip --no-check-certificate -O ./data/thuman2/SMPL+X.zip
-unzip ./data/thuman2/SMPL+X.zip -d ./data/thuman2/
-rm ./data/thuman2/SMPL+X.zip
+wget https://download.is.tue.mpg.de/icon/SMPL-X.zip --no-check-certificate -O ./data/thuman2/SMPL-X.zip
+unzip ./data/thuman2/SMPL-X.zip -d ./data/thuman2/
+rm ./data/thuman2/SMPL-X.zip
 ```
 
 :eyes: `./sample_data` contains one example of THuman2.0 which shows the data folder structure. Note that PaMIR only support SMPL, if you want to use SMPL-X instead, please refer to `./scripts/tetrahedronize_scripits` to generate necessary data used for voxelization.
@@ -25,28 +25,34 @@ rm ./data/thuman2/SMPL+X.zip
 
 ```bash
 conda activate icon
-bash scripts/render_batch.sh debug all
-bash scripts/vis_batch.sh debug all
+python -m scripts.render_batch -debug -headless
+python -m scripts.visibility_batch -debug
 ```
 
 Then you will get the rendered samples & visibility results under `debug/`
 
 ## Generate Mode 
 
-**1. Rendering phrase**: RGB images, normal images, calibration array. *If you need the depth maps, just set `depth=True` at `render_single.py:L56`*
+**1. Rendering phrase**: RGB images, normal images, calibration array. *If you need the depth maps, just update `render_batch.py` as follows* 
+
+```python
+render_types = ["light", "normal"]
+--->
+render_types = ["light", "normal", "depth"]
+```
+
+Then run **render_batch.py**, which will take 20min for THuman2.
 
 ```bash
 conda activate icon
-bash scripts/render_batch.sh gen all
+python -m scripts.render_batch -headless -out_dir data/
 ```
-You could check the rendering status from `log/render/thuman2-{num_views}-{size}-{part}.txt`
 
 **2. Visibility phrase**: SMPL-X based visibility computation
 
 ```bash
-bash scripts/vis_batch.sh gen all
+python -m scripts.visibility_batch -out_dir data/
 ```
-You could check the visibility computing status from `log/vis/thuman2-{num_views}-{part}.txt`
 
 
 :white_check_mark: NOW, you have all the synthetic dataset under `data/thuman2_{num_views}views`, which will be used for training. 

@@ -86,34 +86,6 @@ def load_fit_body(fitted_path, scale, smpl_type='smplx', smpl_gender='neutral', 
     return smpl_mesh, smpl_joints
 
 
-def load_ori_fit_body(fitted_path, smpl_type='smplx', smpl_gender='neutral'):
-
-    param = np.load(fitted_path, allow_pickle=True)
-    for key in param.keys():
-        param[key] = torch.as_tensor(param[key])
-
-    smpl_model = get_smpl_model(smpl_type, smpl_gender)
-    model_forward_params = dict(
-        betas=param['betas'],
-        global_orient=param['global_orient'],
-        body_pose=param['body_pose'],
-        left_hand_pose=param['left_hand_pose'],
-        right_hand_pose=param['right_hand_pose'],
-        jaw_pose=param['jaw_pose'],
-        leye_pose=param['leye_pose'],
-        reye_pose=param['reye_pose'],
-        expression=param['expression'],
-        return_verts=True
-    )
-
-    smpl_out = smpl_model(**model_forward_params)
-
-    smpl_verts = smpl_out.vertices[0].detach()
-    smpl_mesh = trimesh.Trimesh(smpl_verts, smpl_model.faces, process=False, maintain_order=True)
-
-    return smpl_mesh
-
-
 def save_obj_mesh(mesh_path, verts, faces):
     file = open(mesh_path, 'w')
     for v in verts:
@@ -484,43 +456,12 @@ def compute_normal_batch(vertices, faces):
 
 
 # compute tangent and bitangent
-def compute_tangent(vertices, faces, normals, uvs, faceuvs):
+def compute_tangent(normals):
     # NOTE: this could be numerically unstable around [0,0,1]
     # but other current solutions are pretty freaky somehow
     c1 = np.cross(normals, np.array([0, 1, 0.0]))
     tan = c1
     normalize_v3(tan)
     btan = np.cross(normals, tan)
-
-    # NOTE: traditional version is below
-
-    # pts_tris = vertices[faces]
-    # uv_tris = uvs[faceuvs]
-
-    # W = np.stack([pts_tris[::, 1] - pts_tris[::, 0], pts_tris[::, 2] - pts_tris[::, 0]],2)
-    # UV = np.stack([uv_tris[::, 1] - uv_tris[::, 0], uv_tris[::, 2] - uv_tris[::, 0]], 1)
-
-    # for i in range(W.shape[0]):
-    #     W[i,::] = W[i,::].dot(np.linalg.inv(UV[i,::]))
-
-    # tan = np.zeros(vertices.shape, dtype=vertices.dtype)
-    # tan[faces[:,0]] += W[:,:,0]
-    # tan[faces[:,1]] += W[:,:,0]
-    # tan[faces[:,2]] += W[:,:,0]
-
-    # btan = np.zeros(vertices.shape, dtype=vertices.dtype)
-    # btan[faces[:,0]] += W[:,:,1]
-    # btan[faces[:,1]] += W[:,:,1]
-    # btan[faces[:,2]] += W[:,:,1]
-
-    # normalize_v3(tan)
-
-    # ndott = np.sum(normals*tan, 1, keepdims=True)
-    # tan = tan - ndott * normals
-
-    # normalize_v3(btan)
-    # normalize_v3(tan)
-
-    # tan[np.sum(np.cross(normals, tan) * btan, 1) < 0,:] *= -1.0
 
     return tan, btan
