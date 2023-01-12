@@ -54,7 +54,7 @@ class TestDataset():
         self.device = device
 
         keep_lst = sorted(glob.glob(f"{self.image_dir}/*"))
-        img_fmts = ['jpg', 'png', 'jpeg', "JPG", 'bmp']
+        img_fmts = ['jpg', 'png', 'jpeg', "JPG", 'bmp', 'exr']
         keep_lst = [item for item in keep_lst if item.split(".")[-1] in img_fmts]
 
         self.subject_list = sorted([item for item in keep_lst if item.split(".")[-1] in img_fmts])
