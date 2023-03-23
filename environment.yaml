@@ -1,4 +1,4 @@
-name: icon
+name: icon3090
 channels:
   - pytorch-lts
   - nvidia

@@ -13,7 +13,8 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
-
+import sys
+sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/")
 from lib.net.voxelize import Voxelization
 from lib.dataset.mesh_util import feat_select, read_smpl_constants
 from lib.net.NormalNet import NormalNet
@@ -44,7 +45,7 @@ class HGPIFuNet(BasePIFuNet):
     def __init__(self, cfg, projection_mode="orthogonal", error_term=nn.MSELoss()):
 
         super(HGPIFuNet, self).__init__(projection_mode=projection_mode, error_term=error_term)
-
+        self.cfg=cfg
         self.l1_loss = nn.SmoothL1Loss()
         self.opt = cfg.net
         self.root = cfg.root
@@ -86,10 +87,19 @@ class HGPIFuNet(BasePIFuNet):
                 self.channels_filter = [normal_F_lst, normal_B_lst]
 
         else:
+            # if "image" in self.in_geo and not cfg.exclude_normal:
+            #     self.channels_filter = [image_lst + normal_F_lst + normal_B_lst]
+            # elif "image" not in self.in_geo:
+            #     self.channels_filter = [normal_F_lst + normal_B_lst]
+            # elif "image" in self.in_geo and cfg.exclude_normal:
+            #     self.channels_filter = [image_lst]
             if "image" in self.in_geo:
-                self.channels_filter = [image_lst + normal_F_lst + normal_B_lst]
-            else:
-                self.channels_filter = [normal_F_lst + normal_B_lst]
+                self.channels_filter = [image_lst] 
+            if "normal_F" in self.in_geo:
+                self.channels_filter += [normal_F_lst] 
+            if "normal_F" in self.in_geo:
+                self.channels_filter += [normal_B_lst] 
+
 
         use_vis = (self.prior_type in ["icon", "keypoint"]) and ("vis" in self.smpl_feats)
         if self.prior_type in ["pamir", "pifu"]:
@@ -118,8 +128,8 @@ class HGPIFuNet(BasePIFuNet):
                 volume_res=128,
                 sigma=0.05,
                 smooth_kernel_size=7,
-                batch_size=cfg.batch_size,
-                device=torch.device(f"cuda:{cfg.gpus[0]}"),
+                batch_size=self.cfg.batch_size,
+                device=torch.device(f"cuda:{self.cfg.gpus[0]}"),
             )
             self.ve = VolumeEncoder(3, self.voxel_dim, self.opt.num_stack)
 
@@ -141,7 +151,7 @@ class HGPIFuNet(BasePIFuNet):
             name="if",
             res_layers=self.opt.res_layers,
             norm=self.opt.norm_mlp,
-            last_op=nn.Sigmoid() if not cfg.test_mode else None,
+            last_op=nn.Sigmoid() if not self.cfg.test_mode else None,
         )
 
         self.sp_encoder = SpatialEncoder()
@@ -177,7 +187,7 @@ class HGPIFuNet(BasePIFuNet):
 
         print(colored(summary_log, "yellow"))
 
-        self.normal_filter = NormalNet(cfg)
+        self.normal_filter = NormalNet(self.cfg)
 
         init_net(self)
 
@@ -190,15 +200,27 @@ class HGPIFuNet(BasePIFuNet):
                 feat_lst = []
                 if "image" in self.in_geo:
                     feat_lst.append(in_tensor_dict["image"])    # [1, 3, 512, 512]
-                if "normal_F" in self.in_geo and "normal_B" in self.in_geo:
+                # if "normal_F" in self.in_geo and "normal_B" in self.in_geo and not self.cfg.exclude_normal:
+                # if "normal_F" in self.in_geo or "normal_B" in self.in_geo:
+                #     if (
+                #         "normal_F" not in in_tensor_dict.keys() or
+                #         "normal_B" not in in_tensor_dict.keys()
+                #     ):
+                #         (nmlF, nmlB) = self.normal_filter(in_tensor_dict)
+                #     else:
+                #         nmlF = in_tensor_dict["normal_F"]
+                #         nmlB = in_tensor_dict["normal_B"]
+                                # if "normal_F" in self.in_geo or "normal_B" in self.in_geo:
                     if (
                         "normal_F" not in in_tensor_dict.keys() or
                         "normal_B" not in in_tensor_dict.keys()
                     ):
                         (nmlF, nmlB) = self.normal_filter(in_tensor_dict)
                     else:
-                        nmlF = in_tensor_dict["normal_F"]
-                        nmlB = in_tensor_dict["normal_B"]
+                        if "normal_F" in in_tensor_dict.keys():
+                            nmlF = in_tensor_dict["normal_F"]
+                        elif "normal_B" in in_tensor_dict.keys():
+                            nmlB = in_tensor_dict["normal_B"]
                     feat_lst.append(nmlF)    # [1, 3, 512, 512]
                     feat_lst.append(nmlB)    # [1, 3, 512, 512]
             in_filter = torch.cat(feat_lst, dim=1)
@@ -247,7 +269,7 @@ class HGPIFuNet(BasePIFuNet):
                 features_G.append(torch.cat([features_F[idx], features_B[idx]], dim=1))
         else:
             if self.use_filter:
-                features_G = self.F_filter(in_filter[:, self.channels_filter[0]])
+                    features_G = self.F_filter(in_filter[:, self.channels_filter[0]])
             else:
                 features_G = [in_filter[:, self.channels_filter[0]]]
 

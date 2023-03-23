@@ -1,7 +1,8 @@
 name: icon-filter
-ckpt_dir: "./data/ckpt/"
+ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 resume_path: "./data/ckpt/icon-filter.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
+results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
 test_mode: True
 batch_size: 1

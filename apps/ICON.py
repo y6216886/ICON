@@ -503,7 +503,7 @@ class ICON(pl.LightningModule):
         self.export_dir = osp.join(
             self.cfg.results_path, self.cfg.name, "-".join(self.cfg.dataset.types), mesh_name
         )
-
+        print(self.export_dir)
         os.makedirs(self.export_dir, exist_ok=True)
 
         for name in self.in_total:
@@ -579,16 +579,31 @@ class ICON(pl.LightningModule):
     def test_epoch_end(self, outputs):
 
         # make_test_gif("/".join(self.export_dir.split("/")[:-2]))
+        if not self.cfg.test_mode:
 
-        accu_outputs = accumulate(
-            outputs,
-            rot_num=3,
-            split={
-                "cape-easy": (0, 50),
-                "cape-hard": (50, 100)
-            },
-        )
+            accu_outputs = accumulate(
+                outputs,
+                rot_num=3,
+                # split={
+                #     "cape-easy": (0, 50),
+                #     "cape-hard": (50, 100)
+                # },
+                split={
+                    "thuman2": (0, 5)
+                },
+            )
 
+        elif self.cfg.test_mode:
+
+            accu_outputs = accumulate(
+                outputs,
+                rot_num=3,
+                split={
+                    "cape-easy": (0, 50),
+                    "cape-hard": (50, 100)
+                },
+
+            )
         print(colored(self.cfg.name, "green"))
         print(colored(self.cfg.dataset.noise_scale, "green"))
 

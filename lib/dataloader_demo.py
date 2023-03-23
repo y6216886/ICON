@@ -30,7 +30,8 @@ if __name__ == '__main__':
     dataset = PIFuDataset(args, split='test', vis=args_c.show)
     print(f"Number of subjects :{len(dataset.subject_list)}")
     data_dict = dataset[1]
-
+    # print(data_dict)
+    # assert 1==0
     if args_c.list:
         for k in data_dict.keys():
             if not hasattr(data_dict[k], "shape"):

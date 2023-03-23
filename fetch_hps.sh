@@ -3,16 +3,16 @@ urle () { [[ "${1}" ]] || return 1; local LANG=C i x; for (( i = 0; i < ${#1}; i
 
 # download mesh_downsampling file
 mkdir -p data/HPS/pymaf_data && cd data/HPS/pymaf_data/
-wget https://github.com/nkolot/GraphCMR/raw/master/data/mesh_downsampling.npz
+curl -OL https://github.com/nkolot/GraphCMR/raw/master/data/mesh_downsampling.npz
 
 # Model constants etc from https://github.com/nkolot/SPIN/blob/master/fetch_data.sh
-wget http://visiondata.cis.upenn.edu/spin/data.tar.gz
+curl -OL http://visiondata.cis.upenn.edu/spin/data.tar.gz
 tar xvf data.tar.gz
 mv data/* .
 rm -rf data && rm -f data.tar.gz
 
 # PyMAF pre-trained modeln (gdown>=4.6.0)
-gdown https://drive.google.com/drive/u/1/folders/1CkF79XRaZzdRlj6eJUt4W0nbTORv2t7O -O pretrained_model --folder
+https_proxy=socks5h://cpu0 gdown https://drive.google.com/drive/u/1/folders/1CkF79XRaZzdRlj6eJUt4W0nbTORv2t7O -O pretrained_model --folder
 cd ../../..
 echo "PyMAF done!"
 
@@ -20,7 +20,7 @@ function download_pare(){
     # (optional) download PARE
     cd data
 
-    wget https://www.dropbox.com/s/aeulffqzb3zmh8x/pare-github-data.zip
+    https_proxy=socks5h://cpu0 curl -OL https://www.dropbox.com/s/aeulffqzb3zmh8x/pare-github-data.zip
     unzip pare-github-data.zip && mv data HPS/pare_data
     rm -f pare-github-data.zip
     cd ..
@@ -38,11 +38,11 @@ function download_pixie(){
   read -p "Password (SMPL-X):" password
   username=$(urle $username)
   password=$(urle $password)
-  wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=smplx&sfile=SMPLX_NEUTRAL_2020.npz&resume=1' -O './data/HPS/pixie_data/SMPLX_NEUTRAL_2020.npz' --no-check-certificate --continue
+  https_proxy=socks5h://cpu0 curl -OL --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=smplx&sfile=SMPLX_NEUTRAL_2020.npz&resume=1' -O './data/HPS/pixie_data/SMPLX_NEUTRAL_2020.npz' --no-check-certificate --continue
 
   # PIXIE pretrained model and utilities
-  wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=pixie&sfile=pixie_model.tar&resume=1' -O './data/HPS/pixie_data/pixie_model.tar' --no-check-certificate --continue
-  wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=pixie&sfile=utilities.zip&resume=1' -O './data/HPS/pixie_data/utilities.zip' --no-check-certificate --continue
+  https_proxy=socks5h://cpu0 curl -OL --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=pixie&sfile=pixie_model.tar&resume=1' -O './data/HPS/pixie_data/pixie_model.tar' --no-check-certificate --continue
+  https_proxy=socks5h://cpu0 curl -OL --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=pixie&sfile=utilities.zip&resume=1' -O './data/HPS/pixie_data/utilities.zip' --no-check-certificate --continue
   cd data/HPS/pixie_data
   unzip utilities.zip
   rm utilities.zip
@@ -54,7 +54,7 @@ function download_hybrik(){
 
     # (optional) download HybrIK
     # gdown https://drive.google.com/uc?id=16Y_MGUynFeEzV8GVtKTE5AtkHSi3xsF9 -O data/hybrik_data/pretrained_w_cam.pth
-    gdown https://drive.google.com/uc?id=1lEWZgqxiDNNJgvpjlIXef2VuxcGbtXzi -O data/HPS/hybrik_data.zip
+    https_proxy=socks5h://cpu0 gdown https://drive.google.com/uc?id=1lEWZgqxiDNNJgvpjlIXef2VuxcGbtXzi -O data/HPS/hybrik_data.zip
     cd data/HPS
     unzip hybrik_data.zip
     rm -r *.zip __MACOSX

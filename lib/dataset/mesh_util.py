@@ -333,11 +333,9 @@ def get_visibility(xy, z, faces):
     xyz = torch.cat((xy, -z), dim=1)
     xyz = (xyz + 1.0) / 2.0
     faces = faces.long()
-
     rasterizer = Pytorch3dRasterizer(image_size=2**12)
     meshes_screen = Meshes(verts=xyz[None, ...], faces=faces[None, ...])
     raster_settings = rasterizer.raster_settings
-
     pix_to_face, zbuf, bary_coords, dists = rasterize_meshes(
         meshes_screen,
         image_size=raster_settings.image_size,
@@ -348,7 +346,6 @@ def get_visibility(xy, z, faces):
         perspective_correct=raster_settings.perspective_correct,
         cull_backfaces=raster_settings.cull_backfaces,
     )
-
     vis_vertices_id = torch.unique(faces[torch.unique(pix_to_face), :])
     vis_mask = torch.zeros(size=(z.shape[0], 1))
     vis_mask[vis_vertices_id] = 1.0

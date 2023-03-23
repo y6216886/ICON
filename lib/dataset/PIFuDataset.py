@@ -13,7 +13,8 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
-
+import sys
+sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/")
 from lib.renderer.mesh import load_fit_body, compute_normal_batch
 from lib.dataset.body_model import TetraSMPLModel
 from lib.common.render import Render
@@ -39,7 +40,7 @@ cape_gender = {
 
 class PIFuDataset():
     def __init__(self, cfg, split='train', vis=False):
-
+        self.test=cfg.test_mode
         self.split = split
         self.root = cfg.root
         self.bsize = cfg.batch_size
@@ -74,7 +75,7 @@ class PIFuDataset():
 
         self.use_sdf = cfg.sdf
         self.sdf_clip = cfg.sdf_clip
-
+        print(cfg.net.in_geo)
         # [(feat_name, channel_num),...]
         self.in_geo = [item[0] for item in cfg.net.in_geo]
         self.in_nml = [item[0] for item in cfg.net.in_nml]
@@ -101,7 +102,6 @@ class PIFuDataset():
 
             mesh_dir = None
             smplx_dir = None
-
             dataset_dir = osp.join(self.root, dataset)
 
             mesh_dir = osp.join(dataset_dir, "scans")
@@ -193,6 +193,7 @@ class PIFuDataset():
 
     def __len__(self):
         return len(self.subject_list) * len(self.rotations)
+        # return 360
 
     def __getitem__(self, index):
 
@@ -204,10 +205,13 @@ class PIFuDataset():
         mid = index // len(self.rotations)
 
         rotation = self.rotations[rid]
-        subject = self.subject_list[mid].split("/")[1]
-        dataset = self.subject_list[mid].split("/")[0]
+        subject = self.subject_list[mid].split("/")[-1]
+        if not self.test:
+            dataset = self.subject_list[mid].split("/")[-3]
+        else:
+            dataset = self.subject_list[mid].split("/")[-2]
+        # print(self.subject_list,mid,self.subject_list[mid])
         render_folder = "/".join([dataset + f"_{self.opt.rotation_num}views", subject])
-
         # setup paths
         data_dict = {
             'dataset': dataset,
@@ -219,7 +223,8 @@ class PIFuDataset():
             'smpl_path': osp.join(self.datasets_dict[dataset]["smpl_dir"], f"{subject}.obj"),
             'vis_path': osp.join(self.root, render_folder, 'vis', f'{rotation:03d}.pt')
         }
-
+        # print(dataset)
+        # print(self.datasets_dict[dataset]["mesh_dir"], f"{subject}/{subject}.obj")
         if dataset == 'thuman2':
             data_dict.update(
                 {
@@ -458,89 +463,94 @@ class PIFuDataset():
         ) else "smpl"
 
         return_dict = {}
+        try:
+            if 'smplx_param' in data_dict.keys() and \
+                os.path.exists(data_dict['smplx_param']) and \
+                    sum(self.noise_scale) > 0.0:
+                smplx_verts, smplx_dict = self.compute_smpl_verts(
+                    data_dict, self.noise_type, self.noise_scale
+                )
+                smplx_faces = torch.as_tensor(self.smplx.smplx_faces).long()
+                smplx_cmap = torch.as_tensor(np.load(self.smplx.cmap_vert_path)).float()
 
-        if 'smplx_param' in data_dict.keys() and \
-            os.path.exists(data_dict['smplx_param']) and \
-                sum(self.noise_scale) > 0.0:
-            smplx_verts, smplx_dict = self.compute_smpl_verts(
-                data_dict, self.noise_type, self.noise_scale
-            )
-            smplx_faces = torch.as_tensor(self.smplx.smplx_faces).long()
-            smplx_cmap = torch.as_tensor(np.load(self.smplx.cmap_vert_path)).float()
+            else:
+                
+                    smplx_vis = torch.load(data_dict['vis_path']).float()
+                    return_dict.update({'smpl_vis': smplx_vis})
 
-        else:
-            smplx_vis = torch.load(data_dict['vis_path']).float()
-            return_dict.update({'smpl_vis': smplx_vis})
+                    smplx_verts = rescale_smpl(data_dict[f"{smpl_type}_path"], scale=100.0)
+                    smplx_faces = torch.as_tensor(getattr(self.smplx, f"{smpl_type}_faces")).long()
+                    smplx_cmap = self.smplx.cmap_smpl_vids(smpl_type)
 
-            smplx_verts = rescale_smpl(data_dict[f"{smpl_type}_path"], scale=100.0)
-            smplx_faces = torch.as_tensor(getattr(self.smplx, f"{smpl_type}_faces")).long()
-            smplx_cmap = self.smplx.cmap_smpl_vids(smpl_type)
 
-        smplx_verts = projection(smplx_verts, data_dict['calib']).float()
+            smplx_verts = projection(smplx_verts, data_dict['calib']).float()
 
-        # get smpl_vis
-        if "smpl_vis" not in return_dict.keys() and "smpl_vis" in self.feat_keys:
-            (xy, z) = torch.as_tensor(smplx_verts).to(self.device).split([2, 1], dim=1)
-            smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces).to(self.device).long())
-            return_dict['smpl_vis'] = smplx_vis
+            # get smpl_vis
+            if "smpl_vis" not in return_dict.keys() and "smpl_vis" in self.feat_keys:
+                (xy, z) = torch.as_tensor(smplx_verts).to(self.device).split([2, 1], dim=1)
+                smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces).to(self.device).long())
+                return_dict['smpl_vis'] = smplx_vis
 
-        if "smpl_norm" not in return_dict.keys() and "smpl_norm" in self.feat_keys:
-            # get smpl_norms
-            smplx_norms = compute_normal_batch(smplx_verts.unsqueeze(0),
-                                               smplx_faces.unsqueeze(0))[0]
-            return_dict["smpl_norm"] = smplx_norms
+            if "smpl_norm" not in return_dict.keys() and "smpl_norm" in self.feat_keys:
+                # get smpl_norms
+                smplx_norms = compute_normal_batch(smplx_verts.unsqueeze(0),
+                                                smplx_faces.unsqueeze(0))[0]
+                return_dict["smpl_norm"] = smplx_norms
 
-        if "smpl_cmap" not in return_dict.keys() and "smpl_cmap" in self.feat_keys:
-            return_dict["smpl_cmap"] = smplx_cmap
-
-        return_dict.update(
-            {
-                'smpl_verts': smplx_verts,
-                'smpl_faces': smplx_faces,
-                'smpl_cmap': smplx_cmap,
-            }
-        )
-
-        if vis:
-
-            (xy, z) = torch.as_tensor(smplx_verts).to(self.device).split([2, 1], dim=1)
-            smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces).to(self.device).long())
-
-            T_normal_F, T_normal_B = self.render_normal(
-                (smplx_verts * torch.tensor(np.array([1.0, -1.0, 1.0]))).to(self.device),
-                smplx_faces.to(self.device)
-            )
+            if "smpl_cmap" not in return_dict.keys() and "smpl_cmap" in self.feat_keys:
+                return_dict["smpl_cmap"] = smplx_cmap
 
             return_dict.update(
                 {
-                    "T_normal_F": T_normal_F.squeeze(0),
-                    "T_normal_B": T_normal_B.squeeze(0)
-                }
-            )
-            query_points = projection(data_dict['samples_geo'], data_dict['calib']).float()
-
-            smplx_sdf, smplx_norm, smplx_cmap, smplx_vis = cal_sdf_batch(
-                smplx_verts.unsqueeze(0).to(self.device),
-                smplx_faces.unsqueeze(0).to(self.device),
-                smplx_cmap.unsqueeze(0).to(self.device),
-                smplx_vis.unsqueeze(0).to(self.device),
-                query_points.unsqueeze(0).contiguous().to(self.device)
-            )
-
-            return_dict.update(
-                {
-                    'smpl_feat':
-                        torch.cat(
-                            (
-                                smplx_sdf[0].detach().cpu(), smplx_cmap[0].detach().cpu(),
-                                smplx_norm[0].detach().cpu(), smplx_vis[0].detach().cpu()
-                            ),
-                            dim=1
-                        )
+                    'smpl_verts': smplx_verts,
+                    'smpl_faces': smplx_faces,
+                    'smpl_cmap': smplx_cmap,
                 }
             )
 
-        return return_dict
+            if vis:
+
+                (xy, z) = torch.as_tensor(smplx_verts).to(self.device).split([2, 1], dim=1)
+                smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces).to(self.device).long())
+
+                T_normal_F, T_normal_B = self.render_normal(
+                    (smplx_verts * torch.tensor(np.array([1.0, -1.0, 1.0]))).to(self.device),
+                    smplx_faces.to(self.device)
+                )
+
+                return_dict.update(
+                    {
+                        "T_normal_F": T_normal_F.squeeze(0),
+                        "T_normal_B": T_normal_B.squeeze(0)
+                    }
+                )
+                query_points = projection(data_dict['samples_geo'], data_dict['calib']).float()
+
+                smplx_sdf, smplx_norm, smplx_cmap, smplx_vis = cal_sdf_batch(
+                    smplx_verts.unsqueeze(0).to(self.device),
+                    smplx_faces.unsqueeze(0).to(self.device),
+                    smplx_cmap.unsqueeze(0).to(self.device),
+                    smplx_vis.unsqueeze(0).to(self.device),
+                    query_points.unsqueeze(0).contiguous().to(self.device)
+                )
+
+                return_dict.update(
+                    {
+                        'smpl_feat':
+                            torch.cat(
+                                (
+                                    smplx_sdf[0].detach().cpu(), smplx_cmap[0].detach().cpu(),
+                                    smplx_norm[0].detach().cpu(), smplx_vis[0].detach().cpu()
+                                ),
+                                dim=1
+                            )
+                    }
+                )
+
+            return return_dict
+        except:
+                print('warning')
+                print(data_dict['vis_path'])
 
     def load_smpl_voxel(self, data_dict):
 
@@ -682,3 +692,46 @@ class PIFuDataset():
         vis_list.append(pc)
 
         vp.show(*vis_list, bg="white", axes=1.0, interactive=True)
+
+
+if __name__=="__main__":
+
+    config_file="/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/configs/train/icon-filter.yaml"
+    from lib.common.config import get_cfg_defaults
+    from torch.utils.data import DataLoader
+    # from tqdm import tqdm
+    cfg1 = get_cfg_defaults()
+    cfg1.merge_from_file(config_file)
+    pifu= PIFuDataset(cfg=cfg1, split='train')
+    test_data_loader = DataLoader(
+            pifu,
+            batch_size=1,
+            shuffle=False,
+            num_workers=16,
+            pin_memory=True
+        )
+    print("train")
+    for i,j in enumerate(test_data_loader):
+        print(j)
+    # pifu= PIFuDataset(cfg=cfg1, split='val')
+    # test_data_loader = DataLoader(
+    #         pifu,
+    #         batch_size=1,
+    #         shuffle=False,
+    #         num_workers=16,
+    #         pin_memory=True
+    #     )
+    # print("val")
+    # for i,j in enumerate(test_data_loader):
+    #     print(1)
+    # print('test')
+    # pifu= PIFuDataset(cfg=cfg1, split='test')
+    # test_data_loader = DataLoader(
+    #         pifu,
+    #         batch_size=1,
+    #         shuffle=False,
+    #         num_workers=16,
+    #         pin_memory=True
+    #     )
+    # for i,j in enumerate(test_data_loader):
+    #     print(2)

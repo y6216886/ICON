@@ -20,15 +20,15 @@ import os
 _C = CN(new_allowed=True)
 
 # needed by trainer
-_C.name = 'default'
+_C.name = 'baseline/icon'
 _C.gpus = [0]
 _C.test_gpus = [1]
 _C.root = "./data/"
-_C.ckpt_dir = './data/ckpt/'
+_C.ckpt_dir = '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/'+_C.name+'/ckpt/'
 _C.resume_path = ''
 _C.normal_path = ''
 _C.corr_path = ''
-_C.results_path = './data/results/'
+_C.results_path = '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/'+_C.name+'/results/'
 _C.projection_mode = 'orthogonal'
 _C.num_views = 1
 _C.sdf = False
@@ -59,7 +59,7 @@ _C.clean_mesh = True
 _C.remesh = False
 
 _C.batch_size = 4
-_C.num_threads = 8
+_C.num_threads = 16
 
 _C.num_epoch = 10
 _C.freq_plot = 0.01

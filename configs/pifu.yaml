@@ -1,7 +1,8 @@
-name: pifu
-ckpt_dir: "./data/ckpt/"
+name: baseline/pifu_debug
+ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 resume_path: "./data/ckpt/pifu.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
+results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
 test_mode: True
 batch_size: 1
@@ -22,3 +23,9 @@ net:
 # user defined
 mcube_res: 512    # occupancy field resolution, higher --> more details
 clean_mesh: False # if True, will remove floating pieces
+
+# _C.ckpt_dir = '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/'+_C.name+'/ckpt/'
+# _C.resume_path = ''
+# _C.normal_path = ''
+# _C.corr_path = ''
+# _C.results_path = '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/'+_C.name+'/results/'

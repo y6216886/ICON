@@ -1,8 +1,8 @@
-name: pamir
-ckpt_dir: "./data/ckpt/"
+name: baseline/pamir_v2_0323
+ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 resume_path: "./data/ckpt/pamir.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
-results_path: "./results"
+results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
 dataset:
   root: "./data/"
@@ -49,10 +49,10 @@ net:
 lr_G: 1e-4
 weight_decay: 0.0 
 momentum: 0.0
-batch_size: 8
+batch_size: 2
 num_threads: 16
-gpus: [0]
-test_gpus: [0]
+gpus: [7]
+test_gpus: [7]
 
 sdf: False
 sdf_clip: 15.0
@@ -69,7 +69,7 @@ optim: RMSprop
 
 # training (batch=4, set=agora, rot-6)
 overfit: False
-num_epoch: 10
+num_epoch: 1
 freq_show_train: 0.1
 freq_show_val: 0.3
 freq_plot: 0.01

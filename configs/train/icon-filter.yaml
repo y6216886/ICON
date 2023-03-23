@@ -1,8 +1,8 @@
-name: icon-filter
-ckpt_dir: "./data/ckpt/"
+name: baseline/icon-filter-v2_0221_batch8
+ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 resume_path: "./data/ckpt/icon-filter.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
-results_path: "./results"
+results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
 dataset:
   root: "./data/"
@@ -51,10 +51,10 @@ net:
 lr_G: 1e-4
 weight_decay: 0.0 
 momentum: 0.0
-batch_size: 4
-num_threads: 8
-gpus: [0]
-test_gpus: [0]
+batch_size: 2
+num_threads: 32
+gpus: [7]
+test_gpus: [7]
 
 sdf: False
 sdf_clip: 15.0

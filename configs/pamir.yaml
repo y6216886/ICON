@@ -1,10 +1,12 @@
-name: pamir
+name: pamir_debugv1
 ckpt_dir: "./data/ckpt/"
 resume_path: "./data/ckpt/pamir.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
 
 test_mode: True
 batch_size: 1
+
+exclude_normal: True
 
 net:
   mlp_dim: [256, 512, 256, 128, 1]

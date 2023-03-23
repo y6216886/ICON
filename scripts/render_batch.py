@@ -60,7 +60,7 @@ def render_subject(subject, dataset, save_folder, rotation, size, render_types, 
         up_axis = 1
         smpl_type = "smplx"
 
-        mesh_file = os.path.join(f'./data/{dataset}/scans/{subject}', f'{subject}.obj')
+        mesh_file = os.path.join(f'./data/{dataset}/scans/{subject}', f'{subject}.obj')  ##finer human model
         smplx_file = f'./data/{dataset}/{smpl_type}/{subject}.obj'
         tex_file = f'./data/{dataset}/scans/{subject}/material0.jpeg'
         fit_file = f'./data/{dataset}/{smpl_type}/{subject}.pkl'
@@ -193,14 +193,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-dataset', '--dataset', type=str, default="thuman2", help='dataset name')
-    parser.add_argument('-out_dir', '--out_dir', type=str, default="./debug", help='output dir')
+    parser.add_argument('-out_dir', '--out_dir', type=str, default="data/", help='output dir')
     parser.add_argument('-num_views', '--num_views', type=int, default=36, help='number of views')
     parser.add_argument('-size', '--size', type=int, default=512, help='render size')
     parser.add_argument(
         '-debug', '--debug', action="store_true", help='debug mode, only render one subject'
     )
     parser.add_argument(
-        '-headless', '--headless', action="store_true", help='headless rendering with EGL'
+        '-headless', '--headless', action="store_true",default=True, help='headless rendering with EGL'
     )
     args = parser.parse_args()
 
@@ -210,7 +210,7 @@ if __name__ == "__main__":
     else:
         os.environ["PYOPENGL_PLATFORM"] = ""
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
     # shoud be put after PYOPENGL_PLATFORM
     import lib.renderer.opengl_util as opengl_util
@@ -237,11 +237,12 @@ if __name__ == "__main__":
     else:
         random.shuffle(subjects)
         render_types = ["light", "normal"]
-
+    subjects=np.array(['0102'])
     print(f"Rendering types: {render_types}")
 
-    NUM_GPUS = 2
-    PROC_PER_GPU = mp.cpu_count() // NUM_GPUS
+    NUM_GPUS = 1
+    # PROC_PER_GPU = mp.cpu_count() // NUM_GPUS
+    PROC_PER_GPU=1
 
     queue = Queue()
 
@@ -250,7 +251,7 @@ if __name__ == "__main__":
         for _ in range(PROC_PER_GPU):
             queue.put(gpu_ids)
 
-    with Pool(processes=mp.cpu_count(), maxtasksperchild=1) as pool:
+    with Pool(processes=20, maxtasksperchild=1) as pool: #render_subject(subject, dataset, save_folder, rotation, size, render_types, egl):
         for _ in tqdm(
             pool.imap_unordered(
                 partial(

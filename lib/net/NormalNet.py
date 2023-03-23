@@ -64,7 +64,7 @@ class NormalNet(BasePIFuNet):
         init_net(self)
 
     def forward(self, in_tensor):
-
+        
         inF_list = []
         inB_list = []
 

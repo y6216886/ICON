@@ -20,7 +20,6 @@ sys.path.append(os.path.join(os.getcwd()))
 from lib.renderer.mesh import load_fit_body
 from lib.dataset.mesh_util import projection, load_calib, get_visibility
 
-
 def visibility_subject(subject, dataset, save_folder, rotation, debug):
     
     gpu_id = queue.get()
@@ -39,7 +38,6 @@ def visibility_subject(subject, dataset, save_folder, rotation, debug):
 
             calib_file = os.path.join(f'{save_folder}/{subject}/calib', f'{y:03d}.txt')
             vis_file = os.path.join(f'{save_folder}/{subject}/vis', f'{y:03d}.pt')
-
             os.makedirs(os.path.dirname(vis_file), exist_ok=True)
 
             if not os.path.exists(vis_file):
@@ -48,7 +46,7 @@ def visibility_subject(subject, dataset, save_folder, rotation, debug):
                 calib_verts = projection(smpl_verts, calib)
                 (xy, z) = calib_verts.split([2, 1], dim=1)
                 smpl_vis = get_visibility(xy, z, smpl_faces)
-
+                torch.cuda.empty_cache()
                 if debug:
                     mesh = trimesh.Trimesh(
                         smpl_verts.cpu().numpy(), smpl_faces.cpu().numpy(), process=False
@@ -62,10 +60,9 @@ def visibility_subject(subject, dataset, save_folder, rotation, debug):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-dataset', '--dataset', type=str, default="thuman2", help='dataset name')
-    parser.add_argument('-out_dir', '--out_dir', type=str, default="./debug", help='output dir')
+    parser.add_argument('-out_dir', '--out_dir', type=str, default="data", help='output dir')
     parser.add_argument('-num_views', '--num_views', type=int, default=36, help='number of views')
     parser.add_argument(
         '-debug', '--debug', action="store_true", help='debug mode, only render one subject'
@@ -78,10 +75,11 @@ if __name__ == "__main__":
     os.makedirs(current_out_dir, exist_ok=True)
     print(f"Output dir: {current_out_dir}")
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "6"#4 3 1 0
     
-    NUM_GPUS = 2
-    PROC_PER_GPU = mp.cpu_count() // NUM_GPUS
+    NUM_GPUS = 1
+    cpu_num=1
+    PROC_PER_GPU = cpu_num // NUM_GPUS
     queue = Queue()
     
     # initialize the queue with the GPU ids
@@ -89,27 +87,37 @@ if __name__ == "__main__":
         for _ in range(PROC_PER_GPU):
             queue.put(gpu_ids)
 
-    p = Pool(processes=mp.cpu_count(), maxtasksperchild=1)
+    p = Pool(processes=cpu_num, maxtasksperchild=1)
     subjects = np.loadtxt(f"./data/{args.dataset}/all.txt", dtype=str)
 
     if args.debug:
-        subjects = subjects[:2]
+        subjects = subjects[:2] 
+    # subjects = subjects[100:200]
+    # subjects = subjects[200:300]
+    # subjects = subjects[300:400]
+    # subjects = subjects[400:500]
+    # subjects = subjects[260:500]
+    # subjects = subjects[103:300] ##101 raise index error
+    subjects = ['0029', '0210', '0311', '0410', '0511']
+    # subjects = ['0210']
+    # print(subjects)
+    # assert 1==0
+    with torch.no_grad():
+        for _ in tqdm(
+            p.imap_unordered(
+                partial(
+                    visibility_subject,
+                    dataset=args.dataset,
+                    save_folder=current_out_dir,
+                    rotation=args.num_views,
+                    debug=args.debug,
+                ), subjects
+            ),
+            total=len(subjects)
+        ):
+            pass
 
-    for _ in tqdm(
-        p.imap_unordered(
-            partial(
-                visibility_subject,
-                dataset=args.dataset,
-                save_folder=current_out_dir,
-                rotation=args.num_views,
-                debug=args.debug,
-            ), subjects
-        ),
-        total=len(subjects)
-    ):
-        pass
+        p.close()
+        p.join()
 
-    p.close()
-    p.join()
-
-    print('Finish Visibility Computing.')
+        print('Finish Visibility Computing.')

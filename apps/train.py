@@ -6,7 +6,8 @@ warnings.filterwarnings('ignore')
 logging.getLogger("wandb").setLevel(logging.ERROR)
 logging.getLogger("lightning").setLevel(logging.ERROR)
 logging.getLogger("trimesh").setLevel(logging.ERROR)
-
+import sys
+sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON")
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning import loggers as pl_loggers
@@ -22,13 +23,15 @@ import numpy as np
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cfg", "--config_file", type=str, help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='./configs/train/pamir/pamir_img_normal_front.yaml',help="path of the yaml config file")
     parser.add_argument("-test", "--test_mode", action="store_true")
+    parser.add_argument("--gpus", type=list, default=[5])
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
+    cfg.gpus=[int(i) for i in args.gpus]
     cfg.freeze()
-
+    print("note cfg is freeze")
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
 
@@ -45,6 +48,7 @@ if __name__ == "__main__":
         dirpath=osp.join(cfg.ckpt_dir, cfg.name),
         save_top_k=1,
         verbose=False,
+        save_last=True,
         save_weights_only=True,
         monitor="val/avgloss",
         mode="min",
@@ -93,7 +97,7 @@ if __name__ == "__main__":
     }
 
     datamodule = PIFuDataModule(cfg)
-
+    print("note !!!!in test mode")
     if not cfg.test_mode:
         datamodule.setup(stage="fit")
         train_len = datamodule.data_size["train"]

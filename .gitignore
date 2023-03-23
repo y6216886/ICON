@@ -19,3 +19,14 @@ results
 results/
 libmesh/
 libvoxelize/
+*.obj
+*.pkl
+*.npy
+*.png
+*.jpg
+*.txt
+gdrive
+sample_data/
+*.zip
+*/*.gif
+*.gif

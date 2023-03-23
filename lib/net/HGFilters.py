@@ -131,7 +131,7 @@ class HGFilter(nn.Module):
                     nn.Conv2d(opt.hourglass_dim, 256, kernel_size=1, stride=1, padding=0)
                 )
 
-    def forward(self, x):
+    def forward(self, x):#x:normal map
         x = F.relu(self.bn1(self.conv1(x)), True)
         tmpx = x
         if self.opt.hg_down == 'ave_pool':
