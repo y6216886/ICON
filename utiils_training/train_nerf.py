@@ -75,7 +75,7 @@ def occumpy_mem(cuda_device):
     total = int(total)
     used = int(used)
     
-    max_mem = int(total * 0.7)
+    max_mem = int(total * 0.4)
     
     block_mem = max_mem - used
     print(total, used,max_mem, block_mem,"total, used, max_mem, block_mem")

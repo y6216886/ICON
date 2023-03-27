@@ -67,27 +67,42 @@ class NormalNet(BasePIFuNet):
         
         inF_list = []
         inB_list = []
+        F_flag=False
+        B_flag=False
+        mask = (in_tensor['image'].abs().sum(dim=1, keepdim=True) != 0.0).detach().float()
+        # for name in self.in_nmlF:
+        #     inF_list.append(in_tensor[name])
+        # for name in self.in_nmlB:
+        #     inB_list.append(in_tensor[name])
+        for item in self.in_nmlF:
+            inF_list.append(in_tensor[item])
+            if "F" in item:
+                F_flag=True
+        if F_flag:
+            nmlF = self.netF(torch.cat(inF_list, dim=1))
+            nmlF = nmlF / torch.norm(nmlF, dim=1, keepdim=True)
+            nmlF = nmlF * mask
+                
+        for item in self.in_nmlB:
+            inB_list.append(in_tensor[item])
+            if "B" in item:
+                B_flag=True
+        if B_flag:
+            nmlB = self.netB(torch.cat(inB_list, dim=1))
+            nmlB = nmlB / torch.norm(nmlB, dim=1, keepdim=True)
+            nmlB = nmlB * mask
+                
 
-        for name in self.in_nmlF:
-            inF_list.append(in_tensor[name])
-        for name in self.in_nmlB:
-            inB_list.append(in_tensor[name])
-
-        nmlF = self.netF(torch.cat(inF_list, dim=1))
-        nmlB = self.netB(torch.cat(inB_list, dim=1))
+        
 
         # ||normal|| == 1
-        nmlF = nmlF / torch.norm(nmlF, dim=1, keepdim=True)
-        nmlB = nmlB / torch.norm(nmlB, dim=1, keepdim=True)
-
+        
         # output: float_arr [-1,1] with [B, C, H, W]
 
-        mask = (in_tensor['image'].abs().sum(dim=1, keepdim=True) != 0.0).detach().float()
-
-        nmlF = nmlF * mask
-        nmlB = nmlB * mask
-
-        return nmlF, nmlB
+        if F_flag and B_flag:
+            return nmlF, nmlB
+        elif F_flag: return nmlF, None
+        elif B_flag: return None, nmlB
 
     def get_norm_error(self, prd_F, prd_B, tgt):
         """calculate normal loss
@@ -97,7 +112,7 @@ class NormalNet(BasePIFuNet):
             tagt (torch.tensor): [B, 6, 512, 512]
         """
 
-        tgt_F, tgt_B = tgt['normal_F'], tgt['normal_B']
+        tgt_F, tgt_B = tgt['normal_F'], tgt['normal_B'] ##which means normal_F and normal_B are the normal maps of clothed human
 
         l1_F_loss = self.l1_loss(prd_F, tgt_F)
         l1_B_loss = self.l1_loss(prd_B, tgt_B)

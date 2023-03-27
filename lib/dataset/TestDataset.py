@@ -353,7 +353,7 @@ if __name__ == '__main__':
     cfg.merge_from_file("./configs/icon-filter.yaml")
     cfg.merge_from_file('./lib/pymaf/configs/pymaf_config.yaml')
 
-    cfg_show_list = ['test_gpus', ['0'], 'mcube_res', 512, 'clean_mesh', False]
+    cfg_show_list = ['gpus', ['0'], 'mcube_res', 512, 'clean_mesh', False]
 
     cfg.merge_from_list(cfg_show_list)
     cfg.freeze()

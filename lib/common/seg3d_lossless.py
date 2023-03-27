@@ -158,7 +158,7 @@ class Seg3dLossless(nn.Module):
                     # return F.interpolate(
                     #     occupancys, size=(final_D, final_H, final_W),
                     #     mode="linear", align_corners=True)
-                    return None
+                    return None ##whole value is too small
 
                 if self.visualize:
                     self.plot(occupancys, coords, final_D, final_H, final_W)

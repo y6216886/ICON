@@ -1,6 +1,6 @@
-name: baseline/pamir_using_img_only
+name: baseline/pifu_img+normb+normf
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
-resume_path: "./data/ckpt/pamir.ckpt"
+# resume_path: "./data/ckpt/pifu.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
 results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
@@ -21,7 +21,7 @@ dataset:
   zray_type: False
   semantic_p: False
   remove_outlier: False
-  
+
   noise_type: ['pose', 'beta']
   noise_scale: [0.0, 0.0]
 
@@ -32,12 +32,10 @@ net:
   mlp_dim: [256, 512, 256, 128, 1]
   res_layers: [2,3,4]
   num_stack: 2
-  prior_type: "pamir"
+  prior_type: "pifu"
   use_filter: True
-  # in_geo: (('image',3), ('normal_F',3), ('normal_B',3))
-  # in_nml: (('image',3), ('T_normal_F',3), ('T_normal_B',3))
-  in_geo: [['image',3],['normal_F',3]]
-  in_nml: [['image',3],['T_normal_F',3]] 
+  in_geo: [['image',3], ['normal_F',3], ['normal_B',3]]
+  in_nml: [['image',3], ['T_normal_F',3], ['T_normal_B',3]]
   gtype: 'HGPIFuNet'
   ctype: 'resnet34'
   norm_mlp: 'batch'
@@ -45,17 +43,17 @@ net:
   geo_w: 0.1
   norm_w: 0.001
   dc_w: 1.0
-  hourglass_dim: 6
-  voxel_dim: 7
+  hourglass_dim: 12
+  voxel_dim: 32
+  smpl_dim: 7
 
-exclude_normal: True
 lr_G: 1e-4
 weight_decay: 0.0 
 momentum: 0.0
 batch_size: 2
 num_threads: 16
-gpus: [5]
-test_gpus: [5]
+gpus: [0]
+test_gpus: [0]
 
 sdf: False
 sdf_clip: 15.0
@@ -72,7 +70,7 @@ optim: RMSprop
 
 # training (batch=4, set=agora, rot-6)
 overfit: False
-num_epoch: 1
+num_epoch: 10
 freq_show_train: 0.1
 freq_show_val: 0.3
 freq_plot: 0.01

@@ -211,18 +211,27 @@ class HGPIFuNet(BasePIFuNet):
                 #         nmlF = in_tensor_dict["normal_F"]
                 #         nmlB = in_tensor_dict["normal_B"]
                                 # if "normal_F" in self.in_geo or "normal_B" in self.in_geo:
-                    if (
+                if (
+                        "normal_F" not in in_tensor_dict.keys() and
+                        "normal_B" not in in_tensor_dict.keys()
+                    ):
+                    print("img only")
+                elif (
                         "normal_F" not in in_tensor_dict.keys() or
                         "normal_B" not in in_tensor_dict.keys()
                     ):
                         (nmlF, nmlB) = self.normal_filter(in_tensor_dict)
-                    else:
-                        if "normal_F" in in_tensor_dict.keys():
+                        if nmlF!=None: 
+                            feat_lst.append(nmlF)    # [1, 3, 512, 512]
+                        if nmlB!=None: 
+                            feat_lst.append(nmlB)    # [1, 3, 512, 512]
+                else:
                             nmlF = in_tensor_dict["normal_F"]
-                        elif "normal_B" in in_tensor_dict.keys():
+                            feat_lst.append(nmlF)
                             nmlB = in_tensor_dict["normal_B"]
-                    feat_lst.append(nmlF)    # [1, 3, 512, 512]
-                    feat_lst.append(nmlB)    # [1, 3, 512, 512]
+                            feat_lst.append(nmlB) 
+                            # [1, 3, 512, 512]
+                           # [1, 3, 512, 512]
             in_filter = torch.cat(feat_lst, dim=1)
 
         else:

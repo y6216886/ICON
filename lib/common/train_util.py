@@ -78,11 +78,12 @@ class SubTrainer(pl.Trainer):
 
 
 def load_networks(cfg, model, mlp_path, normal_path):
-
+    print("loading model from path:")
+    print(mlp_path,normal_path)
     model_dict = model.state_dict()
     main_dict = {}
     normal_dict = {}
-
+    
     # MLP part loading
     if os.path.exists(mlp_path) and mlp_path.endswith("ckpt"):
         main_dict = torch.load(mlp_path,

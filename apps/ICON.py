@@ -77,14 +77,14 @@ class ICON(pl.LightningModule):
             resolutions=self.resolutions,
             align_corners=True,
             balance_value=0.50,
-            device=torch.device(f"cuda:{self.cfg.test_gpus[0]}"),
+            device=torch.device(f"cuda:{self.cfg.gpus[0]}"),
             visualize=False,
             debug=False,
             use_cuda_impl=False,
             faster=True,
         )
 
-        self.render = Render(size=512, device=torch.device(f"cuda:{self.cfg.test_gpus[0]}"))
+        self.render = Render(size=512, device=torch.device(f"cuda:{self.cfg.gpus[0]}"))
         self.smpl_data = SMPLX()
 
         self.get_smpl_model = lambda smpl_type, gender, age, v_template: smplx.create(
@@ -529,6 +529,7 @@ class ICON(pl.LightningModule):
 
         with torch.no_grad():
             features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
+
             sdf = self.reconEngine(
                 opt=self.cfg, netG=self.netG, features=features, proj_matrix=None
             )
@@ -694,7 +695,7 @@ class ICON(pl.LightningModule):
             sdf = self.reconEngine(
                 opt=self.cfg, netG=self.netG, features=features, proj_matrix=None
             )
-
+        print(sdf,1111)
         verts_pr, faces_pr = self.reconEngine.export_mesh(sdf)
 
         if self.clean_mesh_flag:

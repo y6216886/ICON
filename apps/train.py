@@ -19,13 +19,14 @@ import os
 import os.path as osp
 import argparse
 import numpy as np
+from pytorch_lightning.loggers import WandbLogger
 
 if __name__ == "__main__":
-
+    
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cfg", "--config_file", type=str, default='./configs/train/pamir/pamir_img_normal_front.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/pamir/pamir_img.yaml',help="path of the yaml config file")
     parser.add_argument("-test", "--test_mode", action="store_true")
-    parser.add_argument("--gpus", type=list, default=[5])
+    parser.add_argument("--gpus", type=list, default=[4])
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
@@ -38,6 +39,7 @@ if __name__ == "__main__":
     tb_logger = pl_loggers.TensorBoardLogger(
         save_dir=cfg.results_path, name=cfg.name, default_hp_metric=False
     )
+    # wandb_logger = WandbLogger(name=cfg.name, project=cfg.proj_name, save_dir=cfg.wandbsavepath)
 
     if cfg.overfit:
         cfg_overfit_list = ["batch_size", 1]
@@ -128,7 +130,11 @@ if __name__ == "__main__":
     trainer = SubTrainer(**trainer_kwargs)
 
     # load checkpoints
-    load_networks(cfg, model, mlp_path=cfg.resume_path, normal_path=cfg.normal_path)
+    if not cfg.test_mode:
+        resume_path=cfg.resume_path
+    else:
+        resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
+    load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
 
     if not cfg.test_mode:
         trainer.fit(model=model, datamodule=datamodule)

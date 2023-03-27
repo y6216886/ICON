@@ -87,7 +87,7 @@ def projection(points, calib):
 
 def get_face_idx_from_smplx(smplx_obj_numpy,smplx_flame_vertex_ids="projection/SMPL-X__FLAME_vertex_ids.npy"):
     sf_ids = np.load(smplx_flame_vertex_ids)
-
+    smplx_obj_numpy=np.array(smplx_obj_numpy)
     smplx_vertex_numpy=list(list(i) for i in smplx_obj_numpy[sf_ids])
 
     return smplx_vertex_numpy
@@ -222,36 +222,36 @@ if __name__ =="__main__":
        }
 
     
-    uv_of_face_in_image_crop(**kwargsv3) #reproject vertex of face into image
+    # uv_of_face_in_image_crop(**kwargsv3) #reproject vertex of face into image
     # uv_of_face_in_image_crop(**kwargs)
-    # smpl_whole_body=read_vertex_faces_id_from_obj("projection/0000.obj")
-    # vertex_whole_body = smpl_whole_body[1]
-    # # smpl_whole_body=list(list(i) for i in vertex_whole_body)
+    smpl_whole_body=read_vertex_faces_id_from_obj("projection/0000.obj")
+    vertex_whole_body = smpl_whole_body[1]
+    smpl_whole_body=list(list(i) for i in vertex_whole_body)
 
 
  
-    # # vertex_whole_body=torch.from_numpy(vertex_whole_body)* 100.0
-    # # calib=load_calib("/home/young/code/HairNet_orient2D/maskrcnn_segmentation/locate_head_with_smpl/000.txt")
-    # # transformed_body=projection(vertex_whole_body, calib)
-    # # transformed_body[:, 1] *= -1
+    # vertex_whole_body=torch.from_numpy(vertex_whole_body)* 100.0
+    # calib=load_calib("/home/young/code/HairNet_orient2D/maskrcnn_segmentation/locate_head_with_smpl/000.txt")
+    # transformed_body=projection(vertex_whole_body, calib)
+    # transformed_body[:, 1] *= -1
 
-    # # write_numpy_to_obj(transformed_body, filename="body.obj")
+    # write_numpy_to_obj(transformed_body, filename="body.obj")
 
-    # smplx_vertex_numpy=get_face_idx_from_smplx(smpl_whole_body)
-    # face_smplx_vertex_torch=torch.Tensor(smplx_vertex_numpy)* 100.0
-    # calib=load_calib_togther("projection/000.txt")
-    # transformed_face=orthogonal(face_smplx_vertex_torch, calib)
-    # print(torch.max(transformed_face), torch.min(transformed_face))
-    # # face_smplx_vertex_torch[:, 1] *= -1
-    # write_numpy_to_obj(transformed_face, filename="body.obj")
-    # transformed_face=(transformed_face+1)/2*512
-    # # transformed_face_v1 = torch.div(transformed_face[:,:2] , depth)
-    # # gt_joint = reproject(calib_ex,calib_in, face_smplx_vertex_torch)*512 ##2d
-    # img = cv2.imread('projection/000.png')
-    # for i in range(transformed_face.shape[0]):
-    #         joint_img = cv2.circle(img, (int( transformed_face[i][0]), int(transformed_face[i][1])), 1, (0,255,0),-1)
-    # cv2.imwrite('projection/000_project.png', joint_img)
-    # # transformed_face_v1[:,2]=0
+    smplx_vertex_numpy=get_face_idx_from_smplx(smpl_whole_body)
+    face_smplx_vertex_torch=torch.Tensor(smplx_vertex_numpy)* 100.0
+    calib=load_calib_togther("projection/000.txt")
+    transformed_face=orthogonal(face_smplx_vertex_torch, calib)
+    print(torch.max(transformed_face), torch.min(transformed_face))
+    # face_smplx_vertex_torch[:, 1] *= -1
+    write_numpy_to_obj(transformed_face, filename="body.obj")
+    transformed_face=(transformed_face+1)/2*512
+    # transformed_face_v1 = torch.div(transformed_face[:,:2] , depth)
+    # gt_joint = reproject(calib_ex,calib_in, face_smplx_vertex_torch)*512 ##2d
+    img = cv2.imread('projection/000.png')
+    for i in range(transformed_face.shape[0]):
+            joint_img = cv2.circle(img, (int( transformed_face[i][0]), int(transformed_face[i][1])), 1, (0,255,0),-1)
+    cv2.imwrite('projection/000_project.png', joint_img)
+    # transformed_face_v1[:,2]=0
 
-    # # write_numpy_to_obj(gt_joint, filename="head.obj")
-    # print(1)
+    # write_numpy_to_obj(gt_joint, filename="head.obj")
+    print(1)
