@@ -13,7 +13,7 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
-
+import wandb
 from lib.common.seg3d_lossless import Seg3dLossless
 from lib.dataset.Evaluator import Evaluator
 from lib.net import HGPIFuNet
@@ -200,6 +200,8 @@ class ICON(pl.LightningModule):
             "train_prec": prec.item(),
             "train_recall": recall.item(),
         }
+        for key in metrics_log:
+            self.log(key, metrics_log[key])
 
         tf_log = tf_log_convert(metrics_log)
         bar_log = bar_log_convert(metrics_log)
@@ -608,13 +610,18 @@ class ICON(pl.LightningModule):
         print(colored(self.cfg.name, "green"))
         print(colored(self.cfg.dataset.noise_scale, "green"))
 
-        self.logger.experiment.add_hparams(
-            hparam_dict={
-                "lr_G": self.lr_G,
-                "bsize": self.batch_size
-            },
-            metric_dict=accu_outputs,
-        )
+        # self.logger.experiment.add_hparams(
+        #     hparam_dict={
+        #         "lr_G": self.lr_G,
+        #         "bsize": self.batch_size
+        #     },
+        #     metric_dict=accu_outputs,
+        # )
+        self.log("lr_G", self.lr_G)
+        self.log("bsize", self.batch_size)
+        for key in accu_outputs:
+            self.log(key, accu_outputs[key])
+
 
         np.save(
             osp.join(self.export_dir, "../test_results.npy"),
@@ -667,11 +674,14 @@ class ICON(pl.LightningModule):
             image = np.concatenate([image_pred, image_gt] + image_inter, axis=1)
 
             step_id = self.global_step if dataset == "train" else self.global_step + idx
-            self.logger.experiment.add_image(
-                tag=f"Occupancy-{dataset}/{step_id}",
-                img_tensor=image.transpose(2, 0, 1),
-                global_step=step_id,
-            )
+            # self.logger.experiment.add_image(
+            #     tag=f"Occupancy-{dataset}/{step_id}",
+            #     img_tensor=image.transpose(2, 0, 1),
+            #     global_step=step_id,
+            # )
+            stack=image.transpose(2, 0, 1)
+            self.logger.experiment.log({"Occupancy": [wandb.Image(img) for img in stack]})
+            # self.logger.log_image(key=f"Occupancy-{dataset}/{step_id}", images=[image.transpose(2, 0, 1)],step=step_id)
 
     def test_single(self, batch):
 

@@ -193,6 +193,7 @@ class PIFuDataset():
 
     def __len__(self):
         return len(self.subject_list) * len(self.rotations)
+        # return 10
         # return 360
 
     def __getitem__(self, index):

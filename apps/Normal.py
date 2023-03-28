@@ -6,7 +6,7 @@ import numpy as np
 from torch import nn
 from skimage.transform import resize
 import pytorch_lightning as pl
-
+import wandb
 torch.backends.cudnn.benchmark = True
 
 logging.getLogger("lightning").setLevel(logging.ERROR)
@@ -113,12 +113,14 @@ class Normal(pl.LightningModule):
                 in_tensor.update({"nmlF": nmlF, "nmlB": nmlB})
                 result_array = self.render_func(in_tensor)
 
-                self.logger.experiment.add_image(
-                    tag=f"Normal-train/{self.global_step}",
-                    img_tensor=result_array.transpose(2, 0, 1),
-                    global_step=self.global_step,
-                )
-
+                # self.logger.experiment.add_image(
+                #     tag=f"Normal-train/{self.global_step}",
+                #     img_tensor=result_array.transpose(2, 0, 1),
+                #     global_step=self.global_step,
+                # )
+                # self.logger.log_image(key=f"Normal-train/{self.global_step}", images=[result_array.transpose(2, 0, 1)],step=self.global_step)
+                stack=result_array.transpose(2, 0, 1)
+                self.logger.experiment.log({"Normal-train": [wandb.Image(img) for img in stack]})
         # metrics processing
         metrics_log = {
             "train_loss-NF": error_NF.item(),
@@ -176,11 +178,14 @@ class Normal(pl.LightningModule):
                 in_tensor.update({"nmlF": nmlF, "nmlB": nmlB})
                 result_array = self.render_func(in_tensor)
 
-                self.logger.experiment.add_image(
-                    tag=f"Normal-val/{self.global_step}",
-                    img_tensor=result_array.transpose(2, 0, 1),
-                    global_step=self.global_step,
-                )
+                # self.logger.experiment.add_image(
+                #     tag=f"Normal-val/{self.global_step}",
+                #     img_tensor=result_array.transpose(2, 0, 1),
+                #     global_step=self.global_step,
+                # )
+                stack=result_array.transpose(2, 0, 1)
+                self.logger.experiment.log({"Normal-val": [wandb.Image(img) for img in stack]})
+                
 
         return {
             "val_loss": error_NF + error_NB,

@@ -1,4 +1,4 @@
-name: baseline/pifu_v2_0220
+name: baseline/pifu_v2_0220_testwandb
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 resume_path: "./data/ckpt/pifu.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
@@ -70,7 +70,7 @@ optim: RMSprop
 
 # training (batch=4, set=agora, rot-6)
 overfit: False
-num_epoch: 7
+num_epoch: 1
 freq_show_train: 0.1
 freq_show_val: 0.3
 freq_plot: 0.01

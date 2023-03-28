@@ -25,6 +25,8 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/pamir/pamir_img.yaml',help="path of the yaml config file")
+    parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
+    parser.add_argument("--wandbsavepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", action="store_true")
     parser.add_argument("--gpus", type=list, default=[4])
     args = parser.parse_args()
@@ -39,7 +41,7 @@ if __name__ == "__main__":
     tb_logger = pl_loggers.TensorBoardLogger(
         save_dir=cfg.results_path, name=cfg.name, default_hp_metric=False
     )
-    # wandb_logger = WandbLogger(name=cfg.name, project=cfg.proj_name, save_dir=cfg.wandbsavepath)
+    wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.wandbsavepath)
 
     if cfg.overfit:
         cfg_overfit_list = ["batch_size", 1]
@@ -85,7 +87,7 @@ if __name__ == "__main__":
         "reload_dataloaders_every_epoch": True,
         "sync_batchnorm": True,
         "benchmark": True,
-        "logger": tb_logger,
+        "logger": wandb_logger,
         "track_grad_norm": -1,
         "num_sanity_val_steps": cfg.num_sanity_val_steps,
         "checkpoint_callback": checkpoint,
