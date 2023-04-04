@@ -267,7 +267,7 @@ class ICON(pl.LightningModule):
 
         if batch_idx % int(self.cfg.freq_show_val) == 0:
             with torch.no_grad():
-                self.render_func(in_tensor_dict, dataset="val", idx=batch_idx)
+                self.render_func(in_tensor_dict, dataset="val", idx=batch_idx) ##this function is computational reduntant
 
         metrics_return = {
             "val_loss": error_G,
@@ -662,7 +662,7 @@ class ICON(pl.LightningModule):
         if sdf is not None:
             render = self.reconEngine.display(sdf)
 
-            image_pred = np.flip(render[:, :, ::-1], axis=0)
+            image_pred = np.flip(render[:, :, ::-1], axis=0)  ##513 2052 3  GPU:9152MB
             height = image_pred.shape[0]
 
             image_gt = resize(
@@ -682,7 +682,7 @@ class ICON(pl.LightningModule):
             stack=image.transpose(2, 0, 1)
             self.logger.experiment.log({"Occupancy": [wandb.Image(img) for img in stack]})
             # self.logger.log_image(key=f"Occupancy-{dataset}/{step_id}", images=[image.transpose(2, 0, 1)],step=step_id)
-
+        del sdf, features, inter, stack
     def test_single(self, batch):
 
         self.netG.eval()
@@ -705,7 +705,6 @@ class ICON(pl.LightningModule):
             sdf = self.reconEngine(
                 opt=self.cfg, netG=self.netG, features=features, proj_matrix=None
             )
-        print(sdf,1111)
         verts_pr, faces_pr = self.reconEngine.export_mesh(sdf)
 
         if self.clean_mesh_flag:

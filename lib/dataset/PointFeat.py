@@ -5,6 +5,8 @@ from lib.common.render_utils import face_vertices
 from lib.dataset.mesh_util import SMPLX, barycentric_coordinates_of_projection
 from kaolin.ops.mesh import check_sign
 from kaolin.metrics.trianglemesh import point_to_mesh_distance
+import time
+smplx=SMPLX()
 
 
 class PointFeat:
@@ -18,16 +20,16 @@ class PointFeat:
         self.mesh = Meshes(verts, faces)
         self.device = verts.device
         self.faces = faces
-
         # SMPL has watertight mesh, but SMPL-X has two eyeballs and open mouth
         # 1. remove eye_ball faces from SMPL-X: 9928-9383, 10474-9929
         # 2. fill mouth holes with 30 more faces
-
+        
         if verts.shape[1] == 10475:
-            faces = faces[:, ~SMPLX().smplx_eyeball_fid]
+            faces = faces[:, ~smplx.smplx_eyeball_fid]  ##modify this to save time, all eye id in smplx are the same
+            # faces1 = faces[:, ~SMPLX().smplx_eyeball_fid]
             mouth_faces = (
-                torch.as_tensor(SMPLX().smplx_mouth_fid).unsqueeze(0).repeat(self.Bsize, 1,
-                                                                             1).to(self.device)
+                torch.as_tensor(smplx.smplx_mouth_fid, device=self.device).unsqueeze(0).repeat(self.Bsize, 1,
+                                                                             1)
             )
             self.faces = torch.cat([faces, mouth_faces], dim=1).long()
 
@@ -35,7 +37,9 @@ class PointFeat:
         self.triangles = face_vertices(self.verts, self.faces)
 
     def query(self, points, feats={}):
-
+        """
+        Given the predicted clothed-body normal maps, ̂ N c, and the SMPL-body mesh, M, we regress the implicit 3D surface of a clothed human based on local features FP: FP = [Fs(P), F b n (P), F c n (P)], (6) where Fs is the signed distance from a query point P to the closest body point Pb ∈ M, and F b n is the barycentric surface normal of Pb; both provide strong regularization against self occlusions. Finally, Fc n is a normal vector extracted from ̂ Nc front or ̂ Nc back depending on the visibility of Pb: Fc n (P) = { ̂ Nc front(π(P)) if Pb is visible ̂ Nc back(π(P)) else, (7) where π(P) denotes the 2D projection of the 3D point P.
+        """
         # points [B, N, 3]
         # feats {'feat_name': [B, N, C]}
 

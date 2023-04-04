@@ -13,7 +13,8 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
-import sys
+import sys 
+from torchvision.utils import save_image
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/")
 from lib.net.voxelize import Voxelization
 from lib.dataset.mesh_util import feat_select, read_smpl_constants
@@ -28,7 +29,7 @@ from termcolor import colored
 from lib.net.BasePIFuNet import BasePIFuNet
 import torch.nn as nn
 import torch
-
+import time
 
 class HGPIFuNet(BasePIFuNet):
     """
@@ -195,27 +196,43 @@ class HGPIFuNet(BasePIFuNet):
 
         # insert normal features
         if (not self.training) and (not self.overfit):
-            # print(colored("infer normal","blue"))
+                        
             with torch.no_grad():
                 feat_lst = []
                 if "image" in self.in_geo:
                     feat_lst.append(in_tensor_dict["image"])    # [1, 3, 512, 512]
-                # if "normal_F" in self.in_geo and "normal_B" in self.in_geo and not self.cfg.exclude_normal:
-                # if "normal_F" in self.in_geo or "normal_B" in self.in_geo:
-                #     if (
+
+                # if (
+                #         "normal_F" not in in_tensor_dict.keys() and
+                #         "normal_B" not in in_tensor_dict.keys()
+                #     ):
+                #     print("img only")
+                # elif (
                 #         "normal_F" not in in_tensor_dict.keys() or
                 #         "normal_B" not in in_tensor_dict.keys()
                 #     ):
                 #         (nmlF, nmlB) = self.normal_filter(in_tensor_dict)
-                #     else:
-                #         nmlF = in_tensor_dict["normal_F"]
-                #         nmlB = in_tensor_dict["normal_B"]
-                                # if "normal_F" in self.in_geo or "normal_B" in self.in_geo:
+                #         if nmlF!=None: 
+                #             feat_lst.append(nmlF)    # [1, 3, 512, 512]
+                #         if nmlB!=None: 
+                #             feat_lst.append(nmlB)    # [1, 3, 512, 512]
+                # else:
+                #             print("icon training using ground truth normal??")
+                            
+                #             nmlF = in_tensor_dict["normal_F"]
+                #             feat_lst.append(nmlF)
+                #             nmlB = in_tensor_dict["normal_B"]
+                #             feat_lst.append(nmlB) 
+            
                 if (
-                        "normal_F" not in in_tensor_dict.keys() and
-                        "normal_B" not in in_tensor_dict.keys()
-                    ):
-                    print("img only")
+                        "normal_F"  in in_tensor_dict.keys() and
+                        "normal_B"  in in_tensor_dict.keys()
+                    ):      
+                    nmlF = in_tensor_dict["normal_F"]# [1, 3, 512, 512]
+                    feat_lst.append(nmlF)
+                    nmlB = in_tensor_dict["normal_B"]# [1, 3, 512, 512]
+                    feat_lst.append(nmlB) 
+   
                 elif (
                         "normal_F" not in in_tensor_dict.keys() or
                         "normal_B" not in in_tensor_dict.keys()
@@ -225,13 +242,8 @@ class HGPIFuNet(BasePIFuNet):
                             feat_lst.append(nmlF)    # [1, 3, 512, 512]
                         if nmlB!=None: 
                             feat_lst.append(nmlB)    # [1, 3, 512, 512]
-                else:
-                            nmlF = in_tensor_dict["normal_F"]
-                            feat_lst.append(nmlF)
-                            nmlB = in_tensor_dict["normal_B"]
-                            feat_lst.append(nmlB) 
-                            # [1, 3, 512, 512]
-                           # [1, 3, 512, 512]
+                
+                            
             in_filter = torch.cat(feat_lst, dim=1)
 
         else:
@@ -299,7 +311,6 @@ class HGPIFuNet(BasePIFuNet):
             return features_out
 
     def query(self, features, points, calibs, transforms=None, regressor=None):
-
         xyz = self.projection(points, calibs, transforms)
 
         (xy, z) = xyz.split([2, 1], dim=1)
@@ -310,7 +321,7 @@ class HGPIFuNet(BasePIFuNet):
         preds_list = []
         vol_feats = features
 
-        if self.prior_type in ["icon", "keypoint"]:
+        if self.prior_type in ["icon", "keypoint"]: ##icon is slow due to the Point feat following code
 
             # smpl_verts [B, N_vert, 3]
             # smpl_faces [B, N_face, 3]
@@ -349,6 +360,7 @@ class HGPIFuNet(BasePIFuNet):
             vol = self.voxelization(voxel_verts)    # vol ~ [0,1]
             vol_feats = self.ve(vol, intermediate_output=self.training)
 
+
         for im_feat, vol_feat in zip(features, vol_feats):
 
             # normal feature choice by smpl_vis
@@ -381,7 +393,6 @@ class HGPIFuNet(BasePIFuNet):
                 point_feat_list = [self.index(im_feat, xy), z]
 
             point_feat = torch.cat(point_feat_list, 1)
-
             # out of image plane is always set to 0
             preds = regressor(point_feat)
             preds = in_cube * preds
@@ -421,13 +432,9 @@ class HGPIFuNet(BasePIFuNet):
         sample_tensor = in_tensor_dict["sample"]
         calib_tensor = in_tensor_dict["calib"]
         label_tensor = in_tensor_dict["label"]
-
         in_feat = self.filter(in_tensor_dict)
-
         preds_if_list = self.query(
             in_feat, sample_tensor, calib_tensor, regressor=self.if_regressor
         )
-
         error = self.get_error(preds_if_list, label_tensor)
-
         return preds_if_list[-1], error

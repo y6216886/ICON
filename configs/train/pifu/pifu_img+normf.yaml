@@ -1,4 +1,4 @@
-name: baseline/pifu_img+normf
+name: baseline/pifu_img+normf_withn
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 # resume_path: "./data/ckpt/pifu.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"

@@ -17,7 +17,7 @@ logging.getLogger("lightning").setLevel(logging.ERROR)
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cfg", "--config_file", type=str, help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/normal.yaml', help="path of the yaml config file")
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)

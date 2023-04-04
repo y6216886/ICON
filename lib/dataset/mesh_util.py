@@ -240,7 +240,7 @@ def load_checkpoint(model, cfg):
     main_dict = {}
     normal_dict = {}
 
-    device = torch.device(f"cuda:{cfg['test_gpus'][0]}")
+    device = torch.device(f"cuda:{cfg['gpus'][0]}")
 
     if os.path.exists(cfg.resume_path) and cfg.resume_path.endswith("ckpt"):
         main_dict = torch.load(cfg.resume_path, map_location=device)['state_dict']

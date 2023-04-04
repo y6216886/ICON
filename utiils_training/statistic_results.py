@@ -27,7 +27,7 @@ pathlist=list(glob.glob(root+"/*/"+"/*/"+"test_results.npy"))
 csv_columns = ['exp_name','cape-easy-chamfer', 'cape-easy-p2s', 'cape-easy-NC', 'cape-hard-chamfer', 'cape-hard-p2s', 'cape-hard-NC','thuman2-NC', 'thuman2-chamfer', 'thuman2-p2s']
 
 
-with open('/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/results/file_won.csv', 'a') as f:
+with open('/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/results/file_addpifuwon.csv', 'a') as f:
       for i, path in tqdm(enumerate(pathlist)): 
         expname=path.split("/")[-3]
         results= pd.Series(np.load(path,allow_pickle=True))

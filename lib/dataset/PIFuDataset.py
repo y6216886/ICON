@@ -696,7 +696,7 @@ class PIFuDataset():
 
 
 if __name__=="__main__":
-
+    from torchvision.utils import save_image
     config_file="/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/configs/train/icon-filter.yaml"
     from lib.common.config import get_cfg_defaults
     from torch.utils.data import DataLoader
@@ -708,12 +708,47 @@ if __name__=="__main__":
             pifu,
             batch_size=1,
             shuffle=False,
-            num_workers=16,
+            num_workers=1,
             pin_memory=True
         )
     print("train")
     for i,j in enumerate(test_data_loader):
-        print(j)
+        print(i)
+        imgtensor=torch.cat([j['normal_F'],j['normal_B'],j['T_normal_F'],j['T_normal_B']],dim=0)
+        save_image( imgtensor, "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/examples/normals.png",nrow=2, normalize=True)
+        break
+        for key in j.keys():
+            try:
+                print(key,  j[key].size())
+
+            except:
+                print(key)
+    """
+    calib torch.Size([1, 4, 4])
+    normal_F torch.Size([1, 3, 512, 512])
+    normal_B torch.Size([1, 3, 512, 512])
+    image torch.Size([1, 3, 512, 512])
+    T_normal_F torch.Size([1, 3, 512, 512])
+    T_normal_B torch.Size([1, 3, 512, 512])
+    samples_geo torch.Size([1, 8000, 3])
+    labels_geo torch.Size([1, 8000])
+    smpl_vis torch.Size([1, 10475, 1])
+    smpl_norm torch.Size([1, 10475, 3])
+    smpl_cmap torch.Size([1, 10475, 3])
+    smpl_verts torch.Size([1, 10475, 3])
+    smpl_faces torch.Size([1, 20908, 3])
+    47
+    dataset
+    subject
+    rotation torch.Size([1])
+    scale torch.Size([1])
+    smpl_param
+    smplx_param
+    
+    
+    """
+
+
     # pifu= PIFuDataset(cfg=cfg1, split='val')
     # test_data_loader = DataLoader(
     #         pifu,

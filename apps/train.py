@@ -24,24 +24,24 @@ from pytorch_lightning.loggers import WandbLogger
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/pamir/pamir_img.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter_test.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--wandbsavepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", action="store_true")
-    parser.add_argument("--gpus", type=list, default=[4])
+    parser.add_argument("--offline",default=True, action="store_true")
+    parser.add_argument("--gpus", type=list, default=[3])
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
     cfg.gpus=[int(i) for i in args.gpus]
     cfg.freeze()
-    print("note cfg is freeze")
+    print("note cfg is freeze",cfg.batch_size)
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
-
-    tb_logger = pl_loggers.TensorBoardLogger(
-        save_dir=cfg.results_path, name=cfg.name, default_hp_metric=False
-    )
-    wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.wandbsavepath)
+    if not args.offline: 
+        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.wandbsavepath)
+    else:
+        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.wandbsavepath,offline=True)
 
     if cfg.overfit:
         cfg_overfit_list = ["batch_size", 1]
@@ -135,7 +135,11 @@ if __name__ == "__main__":
     if not cfg.test_mode:
         resume_path=cfg.resume_path
     else:
+        print("loading prtrained filter model")
         resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
+        if not os.path.exists(resume_path):
+            print("checkpoint {} not exists".format(resume_path))
+            assert 1==0
     load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
 
     if not cfg.test_mode:

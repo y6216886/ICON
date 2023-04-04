@@ -133,7 +133,7 @@ class HGFilter(nn.Module):
 
     def forward(self, x):#x:normal map
         x = F.relu(self.bn1(self.conv1(x)), True)
-        tmpx = x
+        # tmpx = x
         if self.opt.hg_down == 'ave_pool':
             x = F.avg_pool2d(self.conv2(x), 2, stride=2)
         elif self.opt.hg_down in ['conv64', 'conv128']:
