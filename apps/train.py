@@ -24,12 +24,12 @@ from pytorch_lightning.loggers import WandbLogger
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter_test.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--wandbsavepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", action="store_true")
-    parser.add_argument("--offline",default=True, action="store_true")
-    parser.add_argument("--gpus", type=list, default=[3])
+    parser.add_argument("--offline",default=False, action="store_true")
+    parser.add_argument("--gpus", type=str, default='1')
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)

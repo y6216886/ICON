@@ -195,7 +195,7 @@ class HGPIFuNet(BasePIFuNet):
     def get_normal(self, in_tensor_dict):
 
         # insert normal features
-        if (not self.training) and (not self.overfit):
+        # if (not self.training) and (not self.overfit):
                         
             with torch.no_grad():
                 feat_lst = []
@@ -246,10 +246,10 @@ class HGPIFuNet(BasePIFuNet):
                             
             in_filter = torch.cat(feat_lst, dim=1)
 
-        else:
-            in_filter = torch.cat([in_tensor_dict[key] for key in self.in_geo], dim=1)
+        # else:
+        #     in_filter = torch.cat([in_tensor_dict[key] for key in self.in_geo], dim=1)
 
-        return in_filter
+            return in_filter
 
     def get_mask(self, in_filter, size=128):
 
@@ -312,7 +312,6 @@ class HGPIFuNet(BasePIFuNet):
 
     def query(self, features, points, calibs, transforms=None, regressor=None):
         xyz = self.projection(points, calibs, transforms)
-
         (xy, z) = xyz.split([2, 1], dim=1)
 
         in_cube = (xyz > -1.0) & (xyz < 1.0)
@@ -334,7 +333,7 @@ class HGPIFuNet(BasePIFuNet):
             point_feat_out = point_feat_extractor.query(
                 xyz.permute(0, 2, 1).contiguous(), self.smpl_feat_dict
             )
-
+            
             feat_lst = [
                 point_feat_out[key] for key in self.smpl_feats if key in point_feat_out.keys()
             ]
@@ -360,13 +359,12 @@ class HGPIFuNet(BasePIFuNet):
             vol = self.voxelization(voxel_verts)    # vol ~ [0,1]
             vol_feats = self.ve(vol, intermediate_output=self.training)
 
-
         for im_feat, vol_feat in zip(features, vol_feats):
-
             # normal feature choice by smpl_vis
 
             if self.prior_type == "icon":
                 if "vis" in self.smpl_feats:
+                    
                     point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :])
                     point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
                 else:
@@ -398,6 +396,10 @@ class HGPIFuNet(BasePIFuNet):
             preds = in_cube * preds
 
             preds_list.append(preds)
+            del preds
+            del point_feat 
+            del point_feat_list
+            del point_local_feat
 
         return preds_list
 

@@ -1,7 +1,7 @@
-name: baseline/icon-filter_batch2_wo_debug
+name: baseline/icon-filter_batch2_wo_debugv1
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 # resume_path: "./data/ckpt/icon-filter.ckpt"
-normal_path: "./data/ckpt/normal.ckpt"
+# normal_path: "./data/ckpt/normal.ckpt"
 results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
 dataset:
@@ -62,7 +62,7 @@ sdf_clip: 15.0
 fast_dev: 0
 resume: False
 test_mode: False
-mcube_res: 512
+mcube_res: 128
 clean_mesh: True
 num_sanity_val_steps: 1
 

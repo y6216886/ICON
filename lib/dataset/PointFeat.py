@@ -42,7 +42,6 @@ class PointFeat:
         """
         # points [B, N, 3]
         # feats {'feat_name': [B, N, C]}
-
         del_keys = ["smpl_verts", "smpl_faces", "smpl_joint"]
 
         residues, pts_ind, _ = point_to_mesh_distance(points, self.triangles)

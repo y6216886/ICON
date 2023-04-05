@@ -616,7 +616,6 @@ class PIFuDataset():
 
         samples = torch.from_numpy(samples).float()
         labels = torch.from_numpy(labels).float()
-
         return {'samples_geo': samples, 'labels_geo': labels}
 
     def visualize_sampling3D(self, data_dict, mode='vis'):

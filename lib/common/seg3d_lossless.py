@@ -136,6 +136,18 @@ class Seg3dLossless(nn.Module):
 
     def _forward_faster(self, **kwargs):
         """
+        torch.Size([1, 2, 8000]) torch.Size([1, 8, 8000]) 342
+        torch.Size([1, 2, 35937]) torch.Size([1, 8, 35937]) 342
+        torch.Size([1, 2, 218875]) torch.Size([1, 8, 218875]) 342
+        torch.Size([1, 2, 1333697]) torch.Size([1, 8, 1333697]) 342
+        torch.Size([1, 2, 4188602]) torch.Size([1, 8, 4188602]) 342
+
+        torch.Size([1, 3, 8000]) 438
+        torch.Size([1, 2, 8000]) torch.Size([1, 8, 8000]) 342
+        torch.Size([1, 2, 35937]) torch.Size([1, 8, 35937]) 342
+        torch.Size([1, 2, 213920]) torch.Size([1, 8, 213920]) 342
+        torch.Size([1, 2, 1201690]) torch.Size([1, 8, 1201690]) 342
+        torch.Size([1, 2, 3601008]) torch.Size([1, 8, 3601008]) 342
         In faster mode, we make following changes to exchange accuracy for speed:
         1. no conflict checking: 4.88 fps -> 6.56 fps
         2. smooth_conv9x9 ~ smooth_conv3x3 for different resolution
@@ -145,7 +157,7 @@ class Seg3dLossless(nn.Module):
         final_H = self.resolutions[-1][1]
         final_D = self.resolutions[-1][2]
 
-        for resolution in self.resolutions:
+        for resolution in self.resolutions: ###out of memory in validation mode
             W, H, D = resolution
             stride = (self.resolutions[-1] - 1) / (resolution - 1)
 
