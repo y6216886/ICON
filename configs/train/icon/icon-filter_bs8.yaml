@@ -1,6 +1,6 @@
-name: baseline/icon-filter_batch2_newresume
+name: baseline/icon-filter_batch8_withnormal_debugv1
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
-# resume_path: "./data/ckpt/icon-filter.ckpt"
+resume_path: "/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch8_withnormal_debugv1/epoch=07.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
 results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
@@ -51,7 +51,7 @@ net:
 lr_G: 1e-4
 weight_decay: 0.0 
 momentum: 0.0
-batch_size: 2
+batch_size: 8
 num_threads: 16
 gpus: [7]
 test_gpus: [7]
@@ -71,7 +71,7 @@ optim: RMSprop
 
 # training (batch=4, set=agora, rot-6)
 overfit: False
-num_epoch: 10
+num_epoch: 3
 freq_show_train: 0.1
 freq_show_val: 0.3
 freq_plot: 0.01

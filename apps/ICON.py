@@ -682,7 +682,6 @@ class ICON(pl.LightningModule):
             stack=image.transpose(2, 0, 1)
             self.logger.experiment.log({"Occupancy": [wandb.Image(img) for img in stack]})
             # self.logger.log_image(key=f"Occupancy-{dataset}/{step_id}", images=[image.transpose(2, 0, 1)],step=step_id)
-        del sdf, features, inter, stack
     def test_single(self, batch):
 
         self.netG.eval()

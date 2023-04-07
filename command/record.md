@@ -44,10 +44,15 @@ For pifu without norm exhibit better performance
 
 
 
+For ICON, using ground truth normal map and the normal net estimated by pretrained normal net 
+
 ---
 
-
-
+| col1                                                                                                     |                                                                                                                                                                                                                                             | col2                                           | col3                   |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ---------------------- |
+| [baseline/icon-filter_batch2_wo_debugv1](https://wandb.ai/y6216886/Human_3d_Reconstruction/runs/tyk4pzlx)  | without pretrained filer and normal net                                                                                                                                                                                                    | 1.52 1.342 0.08451 1.523 1.377 0.08296    |                        |
+| icon-filter-v1_0220                                                                                      | using pretrained filer and ground truth normal map                                                                                                                                                                                          | 0.7630 0.7255 0.0498 0.9025 0.8748 0.0523 | 0.0805 0.9935 0.9566 |
+| baseline/icon-filter_batch2_newresume                                                                    | mlp resume from "/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch4_withnormal_debugv1/last.ckpt"<br />which only uses pretrained normal net to estimated normal net, trained with batchsize 4 | 0.7957 0.778 0.05383 0.9414 0.9191 0.05817     |                        |
 
 ## SPEED
 

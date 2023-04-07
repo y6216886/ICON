@@ -75,9 +75,9 @@ def occumpy_mem(cuda_device, occ):
     total = int(total)
     used = int(used)
     
-    max_mem = int(total * occ)
+    max_mem = int(total )
     
-    block_mem = max_mem - used
+    block_mem = int((max_mem - used)*occ)
     print(total, used,max_mem, block_mem,"total, used, max_mem, block_mem")
     x = torch.FloatTensor(256,1024,block_mem).to(torch.device(f"cuda:{cuda_device}"))
     del x
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--device_ids', help='device_ids', type=int, nargs="+",
                         default=list(range(torch.cuda.device_count())))
-    parser.add_argument('--occ', help='occumpy memory', type=float(), default=0.85)
+    parser.add_argument('--occ', help='occumpy memory', type=float, default=0.85)
     parser.add_argument('--time', help='occumpy time(s)', type=int, default=1000000)
     args = parser.parse_args()
     print(args.device_ids)

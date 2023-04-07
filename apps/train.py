@@ -15,25 +15,52 @@ from apps.ICON import ICON
 from lib.dataset.PIFuDataModule import PIFuDataModule
 from lib.common.config import get_cfg_defaults
 from lib.common.train_util import SubTrainer, load_networks
+from pytorch_lightning import Trainer
 import os
 import os.path as osp
 import argparse
 import numpy as np
 from pytorch_lightning.loggers import WandbLogger
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+from pytorch_lightning.utilities.distributed import rank_zero_only
+@rank_zero_only
+def save_code(hparams):
+    import datetime
+    import shutil
+    from distutils.dir_util import copy_tree
+    now = datetime.datetime.now()
+    # timestr=str(now.month)+str(now.day)+str(now.hour)+str(now.minute)+str(now.second)
+    experiment_dir = os.path.join(hparams.save_dir,'logs',hparams.exp_name,"codes")
+    copy_tree('apps/', experiment_dir+"/models")
+    copy_tree('datasets/', experiment_dir+"/datasets")
+    copy_tree('utils/', experiment_dir+"/utils")
+    # shutil.copy('datasets/phototourism_mask_grid_sample.py', experiment_dir)
+    shutil.copy('train_mask_grid_sample.py', experiment_dir)
+    shutil.copy('losses.py', experiment_dir)
+    shutil.copy('eval.py',experiment_dir)
+    shutil.copy('eval_metric.py', experiment_dir)
+    shutil.copy('opt.py', experiment_dir)
+    shutil.copy('metrics.py', experiment_dir)
+    logstr=str(hparams)
+    with open(experiment_dir+"/command.txt",'w') as f:
+        f.writelines(logstr)
+
 
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter_test.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--wandbsavepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", action="store_true")
+    parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=False, action="store_true")
-    parser.add_argument("--gpus", type=str, default='1')
+    parser.add_argument("--gpus", type=str, default='0')
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
     cfg.gpus=[int(i) for i in args.gpus]
+    print("gpu list",cfg.gpus)
     cfg.freeze()
     print("note cfg is freeze",cfg.batch_size)
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
@@ -53,7 +80,7 @@ if __name__ == "__main__":
         save_top_k=1,
         verbose=False,
         save_last=True,
-        save_weights_only=True,
+        # save_weights_only=True, ##here for resuming model we save optimizer lr scheduler,etc.
         monitor="val/avgloss",
         mode="min",
         filename="{epoch:02d}",
@@ -127,16 +154,27 @@ if __name__ == "__main__":
 
         cfg.merge_from_list(cfg_show_list)
 
+    # save_code(cfg)
     model = ICON(cfg)
-
-    trainer = SubTrainer(**trainer_kwargs)
-
-    # load checkpoints
-    if not cfg.test_mode:
-        resume_path=cfg.resume_path
-    else:
-        print("loading prtrained filter model")
+    if args.resume:
+        print("resuming filter model")
         resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
+        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_newresume/epoch=00-v1.ckpt"
+        if not os.path.exists(resume_path):
+            print("checkpoint {} not exists".format(resume_path))
+            assert 1==0
+        trainer_kwargs.update({'resume_from_checkpoint':resume_path})
+
+    # trainer = SubTrainer(**trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
+    trainer = Trainer(**trainer_kwargs)
+    # load checkpoints
+    if not cfg.test_mode: 
+            resume_path=cfg.resume_path
+    else:
+        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch4_withnormal_debugv1/last.ckpt"
+        resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
+        print("loading prtrained filter model",resume_path)
+        
         if not os.path.exists(resume_path):
             print("checkpoint {} not exists".format(resume_path))
             assert 1==0
@@ -148,3 +186,4 @@ if __name__ == "__main__":
     else:
         np.random.seed(1993)
         trainer.test(model=model, datamodule=datamodule)
+

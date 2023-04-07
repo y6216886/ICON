@@ -396,10 +396,6 @@ class HGPIFuNet(BasePIFuNet):
             preds = in_cube * preds
 
             preds_list.append(preds)
-            del preds
-            del point_feat 
-            del point_feat_list
-            del point_local_feat
 
         return preds_list
 
