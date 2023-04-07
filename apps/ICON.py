@@ -531,7 +531,6 @@ class ICON(pl.LightningModule):
 
         with torch.no_grad():
             features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
-            1==1
             sdf = self.reconEngine(
                 opt=self.cfg, netG=self.netG, features=features, proj_matrix=None
             )

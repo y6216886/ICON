@@ -21,29 +21,38 @@ import os.path as osp
 import argparse
 import numpy as np
 from pytorch_lightning.loggers import WandbLogger
-# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+import wandb
+# print("For debug setting cuda visible diveices here!")
+# os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 from pytorch_lightning.utilities.distributed import rank_zero_only
 @rank_zero_only
-def save_code(hparams):
+def save_code(cfg,args):
     import datetime
     import shutil
     from distutils.dir_util import copy_tree
     now = datetime.datetime.now()
     # timestr=str(now.month)+str(now.day)+str(now.hour)+str(now.minute)+str(now.second)
-    experiment_dir = os.path.join(hparams.save_dir,'logs',hparams.exp_name,"codes")
-    copy_tree('apps/', experiment_dir+"/models")
-    copy_tree('datasets/', experiment_dir+"/datasets")
-    copy_tree('utils/', experiment_dir+"/utils")
-    # shutil.copy('datasets/phototourism_mask_grid_sample.py', experiment_dir)
-    shutil.copy('train_mask_grid_sample.py', experiment_dir)
-    shutil.copy('losses.py', experiment_dir)
-    shutil.copy('eval.py',experiment_dir)
-    shutil.copy('eval_metric.py', experiment_dir)
-    shutil.copy('opt.py', experiment_dir)
-    shutil.copy('metrics.py', experiment_dir)
-    logstr=str(hparams)
-    with open(experiment_dir+"/command.txt",'w') as f:
+    experiment_dir = os.path.join(cfg.results_path,cfg.name,"codes")
+    print("saving code to path:",experiment_dir)
+    copy_tree('apps/', experiment_dir+"/apps")
+    copy_tree('lib/', experiment_dir+"/lib")
+    shutil.copy(args.config_file, experiment_dir+"/configs.yaml")
+    logstr=str(args)
+    
+    with open(experiment_dir+"/args.txt",'w') as f:
         f.writelines(logstr)
+
+def gettime():
+    from datetime import datetime
+    # create a datetime object with the current time
+    now = datetime.now()
+
+    # format the time string with year, month, day, hour, minute and second
+    time_string = now.strftime("-%Y-%m-%d-%H-%M")
+
+    print("Time string:", time_string)
+    return time_string
+
 
 
 if __name__ == "__main__":
@@ -51,24 +60,29 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter_test.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
-    parser.add_argument("--wandbsavepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
-    parser.add_argument("-test", "--test_mode", action="store_true")
+    parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
+    parser.add_argument("-test", "--test_mode", default=False, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=False, action="store_true")
-    parser.add_argument("--gpus", type=str, default='0')
+    parser.add_argument("--name",type=str)
+    parser.add_argument("--gpus", type=str, default='0') 
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
+    # if os.path.exists(os.path.join(cfg.results_path,cfg.name,"codes")) and not args.test_mode and not args.resume:
+    #      raise Exception("Sorry, experiment name exists, modify the experiment name!")
+    # name_dict=["name",cfg.name+gettime()]
+    # cfg.merge_from_list(name_dict)
     cfg.gpus=[int(i) for i in args.gpus]
-    print("gpu list",cfg.gpus)
+    print("gpu list",cfg.gpus,"experimentname",cfg.name,cfg.name)
     cfg.freeze()
     print("note cfg is freeze",cfg.batch_size)
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
     if not args.offline: 
-        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.wandbsavepath)
-    else:
-        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.wandbsavepath,offline=True)
+        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath)
+    if args.offline or args.test_mode:
+        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath,offline=True)
 
     if cfg.overfit:
         cfg_overfit_list = ["batch_size", 1]
@@ -77,13 +91,13 @@ if __name__ == "__main__":
 
     checkpoint = ModelCheckpoint(
         dirpath=osp.join(cfg.ckpt_dir, cfg.name),
-        save_top_k=1,
+        # save_top_k=1,
         verbose=False,
         save_last=True,
         # save_weights_only=True, ##here for resuming model we save optimizer lr scheduler,etc.
-        monitor="val/avgloss",
-        mode="min",
-        filename="{epoch:02d}",
+        # monitor="val/avgloss",
+        # mode="min",
+        # filename="{epoch:02d}",
     )
 
     if cfg.test_mode or args.test_mode:
@@ -154,32 +168,26 @@ if __name__ == "__main__":
 
         cfg.merge_from_list(cfg_show_list)
 
-    # save_code(cfg)
+    save_code(cfg, args)
     model = ICON(cfg)
-    if args.resume:
-        print("resuming filter model")
-        resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
-        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_newresume/epoch=00-v1.ckpt"
-        if not os.path.exists(resume_path):
-            print("checkpoint {} not exists".format(resume_path))
-            assert 1==0
-        trainer_kwargs.update({'resume_from_checkpoint':resume_path})
 
-    # trainer = SubTrainer(**trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
-    trainer = Trainer(**trainer_kwargs)
+
+    trainer = SubTrainer(**trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
+    # trainer = Trainer(**trainer_kwargs)
     # load checkpoints
-    if not cfg.test_mode: 
+    if not cfg.test_mode and not args.resume: 
+            print("loading filter from cfg")
             resume_path=cfg.resume_path
-    else:
+    elif cfg.test_mode or args.resume:
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch4_withnormal_debugv1/last.ckpt"
         resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
-        print("loading prtrained filter model",resume_path)
-        
+        print("loading prtrained filter model",resume_path)    
         if not os.path.exists(resume_path):
             print("checkpoint {} not exists".format(resume_path))
             assert 1==0
-    load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
-
+    currentepoch=load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
+    if args.resume: trainer.current_epoch=currentepoch
+    wandb_logger.experiment.config.update(cfg)
     if not cfg.test_mode:
         trainer.fit(model=model, datamodule=datamodule)
         trainer.test(model=model, datamodule=datamodule)
