@@ -34,8 +34,8 @@ optim: Adam
 # training (batch=4, set=agora, rot-6)
 overfit: False
 num_epoch: 20
-freq_show_train: 0.1
+freq_show_train: 1.0
 freq_show_val: 0.01
-freq_plot: 0.01
+freq_plot: 0.1
 freq_eval: 0.1
 schedule: [18]

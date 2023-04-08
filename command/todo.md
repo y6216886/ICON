@@ -36,3 +36,7 @@ icon without normal performance is too good, figure out why
   2）
 
 todo: save codes configs
+
+---
+
+I set pytorch lightning trainer with profile = "pytorch" to check the bottleneck of the whole training process in gpu026 bottom left 2 window.

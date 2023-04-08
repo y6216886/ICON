@@ -59,6 +59,8 @@ class SubTrainer(pl.Trainer):
                     del_keys.append(key)
         for key in del_keys:
             del _checkpoint["state_dict"][key]
+        
+        _checkpoint['epoch']=self.current_epoch
 
         if self.is_global_zero:
             # write the checkpoint dictionary on the file
@@ -83,12 +85,14 @@ def load_networks(cfg, model, mlp_path, normal_path):
     model_dict = model.state_dict()
     main_dict = {}
     normal_dict = {}
-    
+    currentepoch=0
     # MLP part loading
     if os.path.exists(mlp_path) and mlp_path.endswith("ckpt"):
         main_dict = torch.load(mlp_path,
                                map_location=torch.device(f"cuda:{cfg.gpus[0]}"))["state_dict"]
-
+        try:
+            currentepoch=main_dict['epoch']
+        except:currentepoch=0
         main_dict = {
             k: v
             for k, v in main_dict.items() if k in model_dict and v.shape == model_dict[k].shape and
@@ -119,6 +123,7 @@ def load_networks(cfg, model, mlp_path, normal_path):
     del normal_dict
     del model_dict
     torch.cuda.empty_cache()
+    return currentepoch
 
 
 def reshape_sample_tensor(sample_tensor, num_views):

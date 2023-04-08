@@ -65,7 +65,7 @@ if __name__ == "__main__":
     parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=False, action="store_true")
     parser.add_argument("--name",type=str)
-    parser.add_argument("--gpus", type=str, default='0') 
+    parser.add_argument("--gpus", type=str, default='2') 
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
@@ -139,6 +139,7 @@ if __name__ == "__main__":
         "fast_dev_run": cfg.fast_dev,
         "max_epochs": cfg.num_epoch,
         "callbacks": [LearningRateMonitor(logging_interval="step")],
+        "profiler":"pytorch",
     }
 
     datamodule = PIFuDataModule(cfg)
@@ -161,7 +162,7 @@ if __name__ == "__main__":
         else:
             cfg_show_list = [
                 "freq_show_train",
-                cfg.freq_show_train * train_len // cfg.batch_size,
+                max(cfg.freq_show_train * train_len // cfg.batch_size,1.0),
                 "freq_show_val",
                 max(cfg.freq_show_val * val_len, 1.0),
             ]
