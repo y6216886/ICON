@@ -88,8 +88,10 @@ def load_networks(cfg, model, mlp_path, normal_path):
     currentepoch=0
     # MLP part loading
     if os.path.exists(mlp_path) and mlp_path.endswith("ckpt"):
-        main_dict = torch.load(mlp_path,
-                               map_location=torch.device(f"cuda:{cfg.gpus[0]}"))["state_dict"]
+        # main_dict = torch.load(mlp_path,
+        #                        map_location=torch.device(f"cuda:{cfg.gpus[0]}"))["state_dict"]
+        normal_dict = torch.load(normal_path,
+                                 map_location=torch.device(f"cpu"))["state_dict"]
         try:
             currentepoch=main_dict['epoch']
         except:currentepoch=0
@@ -102,8 +104,10 @@ def load_networks(cfg, model, mlp_path, normal_path):
 
     # normal network part loading
     if os.path.exists(normal_path) and normal_path.endswith("ckpt"):
+        # normal_dict = torch.load(normal_path,
+        #                          map_location=torch.device(f"cuda:{cfg.gpus[0]}"))["state_dict"]
         normal_dict = torch.load(normal_path,
-                                 map_location=torch.device(f"cuda:{cfg.gpus[0]}"))["state_dict"]
+                                 map_location=torch.device(f"cpu"))["state_dict"]
 
         for key in normal_dict.keys():
             normal_dict = rename(normal_dict, key, key.replace("netG", "netG.normal_filter"))

@@ -23,7 +23,7 @@ import numpy as np
 from pytorch_lightning.loggers import WandbLogger
 import wandb
 # print("For debug setting cuda visible diveices here!")
-# os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 from pytorch_lightning.utilities.distributed import rank_zero_only
 @rank_zero_only
 def save_code(cfg,args):
@@ -61,11 +61,12 @@ if __name__ == "__main__":
     parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter_test.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
-    parser.add_argument("-test", "--test_mode", default=False, action="store_true")
+    parser.add_argument("-test", "--test_mode", default=True, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=False, action="store_true")
     parser.add_argument("--name",type=str)
-    parser.add_argument("--gpus", type=str, default='2') 
+    parser.add_argument("--gpus", type=str, default='0') 
+    parser.add_argument("--num_gpus", type=int, default=1) 
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
@@ -73,8 +74,8 @@ if __name__ == "__main__":
     #      raise Exception("Sorry, experiment name exists, modify the experiment name!")
     # name_dict=["name",cfg.name+gettime()]
     # cfg.merge_from_list(name_dict)
-    cfg.gpus=[int(i) for i in args.gpus]
-    print("gpu list",cfg.gpus,"experimentname",cfg.name,cfg.name)
+    # cfg.gpus=[int(i) for i in args.gpus]
+    print("experimentname",cfg.name,cfg.name)
     cfg.freeze()
     print("note cfg is freeze",cfg.batch_size)
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
@@ -91,13 +92,13 @@ if __name__ == "__main__":
 
     checkpoint = ModelCheckpoint(
         dirpath=osp.join(cfg.ckpt_dir, cfg.name),
-        # save_top_k=1,
+        save_top_k=1,
         verbose=False,
         save_last=True,
-        # save_weights_only=True, ##here for resuming model we save optimizer lr scheduler,etc.
-        # monitor="val/avgloss",
-        # mode="min",
-        # filename="{epoch:02d}",
+        save_weights_only=True, ##here for resuming model we save optimizer lr scheduler,etc.
+        monitor="val/avgloss",
+        mode="min",
+        filename="{epoch:02d}",
     )
 
     if cfg.test_mode or args.test_mode:
@@ -123,8 +124,8 @@ if __name__ == "__main__":
         freq_eval = cfg.fast_dev
 
     trainer_kwargs = {
-        "gpus": cfg.gpus,
-        "auto_select_gpus": True,
+        # "gpus": cfg.gpus,
+        # "auto_select_gpus": True,
         "reload_dataloaders_every_epoch": True,
         "sync_batchnorm": True,
         "benchmark": True,
@@ -139,7 +140,9 @@ if __name__ == "__main__":
         "fast_dev_run": cfg.fast_dev,
         "max_epochs": cfg.num_epoch,
         "callbacks": [LearningRateMonitor(logging_interval="step")],
-        "profiler":"pytorch",
+        # "profiler":"pytorch",
+        "gpus": args.num_gpus,
+        
     }
 
     datamodule = PIFuDataModule(cfg)
@@ -173,22 +176,23 @@ if __name__ == "__main__":
     model = ICON(cfg)
 
 
-    trainer = SubTrainer(**trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
+    trainer = SubTrainer(accelerator='ddp' if args.num_gpus>1 else None,**trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
     # trainer = Trainer(**trainer_kwargs)
     # load checkpoints
     if not cfg.test_mode and not args.resume: 
             print("loading filter from cfg")
             resume_path=cfg.resume_path
     elif cfg.test_mode or args.resume:
-        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch4_withnormal_debugv1/last.ckpt"
-        resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
+        resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch4_withnormal_debugv1/epoch=06.ckpt"
+        # resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
         print("loading prtrained filter model",resume_path)    
         if not os.path.exists(resume_path):
             print("checkpoint {} not exists".format(resume_path))
             assert 1==0
     currentepoch=load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
     if args.resume: trainer.current_epoch=currentepoch
-    wandb_logger.experiment.config.update(cfg)
+    # if trainer.global_rank == 0:
+    #     wandb_logger.experiment.config.update(cfg)
     if not cfg.test_mode:
         trainer.fit(model=model, datamodule=datamodule)
         trainer.test(model=model, datamodule=datamodule)

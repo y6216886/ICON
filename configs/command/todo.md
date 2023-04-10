@@ -37,6 +37,28 @@ icon without normal performance is too good, figure out why
 
 todo: save codes configs
 
+todo: study the impact of smpl features vis cmap norm and sdf
+
+todo: use part segmentation map to extract feature for mlp  (see body net fig 2)
+
+---
+
+* Evaluate time cost and gpu memory cost of different gpu setting by varing batch size
+
+gpu026 ddp #gpu=2  bs=2 -> 1.9s/iteration 2 hours/epoch  gpu memory 8732MiB/per-gpu use this one
+
+gpu026 ddp #gpu=2  bs=8 -> 1.9s/iteration 2h:40m /epoch  gpu memory 17000MiB
+
+gpu026 ddp #gpu=2  bs=4 -> 1.9s/iteration 2h:40m /epoch  gpu memory 15000MiB
+
+gpu026 without_ddp #gpu=1  bs=2 -> 1.9s/iteration 3h:20m /epoch  gpu memory 7000MiB
+
+* Use ddp=2 bs=2
+
 ---
 
 I set pytorch lightning trainer with profile = "pytorch" to check the bottleneck of the whole training process in gpu026 bottom left 2 window.
+
+ablation on smpl feature
+
+study the dim of each dim

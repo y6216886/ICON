@@ -1,7 +1,7 @@
 source /mnt/cephfs/home/yangyifan/miniconda/etc/profile.d/conda.sh
 # conda activate icontitanx ##icon for 3090
-conda activate icon3090
-cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/ 
+conda activate icon3090;cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/ 
+
 
 CUDA_VISIBLE_DEVICES=3 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg  configs/train/pifu_normal_debug/pifu_img+normf.yaml --gpus 0
 CUDA_VISIBLE_DEVICES=3 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg  configs/train/pifu_normal_debug/pifu_img+normf.yaml -test --gpus 0

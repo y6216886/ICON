@@ -9,7 +9,7 @@ class MLP(pl.LightningModule):
     def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None):
 
         super(MLP, self).__init__()
-
+        print("mlp filter channles",filter_channels)
         self.filters = nn.ModuleList()
         self.norms = nn.ModuleList()
         self.res_layers = res_layers

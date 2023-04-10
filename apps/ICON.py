@@ -679,7 +679,8 @@ class ICON(pl.LightningModule):
             #     global_step=step_id,
             # )
             stack=image.transpose(2, 0, 1)
-            self.logger.experiment.log({"Occupancy": [wandb.Image(img) for img in stack]})
+            if self.trainer.global_rank == 0:
+                self.logger.experiment.log({"Occupancy": [wandb.Image(img) for img in stack]})
             # self.logger.log_image(key=f"Occupancy-{dataset}/{step_id}", images=[image.transpose(2, 0, 1)],step=step_id)
     def test_single(self, batch):
 

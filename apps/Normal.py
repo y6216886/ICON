@@ -184,7 +184,8 @@ class Normal(pl.LightningModule):
                 #     global_step=self.global_step,
                 # )
                 stack=result_array.transpose(2, 0, 1)
-                self.logger.experiment.log({"Normal-val": [wandb.Image(img) for img in stack]})
+                if self.trainer.global_rank == 0:
+                    self.logger.experiment.log({"Normal-val": [wandb.Image(img) for img in stack]})
                 
 
         return {

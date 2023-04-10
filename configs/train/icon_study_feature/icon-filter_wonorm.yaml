@@ -1,4 +1,4 @@
-name: baseline/icon-filter_batch2_newresumev1
+name: baseline/icon-filter_batch2_withnormal_wonorm
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 # resume_path: "./data/ckpt/icon-filter.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
@@ -31,12 +31,12 @@ dataset:
 net:
   mlp_dim: [256, 512, 256, 128, 1]
   res_layers: [2,3,4]
-  num_stack: 4
+  num_stack: 2
   prior_type: "icon"
   use_filter: True
   in_geo: () #(('normal_F',3), ('normal_B',3))
   in_nml: (('image',3), ('T_normal_F',3), ('T_normal_B',3))
-  smpl_feats: ['sdf', 'cmap', 'norm', 'vis']
+  smpl_feats: ['sdf', 'cmap','vis'] #, 'norm'
   gtype: 'HGPIFuNet'
   ctype: 'resnet34'
   norm_mlp: 'batch'
@@ -72,8 +72,8 @@ optim: RMSprop
 # training (batch=4, set=agora, rot-6)
 overfit: False
 num_epoch: 10
-freq_show_train: 0.1
-freq_show_val: 0.3
-freq_plot: 0.01
+freq_show_train: 1.0
+freq_show_val: 1.0
+freq_plot: 0.1
 freq_eval: 0.2
 schedule: [3, 8]
