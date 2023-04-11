@@ -36,7 +36,7 @@ net:
   use_filter: True
   in_geo: () #(('normal_F',3), ('normal_B',3))
   in_nml: (('image',3), ('T_normal_F',3), ('T_normal_B',3))
-  smpl_feats: ['sdf', 'cmap', 'norm','vis']
+  smpl_feats: ['sdf', 'cmap', 'norm']
   gtype: 'HGPIFuNet'
   ctype: 'resnet34'
   norm_mlp: 'batch'
@@ -53,8 +53,8 @@ weight_decay: 0.0
 momentum: 0.0
 batch_size: 2
 num_threads: 16
-gpus: [7]
-test_gpus: [7]
+gpus: [0]
+test_gpus: [0]
 
 sdf: False
 sdf_clip: 15.0

@@ -3,13 +3,15 @@
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
-
+from termcolor import colored
 
 class MLP(pl.LightningModule):
-    def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None):
+    def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None, args=None):
 
         super(MLP, self).__init__()
-        print("mlp filter channles",filter_channels)
+        if args.mlp_first_dim!=0:
+            filter_channels[0]=args.mlp_first_dim
+            print(colored("I have modified mlp filter channles{}".format(filter_channels),"red"))
         self.filters = nn.ModuleList()
         self.norms = nn.ModuleList()
         self.res_layers = res_layers

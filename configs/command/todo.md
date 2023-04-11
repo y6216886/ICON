@@ -62,3 +62,16 @@ I set pytorch lightning trainer with profile = "pytorch" to check the bottleneck
 ablation on smpl feature
 
 study the dim of each dim
+
+0410 gpu025 gpu026 study feature
+
+---
+
+How to extend the 3D human digitilization task to embrace the trends of data centric AI?
+
+    Getting more image to occupancy label pairs
+
+    Improving the quality of existing data
+
+
+How to modify MLP for nerf, 3d human digitalization, etc.

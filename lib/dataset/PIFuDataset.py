@@ -39,12 +39,13 @@ cape_gender = {
 
 
 class PIFuDataset():
-    def __init__(self, cfg, split='train', vis=False):
+    def __init__(self, cfg, split='train', vis=False, args=None):
         self.test=cfg.test_mode
         self.split = split
         self.root = cfg.root
         self.bsize = cfg.batch_size
         self.overfit = cfg.overfit
+        self.args=args
 
         # for debug, only used in visualize_sampling3D
         self.vis = vis
@@ -192,9 +193,10 @@ class PIFuDataset():
         return subject_list
 
     def __len__(self):
-        return len(self.subject_list) * len(self.rotations)
-        # return 360
-        # return 360
+        if self.args.test_code:
+            return 8
+        else:
+            return len(self.subject_list) * len(self.rotations)
 
     def __getitem__(self, index):
 
@@ -488,8 +490,8 @@ class PIFuDataset():
 
             # get smpl_vis
             if "smpl_vis" not in return_dict.keys() and "smpl_vis" in self.feat_keys:
-                (xy, z) = torch.as_tensor(smplx_verts).to(self.device).split([2, 1], dim=1)
-                smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces).to(self.device).long())
+                (xy, z) = torch.as_tensor(smplx_verts, device=self.device).split([2, 1], dim=1) 
+                smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces, device=self.device)).long() 
                 return_dict['smpl_vis'] = smplx_vis
 
             if "smpl_norm" not in return_dict.keys() and "smpl_norm" in self.feat_keys:
@@ -511,11 +513,11 @@ class PIFuDataset():
 
             if vis:
 
-                (xy, z) = torch.as_tensor(smplx_verts).to(self.device).split([2, 1], dim=1)
-                smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces).to(self.device).long())
+                (xy, z) = torch.as_tensor(smplx_verts,device=self.device).split([2, 1], dim=1) 
+                smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces,device=self.device).long())
 
                 T_normal_F, T_normal_B = self.render_normal(
-                    (smplx_verts * torch.tensor(np.array([1.0, -1.0, 1.0]))).to(self.device),
+                    (smplx_verts * torch.tensor(np.array([1.0, -1.0, 1.0]),device=self.device)),
                     smplx_faces.to(self.device)
                 )
 
@@ -695,6 +697,10 @@ class PIFuDataset():
 
 
 if __name__=="__main__":
+    class args_():
+        def __init__(self) -> None:
+            self.test_code=True
+    args_=args_()
     from torchvision.utils import save_image
     config_file="/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/configs/train/icon-filter.yaml"
     from lib.common.config import get_cfg_defaults
@@ -702,7 +708,7 @@ if __name__=="__main__":
     # from tqdm import tqdm
     cfg1 = get_cfg_defaults()
     cfg1.merge_from_file(config_file)
-    pifu= PIFuDataset(cfg=cfg1, split='train')
+    pifu= PIFuDataset(cfg=cfg1, split='train',args=args_)
     test_data_loader = DataLoader(
             pifu,
             batch_size=1,
@@ -714,7 +720,7 @@ if __name__=="__main__":
     for i,j in enumerate(test_data_loader):
         print(i)
         imgtensor=torch.cat([j['normal_F'],j['normal_B'],j['T_normal_F'],j['T_normal_B']],dim=0)
-        save_image( imgtensor, "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/examples/normals.png",nrow=2, normalize=True)
+        # save_image( imgtensor, "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/examples/normals.png",nrow=2, normalize=True)
         break
         for key in j.keys():
             try:

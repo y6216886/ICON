@@ -7,12 +7,12 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 # export OMP_NUM_THREADS=10
 
 # CUDA_VISIBLE_DEVICES=2 python -m apps.train -cfg configs/train/icon/icon-filter.yaml --gpus 0
-# CUDA_VISIBLE_DEVICES=2 python -m apps.train -cfg configs/train/icon/icon-filter.yaml -test --gpus 0
+CUDA_VISIBLE_DEVICES=2,3 python -m apps.train -cfg configs/train/icon/icon-filter.yaml -test --gpus 0
 
 
 # python -m apps.train -cfg configs/train/icon/icon-filter_bs8.yaml --gpus 0
 
-CUDA_LAUNCH_BLOCKING=1 CUDA_VISIBLE_DEVICES=0 python -m apps.train -cfg configs/train/icon/icon-filter_test.yaml --gpus 0 --test
+# CUDA_LAUNCH_BLOCKING=1 CUDA_VISIBLE_DEVICES=0 python -m apps.train -cfg configs/train/icon/icon-filter_test.yaml --gpus 0 --test
 
 
 # CUDA_VISIBLE_DEVICES=2 python -m apps.train -cfg configs/train/icon/icon-filter_wo.yaml --gpus 0

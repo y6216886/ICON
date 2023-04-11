@@ -14,7 +14,7 @@
 #
 # Contact: ps-license@tuebingen.mpg.de
 import sys 
-from torchvision.utils import save_image
+# from torchvision.utils import save_image
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/")
 from lib.net.voxelize import Voxelization
 from lib.dataset.mesh_util import feat_select, read_smpl_constants
@@ -43,7 +43,7 @@ class HGPIFuNet(BasePIFuNet):
         4. Classification.
         5. During training, error is calculated on all stacks.
     """
-    def __init__(self, cfg, projection_mode="orthogonal", error_term=nn.MSELoss()):
+    def __init__(self, cfg, projection_mode="orthogonal", error_term=nn.MSELoss(), args=None):
 
         super(HGPIFuNet, self).__init__(projection_mode=projection_mode, error_term=error_term)
         self.cfg=cfg
@@ -153,6 +153,7 @@ class HGPIFuNet(BasePIFuNet):
             res_layers=self.opt.res_layers,
             norm=self.opt.norm_mlp,
             last_op=nn.Sigmoid() if not self.cfg.test_mode else None,
+            args=args
         )
 
         self.sp_encoder = SpatialEncoder()

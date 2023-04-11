@@ -247,7 +247,6 @@ class Render:
             verts = verts.unsqueeze(0).float()
         if faces.ndimension() == 2:
             faces = faces.unsqueeze(0).long()
-
         verts = verts.to(self.device)
         faces = faces.to(self.device)
 

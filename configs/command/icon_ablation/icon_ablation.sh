@@ -4,22 +4,23 @@ source /mnt/cephfs/home/yangyifan/miniconda/etc/profile.d/conda.sh
 # conda activate icontitanx ##icon for 3090
 conda activate icon3090
 cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/ 
-
-
+# gpu=0,1
+num_gpu=2
 # CUDA_LAUNCH_BLOCKING=1 CUDA_VISIBLE_DEVICES=2 python -m apps.train -cfg configs/train/icon/icon-filter_test.yaml --resume
 
 
-# CUDA_VISIBLE_DEVICES=2,3 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wonorm.yaml --num_gpus 2 --gpus 0
-# CUDA_VISIBLE_DEVICES=2,3 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wonorm.yaml  -test --gpus 0
+# CUDA_VISIBLE_DEVICES=0,1 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wonorm.yaml --num_gpus $num_gpu --gpus 0 --mlp_first_dim 10 #--test_code
+# CUDA_VISIBLE_DEVICES=0,1 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wonorm.yaml  -test --gpus 0 --mlp_first_dim 10 #--test_code
 
-# CUDA_VISIBLE_DEVICES=3,2 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wosdf.yaml --gpus 0 --num_gpus 2
-# CUDA_VISIBLE_DEVICES=3,2 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wosdf.yaml -test --gpus 0
+# CUDA_VISIBLE_DEVICES=2,3 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wosdf.yaml --gpus 0 --num_gpus 2  --mlp_first_dim 12   ##have 12 channels
+# CUDA_VISIBLE_DEVICES=2,3 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wosdf.yaml -test --gpus 0 --mlp_first_dim 12 --test_code
 
-# CUDA_VISIBLE_DEVICES=0,1 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wocmap.yaml --gpus 0 --num_gpus 2
-# CUDA_VISIBLE_DEVICES=0,1 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wocmap.yaml -test --gpus 0
+# CUDA_VISIBLE_DEVICES=3,2 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wocmap.yaml --gpus 0 --num_gpus 2 --mlp_first_dim 10 #have 10 channels
+CUDA_VISIBLE_DEVICES=3,2 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wocmap.yaml -test --gpus 0 --mlp_first_dim 10
 
 # CUDA_VISIBLE_DEVICES=3,2 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wovis.yaml  --gpus 0 --num_gpus 2
-CUDA_VISIBLE_DEVICES=0 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wovis.yaml -test --gpus 0
+# CUDA_VISIBLE_DEVICES=0 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wovis.yaml -test --gpus 0
 
+CUDA_VISIBLE_DEVICES=0,1 python -m apps.train -cfg configs/train/icon/icon-filter_test.yaml --gpus 0 --num_gpus $num_gpu
 
-python /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/train_nerf.py -d 2 3 --occ 0.8
+# python /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/train_nerf.py -d 2 3 --occ 0.8

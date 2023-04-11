@@ -90,7 +90,7 @@ def load_networks(cfg, model, mlp_path, normal_path):
     if os.path.exists(mlp_path) and mlp_path.endswith("ckpt"):
         # main_dict = torch.load(mlp_path,
         #                        map_location=torch.device(f"cuda:{cfg.gpus[0]}"))["state_dict"]
-        normal_dict = torch.load(normal_path,
+        main_dict = torch.load(mlp_path,
                                  map_location=torch.device(f"cpu"))["state_dict"]
         try:
             currentepoch=main_dict['epoch']
@@ -145,8 +145,8 @@ def reshape_sample_tensor(sample_tensor, num_views):
 
 def gen_mesh_eval(opt, net, cuda, data, resolution=None):
     resolution = opt.resolution if resolution is None else resolution
-    image_tensor = data['img'].to(device=cuda)
-    calib_tensor = data['calib'].to(device=cuda)
+    image_tensor = data['img'] #.to(device=cuda)
+    calib_tensor = data['calib'] #.to(device=cuda)
 
     net.filter(image_tensor)
 
@@ -546,8 +546,11 @@ def accumulate(outputs, rot_num, split):
             keyword = f"{dataset}-{metric}"
             if keyword not in hparam_log_dict.keys():
                 hparam_log_dict[keyword] = 0
-            for idx in range(split[dataset][0] * rot_num, split[dataset][1] * rot_num):
-                hparam_log_dict[keyword] += outputs[idx][metric]
+            try:
+                for idx in range(split[dataset][0] * rot_num, split[dataset][1] * rot_num):
+                    hparam_log_dict[keyword] += outputs[idx][metric]
+            except:
+                print("testing code, idx not enough")
             hparam_log_dict[keyword] /= (split[dataset][1] - split[dataset][0]) * rot_num
 
     print(colored(hparam_log_dict, "green"))

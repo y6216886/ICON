@@ -53,8 +53,8 @@ weight_decay: 0.0
 momentum: 0.0
 batch_size: 4
 num_threads: 16
-gpus: [7]
-test_gpus: [7]
+gpus: [0]
+test_gpus: [0]
 
 sdf: False
 sdf_clip: 15.0

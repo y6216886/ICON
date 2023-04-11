@@ -5,7 +5,8 @@ import pytorch_lightning as pl
 
 
 class PIFuDataModule(pl.LightningDataModule):
-    def __init__(self, cfg):
+    def __init__(self, cfg, args=None):
+        self.args=args
         super(PIFuDataModule, self).__init__()
         self.cfg = cfg
         self.overfit = self.cfg.overfit
@@ -28,12 +29,12 @@ class PIFuDataModule(pl.LightningDataModule):
     def setup(self, stage):
 
         if stage == 'fit':
-            self.train_dataset = PIFuDataset(cfg=self.cfg, split="train")
-            self.val_dataset = PIFuDataset(cfg=self.cfg, split="val")
+            self.train_dataset = PIFuDataset(cfg=self.cfg, split="train",args=self.args)
+            self.val_dataset = PIFuDataset(cfg=self.cfg, split="val",args=self.args)
             self.data_size = {'train': len(self.train_dataset), 'val': len(self.val_dataset)}
 
         if stage == 'test':
-            self.test_dataset = PIFuDataset(cfg=self.cfg, split="test")
+            self.test_dataset = PIFuDataset(cfg=self.cfg, split="test",args=self.args)
 
     def train_dataloader(self):
 

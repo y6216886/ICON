@@ -31,7 +31,7 @@ dataset:
 net:
   mlp_dim: [256, 512, 256, 128, 1]
   res_layers: [2,3,4]
-  num_stack: 4
+  num_stack: 2
   prior_type: "icon"
   use_filter: True
   in_geo: () #(('normal_F',3), ('normal_B',3))
@@ -53,8 +53,8 @@ weight_decay: 0.0
 momentum: 0.0
 batch_size: 2
 num_threads: 16
-gpus: [7]
-test_gpus: [7]
+gpus: [0]
+test_gpus: [0]
 
 sdf: False
 sdf_clip: 15.0
@@ -71,7 +71,7 @@ optim: RMSprop
 
 # training (batch=4, set=agora, rot-6)
 overfit: False
-num_epoch: 10
+num_epoch: 1000
 freq_show_train: 0.1
 freq_show_val: 0.3
 freq_plot: 0.01

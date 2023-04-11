@@ -80,7 +80,8 @@ class PointFeat:
             out_dict["vis"] = out_dict["vis"].ge(1e-1).float()
 
         if "norm" in out_dict.keys():
-            pts_norm = out_dict["norm"] * torch.tensor([-1.0, 1.0, -1.0]).to(self.device)
+            temp_=torch.tensor([-1.0, 1.0, -1.0],device=self.device)
+            pts_norm = out_dict["norm"] * temp_
             out_dict["norm"] = F.normalize(pts_norm, dim=2)
 
         if "cmap" in out_dict.keys():

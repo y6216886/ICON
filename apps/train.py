@@ -22,8 +22,11 @@ import argparse
 import numpy as np
 from pytorch_lightning.loggers import WandbLogger
 import wandb
+from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+os.environ["WANDB__SERVICE_WAIT"]="300"
+# print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
 @rank_zero_only
 def save_code(cfg,args):
@@ -61,12 +64,15 @@ if __name__ == "__main__":
     parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter_test.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
-    parser.add_argument("-test", "--test_mode", default=True, action="store_true")
+    parser.add_argument("-test", "--test_mode", default=False, action="store_true")
+    parser.add_argument("--test_code", default=False, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
-    parser.add_argument("--offline",default=False, action="store_true")
+    parser.add_argument("--offline",default=True, action="store_true")
     parser.add_argument("--name",type=str)
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
+    parser.add_argument("--mlp_first_dim", type=int, default=0) 
+    
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
@@ -82,7 +88,7 @@ if __name__ == "__main__":
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
     if not args.offline: 
         wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath)
-    if args.offline or args.test_mode:
+    if args.offline or args.test_code:
         wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath,offline=True)
 
     if cfg.overfit:
@@ -140,12 +146,12 @@ if __name__ == "__main__":
         "fast_dev_run": cfg.fast_dev,
         "max_epochs": cfg.num_epoch,
         "callbacks": [LearningRateMonitor(logging_interval="step")],
-        # "profiler":"pytorch",
+        # "profiler":True,
         "gpus": args.num_gpus,
         
     }
 
-    datamodule = PIFuDataModule(cfg)
+    datamodule = PIFuDataModule(cfg,args)
     print("note !!!!in test mode")
     if not cfg.test_mode:
         datamodule.setup(stage="fit")
@@ -160,6 +166,8 @@ if __name__ == "__main__":
             }
         )
 
+
+
         if cfg.overfit:
             cfg_show_list = ["freq_show_train", 100.0, "freq_show_val", 10.0]
         else:
@@ -172,8 +180,11 @@ if __name__ == "__main__":
 
         cfg.merge_from_list(cfg_show_list)
 
-    save_code(cfg, args)
-    model = ICON(cfg)
+    if not cfg.test_mode:   
+        save_code(cfg, args)
+
+
+    model = ICON(cfg, args)
 
 
     trainer = SubTrainer(accelerator='ddp' if args.num_gpus>1 else None,**trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
@@ -183,14 +194,18 @@ if __name__ == "__main__":
             print("loading filter from cfg")
             resume_path=cfg.resume_path
     elif cfg.test_mode or args.resume:
-        resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch4_withnormal_debugv1/epoch=06.ckpt"
-        # resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
-        print("loading prtrained filter model",resume_path)    
+        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_debugv1/last.ckpt"
+        resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
+        print("loading prtrained filter model from ",resume_path)    
         if not os.path.exists(resume_path):
             print("checkpoint {} not exists".format(resume_path))
             assert 1==0
     currentepoch=load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
     if args.resume: trainer.current_epoch=currentepoch
+    if args.test_code: 
+        trainer.max_epochs=2
+        trainer.log_every_n_steps=1
+        trainer.val_check_interval=1
     # if trainer.global_rank == 0:
     #     wandb_logger.experiment.config.update(cfg)
     if not cfg.test_mode:

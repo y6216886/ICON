@@ -31,7 +31,7 @@ torch.backends.cudnn.benchmark = True
 
 
 class ICON(pl.LightningModule):
-    def __init__(self, cfg):
+    def __init__(self, cfg,args=None):
         super(ICON, self).__init__()
 
         self.cfg = cfg
@@ -47,6 +47,7 @@ class ICON(pl.LightningModule):
             self.cfg,
             self.cfg.projection_mode,
             error_term=nn.SmoothL1Loss() if self.use_sdf else nn.MSELoss(),
+            args=args
         )
 
         self.evaluator = Evaluator(device=torch.device(f"cuda:{self.cfg.gpus[0]}"))
@@ -313,7 +314,7 @@ class ICON(pl.LightningModule):
             batch["type"][0], batch["gender"][0], batch["age"][0], None
         ).to(self.device)
         in_tensor_dict["smpl_faces"] = (
-            torch.tensor(smpl_model.faces.astype(np.int)).long().unsqueeze(0).to(self.device)
+            torch.tensor(smpl_model.faces.astype(np.int),device=self.device).long().unsqueeze(0)
         )
 
         # The optimizer and variables
@@ -381,7 +382,7 @@ class ICON(pl.LightningModule):
                 [in_tensor_dict["normal_F"][0], in_tensor_dict["normal_B"][0]], dim=2
             ).permute(1, 2, 0)
             gt_arr = ((gt_arr + 1.0) * 0.5).to(self.device)
-            bg_color = (torch.Tensor([0.5, 0.5, 0.5]).unsqueeze(0).unsqueeze(0).to(self.device))
+            bg_color = (torch.Tensor([0.5, 0.5, 0.5], device=self.device).unsqueeze(0).unsqueeze(0)) 
             gt_arr = ((gt_arr - bg_color).sum(dim=-1) != 0.0).float()
             loss += torch.abs(smpl_arr - gt_arr).mean()
 
@@ -523,7 +524,7 @@ class ICON(pl.LightningModule):
 
             # update the new T_normal_F/B
             self.render.load_meshes(
-                batch["smpl_verts"] * torch.tensor([1.0, -1.0, 1.0]).to(self.device),
+                batch["smpl_verts"] * torch.tensor([1.0, -1.0, 1.0],device=self.device),
                 batch["smpl_faces"]
             )
             T_normal_F, T_noraml_B = self.render.get_rgb_image()
@@ -545,9 +546,11 @@ class ICON(pl.LightningModule):
         image_inter = np.concatenate(
             self.tensor2image(512, inter[0]) + [smpl_F, smpl_B, image], axis=1
         )
-        Image.fromarray((image_inter).astype(np.uint8)).save(
-            osp.join(self.export_dir, f"{mesh_rot}_inter.png")
-        )
+        try:
+            Image.fromarray((image_inter).astype(np.uint8)).save(
+                osp.join(self.export_dir, f"{mesh_rot}_inter.png")
+            )
+        except:print("No space left ERROR")
 
         verts_pr, faces_pr = self.reconEngine.export_mesh(sdf)
 
@@ -618,9 +621,17 @@ class ICON(pl.LightningModule):
         # )
         self.log("lr_G", self.lr_G)
         self.log("bsize", self.batch_size)
-        for key in accu_outputs:
-            self.log(key, accu_outputs[key])
-
+        for key_ in accu_outputs:
+            self.log(key_, accu_outputs[key_])
+        try:
+            with open(osp.join(self.export_dir, "../test_results.txt"),"a") as f:
+                for keys in accu_outputs.keys():
+                    f.writelines(keys+" ")
+                for keys in accu_outputs.keys():
+                    f.writelines(str(accu_outputs[keys].cpu().item())[:7] + " ")
+                for keys in accu_outputs.keys():
+                    f.writelines(str(keys)+" : "+ str(accu_outputs[keys].cpu().item())+"\n")
+        except: print("saving text failed")
 
         np.save(
             osp.join(self.export_dir, "../test_results.npy"),
