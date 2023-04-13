@@ -272,7 +272,7 @@ class HGPIFuNet(BasePIFuNet):
         :param images: [B, C, H, W] input images
         """
 
-        in_filter = self.get_normal(in_tensor_dict)
+        in_filter = self.get_normal(in_tensor_dict) #the cmap is from the ground truth smpl model.
 
         features_G = []
 

@@ -57,6 +57,8 @@ gpu026 without_ddp #gpu=1  bs=2 -> 1.9s/iteration 3h:20m /epoch  gpu memory 7000
 
 ---
 
+### Study feature
+
 I set pytorch lightning trainer with profile = "pytorch" to check the bottleneck of the whole training process in gpu026 bottom left 2 window.
 
 ablation on smpl feature
@@ -65,13 +67,18 @@ study the dim of each dim
 
 0410 gpu025 gpu026 study feature
 
+0411 try to remove bary weight
+
+0413 mlp se block     channel se and spatial se  gpu026
+
 ---
 
-How to extend the 3D human digitilization task to embrace the trends of data centric AI?
+### How to extend the 3D human digitilization task to embrace the trends of data centric AI?
 
     Getting more image to occupancy label pairs
 
     Improving the quality of existing data
 
+### How to modify MLP for nerf, 3d human digitalization, etc.
 
-How to modify MLP for nerf, 3d human digitalization, etc.
+### Single view synthesis for human body xxx

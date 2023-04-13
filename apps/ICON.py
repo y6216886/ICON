@@ -627,8 +627,10 @@ class ICON(pl.LightningModule):
             with open(osp.join(self.export_dir, "../test_results.txt"),"a") as f:
                 for keys in accu_outputs.keys():
                     f.writelines(keys+" ")
+                f.writelines("\n")
                 for keys in accu_outputs.keys():
                     f.writelines(str(accu_outputs[keys].cpu().item())[:7] + " ")
+                f.writelines("\n")
                 for keys in accu_outputs.keys():
                     f.writelines(str(keys)+" : "+ str(accu_outputs[keys].cpu().item())+"\n")
         except: print("saving text failed")

@@ -1,4 +1,4 @@
-name: baseline/icon-filter_batch2_withnormal_wosdfv1
+name: baseline/icon-filter_batch2_withnormal_mlpse
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 # resume_path: "./data/ckpt/icon-filter.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
@@ -36,7 +36,7 @@ net:
   use_filter: True
   in_geo: () #(('normal_F',3), ('normal_B',3))
   in_nml: (('image',3), ('T_normal_F',3), ('T_normal_B',3))
-  smpl_feats: ['norm', 'cmap','vis'] #, 'sdf'
+  smpl_feats: ['sdf', 'cmap', 'norm', 'vis']
   gtype: 'HGPIFuNet'
   ctype: 'resnet34'
   norm_mlp: 'batch'

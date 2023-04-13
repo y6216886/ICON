@@ -23,8 +23,8 @@ import numpy as np
 from pytorch_lightning.loggers import WandbLogger
 import wandb
 from termcolor import colored
-# print("For debug setting cuda visible diveices here!")
-# os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+print("For debug setting cuda visible diveices here!")
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -72,13 +72,10 @@ if __name__ == "__main__":
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
-
     ####model
     parser.add_argument("--mlpSe", default=False, action="store_true")
-    parser.add_argument("--mlpSev1", default=False, action="store_true")
 
     ######
-    
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
@@ -113,23 +110,7 @@ if __name__ == "__main__":
         filename="{epoch:02d}",
     )
 
-    if cfg.test_mode or args.test_mode:
 
-        cfg_test_mode = [
-            "test_mode",
-            True,
-            "dataset.types",
-            ["cape"],
-            "dataset.scales",
-            [100.0],
-            "dataset.rotation_num",
-            3,
-            "mcube_res",
-            256,
-            "clean_mesh",
-            True,
-        ]
-        cfg.merge_from_list(cfg_test_mode)
 
     freq_eval = cfg.freq_eval
     if cfg.fast_dev > 0:
@@ -157,37 +138,36 @@ if __name__ == "__main__":
         
     }
 
-    datamodule = PIFuDataModule(cfg,args)
-    print("note !!!!in test mode")
-    if not cfg.test_mode:
-        datamodule.setup(stage="fit")
-        train_len = datamodule.data_size["train"]
-        val_len = datamodule.data_size["val"]
-        trainer_kwargs.update(
-            {
-                "log_every_n_steps":
-                    int(cfg.freq_plot * train_len // cfg.batch_size),
-                "val_check_interval":
-                    int(freq_eval * train_len // cfg.batch_size) if freq_eval > 10 else freq_eval,
-            }
-        )
+    datamodule = PIFuDataModule(cfg, args)
+
+    datamodule.setup(stage="fit")
+    train_len = datamodule.data_size["train"]
+    val_len = datamodule.data_size["val"]
+    trainer_kwargs.update(
+        {
+            "log_every_n_steps":
+                int(cfg.freq_plot * train_len // cfg.batch_size),
+            "val_check_interval":
+                int(freq_eval * train_len // cfg.batch_size) if freq_eval > 10 else freq_eval,
+        }
+    )
 
 
 
-        if cfg.overfit:
-            cfg_show_list = ["freq_show_train", 100.0, "freq_show_val", 10.0]
-        else:
-            cfg_show_list = [
-                "freq_show_train",
-                max(cfg.freq_show_train * train_len // cfg.batch_size,1.0),
-                "freq_show_val",
-                max(cfg.freq_show_val * val_len, 1.0),
-            ]
+    if cfg.overfit:
+        cfg_show_list = ["freq_show_train", 100.0, "freq_show_val", 10.0]
+    else:
+        cfg_show_list = [
+            "freq_show_train",
+            max(cfg.freq_show_train * train_len // cfg.batch_size,1.0),
+            "freq_show_val",
+            max(cfg.freq_show_val * val_len, 1.0),
+        ]
 
-        cfg.merge_from_list(cfg_show_list)
+    cfg.merge_from_list(cfg_show_list)
 
-    if not cfg.test_mode:   
-        save_code(cfg, args)
+
+    save_code(cfg, args)
 
 
     model = ICON(cfg, args)
@@ -212,12 +192,47 @@ if __name__ == "__main__":
         trainer.max_epochs=2
         trainer.log_every_n_steps=1
         trainer.val_check_interval=1
-    # if trainer.global_rank == 0:
-    #     wandb_logger.experiment.config.update(cfg)
-    if not cfg.test_mode:
-        trainer.fit(model=model, datamodule=datamodule)
-        trainer.test(model=model, datamodule=datamodule)
-    else:
-        np.random.seed(1993)
-        trainer.test(model=model, datamodule=datamodule)
+
+
+    # trainer.fit(model=model, datamodule=datamodule)
+    # trainer.test(model=model, datamodule=datamodule)
+
+####test_mode
+    args.num_gpus=1
+    cfg_test_mode = [
+        "test_mode",
+        True,
+        "dataset.types",
+        ["cape"],
+        "dataset.scales",
+        [100.0],
+        "dataset.rotation_num",
+        3,
+        "mcube_res",
+        256,
+        "clean_mesh",
+        True,
+    ]
+    cfg.merge_from_list(cfg_test_mode)
+    datamodule_val = PIFuDataModule(cfg,args)
+    model = ICON(cfg, args)
+
+    trainer = SubTrainer(**trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
+    # trainer = Trainer(**trainer_kwargs)
+    # load checkpoints
+
+        #/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt
+        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_debugv1/last.ckpt"
+    resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
+    print("loading prtrained filter model from ",resume_path)    
+    if not os.path.exists(resume_path):
+        NotADirectoryError("checkpoint {} not exists".format(resume_path))
+    currentepoch=load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
+    if args.test_code: 
+        trainer.max_epochs=2
+        trainer.log_every_n_steps=1
+        trainer.val_check_interval=1
+
+    np.random.seed(1993)
+    trainer.test(model=model, datamodule=datamodule)
 

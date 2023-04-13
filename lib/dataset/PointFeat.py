@@ -64,7 +64,7 @@ class PointFeat:
                 closest_feats = torch.gather(
                     feat_tri, 1, pts_ind[:, :, None, None].expand(-1, -1, 3, feat_dim)
                 ).view(-1, 3, feat_dim)
-                pts_feats = ((closest_feats * bary_weights[:, :, None]).sum(1).unsqueeze(0))
+                pts_feats = ((closest_feats * bary_weights[:, :, None]).sum(1).unsqueeze(0))  ##try to remove the weights
                 out_dict[feat_key.split("_")[1]] = pts_feats
 
             else:
