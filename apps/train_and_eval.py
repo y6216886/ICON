@@ -23,8 +23,8 @@ import numpy as np
 from pytorch_lightning.loggers import WandbLogger
 import wandb
 from termcolor import colored
-print("For debug setting cuda visible diveices here!")
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+# print(colored("For debug setting cuda visible diveices here!","red")
+# os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -67,13 +67,15 @@ if __name__ == "__main__":
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
     parser.add_argument("--test_code", default=False, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
-    parser.add_argument("--offline",default=True, action="store_true")
+    parser.add_argument("--offline",default=False, action="store_true")
     parser.add_argument("--name",type=str)
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
     ####model
     parser.add_argument("--mlpSe", default=False, action="store_true")
+    parser.add_argument("--mlpSev1", default=False, action="store_true")
+    parser.add_argument("--mlpSemax", default=False, action="store_true")
 
     ######
     args = parser.parse_args()
@@ -166,6 +168,22 @@ if __name__ == "__main__":
 
     cfg.merge_from_list(cfg_show_list)
 
+    if args.test_mode:
+        cfg_test_mode = [
+            "test_mode",
+            True,
+            "dataset.types",
+            ["cape"],
+            "dataset.scales",
+            [100.0],
+            "dataset.rotation_num",
+            3,
+            "mcube_res",
+            256,
+            "clean_mesh",
+            True,
+        ]
+        cfg.merge_from_list(cfg_test_mode)
 
     save_code(cfg, args)
 
@@ -181,7 +199,7 @@ if __name__ == "__main__":
             resume_path=cfg.resume_path
     elif cfg.test_mode or args.resume:
         #/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt
-        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_debugv1/last.ckpt"
+        # resume_path="data/ckpt/icon-filter.ckpt"
         resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
         print("loading prtrained filter model from ",resume_path)    
         if not os.path.exists(resume_path):
@@ -194,10 +212,13 @@ if __name__ == "__main__":
         trainer.val_check_interval=1
 
 
-    # trainer.fit(model=model, datamodule=datamodule)
-    # trainer.test(model=model, datamodule=datamodule)
+    trainer.fit(model=model, datamodule=datamodule)
+    trainer.test(model=model, datamodule=datamodule)
 
-####test_mode
+
+##########################################################
+####test_mode_in_cape#####################################
+##########################################################
     args.num_gpus=1
     cfg_test_mode = [
         "test_mode",
@@ -214,25 +235,53 @@ if __name__ == "__main__":
         True,
     ]
     cfg.merge_from_list(cfg_test_mode)
+    checkpoint = ModelCheckpoint(
+        dirpath=osp.join(cfg.ckpt_dir, cfg.name),
+        save_top_k=1,
+        verbose=False,
+        save_last=True,
+        save_weights_only=True, ##here for resuming model we save optimizer lr scheduler,etc.
+        monitor="val/avgloss",
+        mode="min",
+        filename="{epoch:02d}",
+    )
     datamodule_val = PIFuDataModule(cfg,args)
-    model = ICON(cfg, args)
-
-    trainer = SubTrainer(**trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
+    model_val = ICON(cfg, args)
+    
+    trainer_kwargs_val = {
+        # "gpus": cfg.gpus,
+        # "auto_select_gpus": True,
+        "reload_dataloaders_every_epoch": True,
+        "sync_batchnorm": True,
+        "benchmark": True,
+        "logger": wandb_logger,
+        "track_grad_norm": -1,
+        "num_sanity_val_steps": cfg.num_sanity_val_steps,
+        "checkpoint_callback": checkpoint,
+        "limit_train_batches": cfg.dataset.train_bsize,
+        "limit_val_batches": cfg.dataset.val_bsize if not cfg.overfit else 0.001,
+        "limit_test_batches": cfg.dataset.test_bsize if not cfg.overfit else 0.0,
+        "profiler": None,
+        "fast_dev_run": cfg.fast_dev,
+        "max_epochs": cfg.num_epoch,
+        "callbacks": [LearningRateMonitor(logging_interval="step")],
+        # "profiler":True,
+        "gpus": 1,
+        
+    }
+    trainer_val = SubTrainer(**trainer_kwargs_val) ##delete normal filter, voxilization, and reconengine while saving checkpoint
     # trainer = Trainer(**trainer_kwargs)
     # load checkpoints
 
-        #/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt
-        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_debugv1/last.ckpt"
-    resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
-    print("loading prtrained filter model from ",resume_path)    
+    # resume_path="data/ckpt/icon-filter.ckpt"
+    resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')   
     if not os.path.exists(resume_path):
         NotADirectoryError("checkpoint {} not exists".format(resume_path))
-    currentepoch=load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
+    load_networks(cfg, model_val, mlp_path=resume_path, normal_path=cfg.normal_path)
     if args.test_code: 
-        trainer.max_epochs=2
-        trainer.log_every_n_steps=1
-        trainer.val_check_interval=1
+        trainer_val.log_every_n_steps=1
+        trainer_val.val_check_interval=1
 
     np.random.seed(1993)
-    trainer.test(model=model, datamodule=datamodule)
+    trainer_val.test(model=model_val, datamodule=datamodule_val)
 

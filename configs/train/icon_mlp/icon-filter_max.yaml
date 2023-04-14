@@ -1,4 +1,4 @@
-name: baseline/icon-filter_batch2_newresumev1
+name: baseline/icon-filter_batch2_withnormal_max(mlpse_mlpce)
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 # resume_path: "./data/ckpt/icon-filter.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
@@ -52,7 +52,7 @@ lr_G: 1e-4
 weight_decay: 0.0 
 momentum: 0.0
 batch_size: 2
-num_threads: 1
+num_threads: 16
 gpus: [0]
 test_gpus: [0]
 
@@ -71,9 +71,9 @@ optim: RMSprop
 
 # training (batch=4, set=agora, rot-6)
 overfit: False
-num_epoch: 10000
-freq_show_train: 0.1
-freq_show_val: 0.3
-freq_plot: 0.01
+num_epoch: 10
+freq_show_train: 1.0
+freq_show_val: 1.0
+freq_plot: 0.1
 freq_eval: 0.2
 schedule: [3, 8]

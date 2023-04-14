@@ -1,4 +1,4 @@
-name: baseline/icon-filter_batch2_withnormal_mlpChannelSELayer
+name: baseline/icon-filter_batch2_withnormal_mlpChannelSELayerv1
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 # resume_path: "./data/ckpt/icon-filter.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"

@@ -71,6 +71,8 @@ study the dim of each dim
 
 0413 mlp se block     channel se and spatial se  gpu026
 
+0413 mlp se block torch.max(c_se, s_se)
+
 ---
 
 ### How to extend the 3D human digitilization task to embrace the trends of data centric AI?
