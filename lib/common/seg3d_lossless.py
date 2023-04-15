@@ -121,7 +121,19 @@ class Seg3dLossless(nn.Module):
             coords2D = coords.float() / self.resolutions[-1] + step / 2
         coords2D = coords2D * (self.b_max - self.b_min) + self.b_min
         # query function
-        occupancys = self.query_func(**kwargs, points=coords2D)
+        bs, B, c=coords2D.size()
+        chunk_temp=8000
+        occ_list=[]
+        for index in range(0, B, chunk_temp):
+            coords2D_chunk=coords2D[:,index:index+chunk_temp,:]
+            chunk_pointnum=coords2D_chunk.size(1)
+            if chunk_pointnum!=chunk_temp:
+                coords2D_chunk=torch.cat([coords2D_chunk, torch.zeros(bs,chunk_temp-chunk_pointnum,c, device=coords2D.device)],dim=1)
+        #####chunk inference
+            occupancys = self.query_func(**kwargs, points=coords2D_chunk)
+            occ_list.append(occupancys)
+        if B!=chunk_temp:
+            occupancys=torch.cat(occ_list,2)[:,:,:B]
         if type(occupancys) is list:
             occupancys = torch.stack(occupancys)    # [bz, C, N]
         assert len(occupancys.size()) == 3, \
@@ -229,7 +241,9 @@ class Seg3dLossless(nn.Module):
                     coords_accum = coords_accum.long()
                     is_boundary[coords_accum[0, :, 2], coords_accum[0, :, 1],
                                 coords_accum[0, :, 0]] = False
-                    point_coords = is_boundary.permute(2, 1, 0).nonzero(as_tuple=False).unsqueeze(0)
+                    point_coords = is_boundary.permute(2, 1, 0)
+                    point_coords=point_coords.nonzero(as_tuple=False)
+                    point_coords=point_coords.unsqueeze(0) ##the nonzero operation yields outputs with variant size.
                     point_indices = (
                         point_coords[:, :, 2] * H * W + point_coords[:, :, 1] * W +
                         point_coords[:, :, 0]

@@ -73,6 +73,8 @@ study the dim of each dim
 
 0413 mlp se block torch.max(c_se, s_se)
 
+0415 mixermlp with chunk
+
 ---
 
 ### How to extend the 3D human digitilization task to embrace the trends of data centric AI?

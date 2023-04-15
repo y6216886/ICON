@@ -64,7 +64,7 @@ if __name__ == "__main__":
     parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter_test.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
-    parser.add_argument("-test", "--test_mode", default=True, action="store_true")
+    parser.add_argument("-test", "--test_mode", default=False, action="store_true")
     parser.add_argument("--test_code", default=False, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=True, action="store_true")
@@ -77,6 +77,7 @@ if __name__ == "__main__":
     parser.add_argument("--mlpSe", default=False, action="store_true")
     parser.add_argument("--mlpSev1", default=True, action="store_true")
     parser.add_argument("--mlpSemax", default=False, action="store_true")
+    parser.add_argument("--mlp3d", default=True, action="store_true")
 
     ######
     

@@ -73,9 +73,10 @@ if __name__ == "__main__":
     parser.add_argument("--num_gpus", type=int, default=1) 
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
     ####model
-    parser.add_argument("--mlpSe", default=False, action="store_true")
-    parser.add_argument("--mlpSev1", default=False, action="store_true")
+    parser.add_argument("--mlpSe", default=False, action="store_true") ##spatial se
+    parser.add_argument("--mlpSev1", default=False, action="store_true") ##channel se
     parser.add_argument("--mlpSemax", default=False, action="store_true")
+    parser.add_argument("--mlp3d", default=False, action="store_true")
 
     ######
     args = parser.parse_args()

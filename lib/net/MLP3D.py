@@ -5,7 +5,7 @@ import torch.nn as nn
 import pytorch_lightning as pl
 from termcolor import colored
 import torch.nn.functional as F
-
+import math
 # class MLP(pl.LightningModule): ##1413
 #     def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None, args=None):
 
@@ -85,10 +85,10 @@ import torch.nn.functional as F
 
 #         return y
 
-class MLP(pl.LightningModule):
+class MLP3d(pl.LightningModule):
     def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None, args=None):
 
-        super(MLP, self).__init__()
+        super(MLP3d, self).__init__()
         self.args=args
         if args.mlp_first_dim!=0:
             filter_channels[0]=args.mlp_first_dim
@@ -100,11 +100,14 @@ class MLP(pl.LightningModule):
         self.last_op = last_op
         self.name = name
         self.activate = nn.LeakyReLU(inplace=True)
+###############se module
         assert [self.args.mlpSe, self.args.mlpSev1, self.args.mlpSemax].count(True) in [0,1], "mlp se strategy cannot be embodied simultaneously"
         if self.args.mlpSe: ##this strategy yields best results, while not surpasses baseline yet. 
             self.se_conv = nn.ModuleList()
-            for filters_nums_ in filter_channels[:-1]:
+            for filters_nums_ in filter_channels[:-3]:
                 self.se_conv.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
+            for filters_nums_ in filter_channels[-3:]:
+                self.se_conv.append(SpatialSELayer3d(filters_nums_))  #1449 gpu memory for bs 2
                 # self.se_conv.append(ChannelSELayer(filters_nums_))  #1457 gpu memory for bs 2
         elif self.args.mlpSev1:
             self.se_conv = nn.ModuleList()
@@ -117,8 +120,8 @@ class MLP(pl.LightningModule):
             for filters_nums_ in filter_channels[:-1]:
                 self.se_conv_spatial.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
                 self.se_conv_channel.append(ChannelSELayer(filters_nums_)) 
-
-        for l in range(0, len(filter_channels) - 1):
+################
+        for l in range(0, len(filter_channels) - 3):
             if l in self.res_layers:
                 self.filters.append(
                     nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
@@ -137,6 +140,23 @@ class MLP(pl.LightningModule):
                     self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
                     # print(self.filters[l].weight_g.size(),
                     #       self.filters[l].weight_v.size())
+        for l in range(len(filter_channels) - 3, len(filter_channels) - 1):
+            if l in self.res_layers:
+                self.filters.append(
+                    CNN3D(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
+                )
+            else:
+                self.filters.append(CNN3D(filter_channels[l], filter_channels[l + 1], 1))
+
+            if l != len(filter_channels) - 2:
+                if norm == 'group':
+                    self.norms.append(nn.GroupNorm(32, filter_channels[l + 1]))
+                elif norm == 'batch':
+                    self.norms.append(nn.BatchNorm3d(filter_channels[l + 1]))
+                elif norm == 'instance':
+                    self.norms.append(nn.InstanceNorm3d(filter_channels[l + 1]))
+                elif norm == 'weight':
+                    self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
         self.len_filter=len(self.filters)
 
     def forward(self, feature):
@@ -147,9 +167,12 @@ class MLP(pl.LightningModule):
         return:
             [B, C_out, N] prediction
         '''
+
         y = feature
         tmpy = feature
-        len_=len(self.filters)
+        bs,c,num_p=tmpy.size()
+        cuberoot=int(round(math.pow(num_p, 1.0/3.0)))
+        tmpy=tmpy.view(bs,c,cuberoot, cuberoot, cuberoot)
         for i, f in enumerate(self.filters):
             if self.args.mlpSe or self.args.mlpSev1:
                 if i!=self.len_filter-1:
@@ -160,21 +183,44 @@ class MLP(pl.LightningModule):
                     y_cha=self.se_conv_channel[i](y) ##
                     y=torch.max(y_spa, y_cha)
             y = f(y if i not in self.res_layers else torch.cat([y, tmpy], 1))
-            if i != len(self.filters) - 1:
+            if i != self.len_filter - 1:
                 if self.norm not in ['batch', 'group', 'instance']:
                     y = self.activate(y)
                 else:
                     y = self.activate(self.norms[i](y))
-##bug do not activate the last channel
-
-
-
-
+            if i ==self.len_filter - 3:
+                  bs,c,num_p=y.size()
+                  y=y.view(bs,c,cuberoot, cuberoot, cuberoot)
+   
         if self.last_op is not None:
             y = self.last_op(y)
+        y=y.view(bs,1,-1)
 
         return y
     
+
+class CNN3D(nn.Module):
+    def __init__(self, channel_in, channel_out, kennel=1, stride=1, padding=0):
+        super(CNN3D, self).__init__()
+        self.conv1 = nn.Conv3d(channel_in, channel_out, kernel_size=kennel, stride=stride, padding=padding)
+        # self.pool1 = nn.MaxPool3d(kernel_size=2, stride=2)
+        # self.conv2 = nn.Conv3d(16, 32, kernel_size=3, stride=1, padding=1)
+        # self.pool2 = nn.MaxPool3d(kernel_size=2, stride=2)
+        # self.fc1 = nn.Linear(32 * 4 * 4 * 4, 256)
+        # self.fc2 = nn.Linear(256, 10)
+        # self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.conv1(x)
+        # x = self.relu(x)
+        # x = self.pool1(x)
+        # x = self.conv2(x)
+        # x = self.relu(x)
+        # x = self.pool2(x)
+        # x = x.view(-1, 32 * 4 * 4 * 4)
+        # x = self.relu(self.fc1(x))
+        # x = self.fc2(x)
+        return x
 
 
 # class MLP_v1(pl.LightningModule):
@@ -288,7 +334,7 @@ class SpatialSELayer(nn.Module):
         :return: output_tensor
         """
         # spatial squeeze
-        batch_size, channel, a= input_tensor.size()
+        batch_size, channel, *a= input_tensor.size()
 
         if weights is not None:
             weights = torch.mean(weights, dim=0)
@@ -299,7 +345,43 @@ class SpatialSELayer(nn.Module):
         squeeze_tensor = self.sigmoid(out)
 
         # spatial excitation
-        squeeze_tensor = squeeze_tensor.view(batch_size, 1, a)
+        squeeze_tensor = squeeze_tensor.view(batch_size, 1, *a)
+        output_tensor = torch.mul(input_tensor, squeeze_tensor)
+        return output_tensor
+
+class SpatialSELayer3d(nn.Module):
+    """
+    Re-implementation of SE block -- squeezing spatially and exciting channel-wise described in:
+        *Roy et al., Concurrent Spatial and Channel Squeeze & Excitation in Fully Convolutional Networks, MICCAI 2018*
+    """
+
+    def __init__(self, num_channels):
+        """
+        :param num_channels: No of input channels
+        """
+        super(SpatialSELayer3d, self).__init__()
+        self.conv = nn.Conv3d(num_channels, 1, 1)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, input_tensor, weights=None):
+        """
+        :param weights: weights for few shot learning
+        :param input_tensor: X, shape = (batch_size, num_channels, H, W)
+        :return: output_tensor
+        """
+        # spatial squeeze
+        batch_size, channel, *a= input_tensor.size()
+
+        if weights is not None:
+            weights = torch.mean(weights, dim=0)
+            weights = weights.view(1, channel, 1, 1)
+            out = F.conv3d(input_tensor, weights)
+        else:
+            out = self.conv(input_tensor)
+        squeeze_tensor = self.sigmoid(out)
+
+        # spatial excitation
+        squeeze_tensor = squeeze_tensor.view(batch_size, 1, *a)
         output_tensor = torch.mul(input_tensor, squeeze_tensor)
         return output_tensor
 
@@ -351,7 +433,7 @@ if __name__=="__main__":
             self.mlpSe=True
             self.mlpSemax=False
     args_=args_()
-    net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()
+    net=MLP3d(filter_channels=[12, 512, 256, 128, 1], res_layers= [2,3,4],args=args_).cuda()
     # net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()
     input=torch.randn(2,12,8000).cuda()
     print(net(input).size())
