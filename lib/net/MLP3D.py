@@ -143,11 +143,19 @@ class MLP3d(pl.LightningModule):
                     #       self.filters[l].weight_v.size())
         for l in range(self.conv3d_start, len(filter_channels) - 1):
             if l in self.res_layers:
+                
+                if  args.conv3d_kernelsize==1: padding_=0
+                if  args.conv3d_kernelsize==3: padding_=1
+                if  args.conv3d_kernelsize==7: padding_=2
+                print("conv3d with kernelsize {} padding {} padding mode {}".format(args.conv3d_kernelsize,padding_,args.pad_mode))
+                
                 self.filters.append(
-                    CNN3D(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
+                    CNN3D(filter_channels[l] + filter_channels[0], filter_channels[l + 1], kennel=args.conv3d_kernelsize, stride=1, padding=padding_, padding_mode_=args.pad_mode)
+                    # CNN3D(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
                 )
             else:
-                self.filters.append(CNN3D(filter_channels[l], filter_channels[l + 1], 1))
+                # self.filters.append(CNN3D(filter_channels[l], filter_channels[l + 1], 1))
+                self.filters.append(CNN3D(filter_channels[l], filter_channels[l + 1], kennel=args.conv3d_kernelsize, stride=1, padding=padding_, padding_mode_=args.pad_mode))
 
             if l != len(filter_channels) - 2:
                 if norm == 'group':
@@ -203,9 +211,9 @@ class MLP3d(pl.LightningModule):
     
 
 class CNN3D(nn.Module):
-    def __init__(self, channel_in, channel_out, kennel=3, stride=1, padding=1):
+    def __init__(self, channel_in, channel_out, kennel=1, stride=1, padding=0, padding_mode_="zeros"):
         super(CNN3D, self).__init__()
-        self.conv1 = nn.Conv3d(channel_in, channel_out, kernel_size=kennel, stride=stride, padding=padding)
+        self.conv1 = nn.Conv3d(channel_in, channel_out, kernel_size=kennel, stride=stride, padding=padding, padding_mode=padding_mode_)
         # self.pool1 = nn.MaxPool3d(kernel_size=2, stride=2)
         # self.conv2 = nn.Conv3d(16, 32, kernel_size=3, stride=1, padding=1)
         # self.pool2 = nn.MaxPool3d(kernel_size=2, stride=2)
@@ -428,21 +436,26 @@ class ChannelSELayer(nn.Module):
         return output_tensor
 
 if __name__=="__main__":
-    # class args_():
-    #     def __init__(self) -> None:
-    #         self.test_code=True
-    #         self.mlp_first_dim=12
-    #         self.mlpSev1=False
-    #         self.mlpSe=False
-    #         self.mlpSemax=False
-    # args_=args_()
+    class args_():
+        def __init__(self) -> None:
+            self.test_code=True
+            self.mlp_first_dim=12
+            self.mlpSev1=False
+            self.mlpSe=False
+            self.mlpSemax=False
+            self.conv3d_kernelsize=3
+            self.pad_mode="replicate"
+            # args.conv3d_kernelsize,padding_,args.pad_mode)
+    args_=args_()
     # net=MLP3d(filter_channels=[12, 512, 256, 128, 1], res_layers= [2,3,4],args=args_).cuda()
     # # net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()
     # input=torch.randn(2,12,8000).cuda()
     # print(net(input).size())
     # print(1)
 
-    net3d=CNN3D(12,128,3,1,1).cuda()
+    # net3d=CNN3D(12,128,3,1,1,padding_mode_="replicate").cuda()
+    padding_=1
+    net3d=CNN3D(12,256, kennel=args_.conv3d_kernelsize, stride=1, padding=padding_, padding_mode_=args_.pad_mode).cuda()
     input=torch.randn(2,12,20,20,20).cuda()
     print(net3d(input).size())
 
