@@ -77,6 +77,7 @@ if __name__ == "__main__":
     parser.add_argument("--mlpSev1", default=False, action="store_true") ##channel se
     parser.add_argument("--mlpSemax", default=False, action="store_true")
     parser.add_argument("--mlp3d", default=False, action="store_true")
+    parser.add_argument("--conv3d_start", type=int, default=2)
 
     ######
     args = parser.parse_args()

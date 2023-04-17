@@ -75,6 +75,8 @@ study the dim of each dim
 
 0415 mixermlp with chunk
 
+0417 gpu023 gpu025 gpu026  conv first layer 1-4
+
 ---
 
 ### How to extend the 3D human digitilization task to embrace the trends of data centric AI?

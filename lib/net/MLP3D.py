@@ -90,23 +90,24 @@ class MLP3d(pl.LightningModule):
 
         super(MLP3d, self).__init__()
         self.args=args
+        self.conv3d_start=args.conv3d_start
         if args.mlp_first_dim!=0:
             filter_channels[0]=args.mlp_first_dim
             print(colored("I have modified mlp filter channles{}".format(filter_channels),"red"))
         self.filters = nn.ModuleList()
         self.norms = nn.ModuleList()
-        self.res_layers = res_layers
+        self.res_layers = res_layers #2 3 4
         self.norm = norm
         self.last_op = last_op
         self.name = name
-        self.activate = nn.LeakyReLU(inplace=True)
+        self.activate = nn.LeakyReLU(0.3, inplace=True)##modify this from default 0.01 to 0.3
 ###############se module
         assert [self.args.mlpSe, self.args.mlpSev1, self.args.mlpSemax].count(True) in [0,1], "mlp se strategy cannot be embodied simultaneously"
         if self.args.mlpSe: ##this strategy yields best results, while not surpasses baseline yet. 
             self.se_conv = nn.ModuleList()
-            for filters_nums_ in filter_channels[:-3]:
+            for filters_nums_ in filter_channels[:(self.conv3d_start)]:
                 self.se_conv.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
-            for filters_nums_ in filter_channels[-3:]:
+            for filters_nums_ in filter_channels[(self.conv3d_start):]:
                 self.se_conv.append(SpatialSELayer3d(filters_nums_))  #1449 gpu memory for bs 2
                 # self.se_conv.append(ChannelSELayer(filters_nums_))  #1457 gpu memory for bs 2
         elif self.args.mlpSev1:
@@ -121,7 +122,7 @@ class MLP3d(pl.LightningModule):
                 self.se_conv_spatial.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
                 self.se_conv_channel.append(ChannelSELayer(filters_nums_)) 
 ################
-        for l in range(0, len(filter_channels) - 3):
+        for l in range(0, self.conv3d_start):
             if l in self.res_layers:
                 self.filters.append(
                     nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
@@ -140,7 +141,7 @@ class MLP3d(pl.LightningModule):
                     self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
                     # print(self.filters[l].weight_g.size(),
                     #       self.filters[l].weight_v.size())
-        for l in range(len(filter_channels) - 3, len(filter_channels) - 1):
+        for l in range(self.conv3d_start, len(filter_channels) - 1):
             if l in self.res_layers:
                 self.filters.append(
                     CNN3D(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
@@ -170,10 +171,14 @@ class MLP3d(pl.LightningModule):
 
         y = feature
         tmpy = feature
-        bs,c,num_p=tmpy.size()
-        cuberoot=int(round(math.pow(num_p, 1.0/3.0)))
-        tmpy=tmpy.view(bs,c,cuberoot, cuberoot, cuberoot)
+        bs,c1,num_p=tmpy.size()
+        # cuberoot=int(round(math.pow(num_p, 1.0/3.0)))
+        cuberoot=20
         for i, f in enumerate(self.filters):
+            if i ==self.conv3d_start:
+                  bs,c2,num_p=y.size()
+                  y=y.view(bs,c2,cuberoot, cuberoot, cuberoot)
+                  tmpy=tmpy.view(bs,c1,cuberoot, cuberoot, cuberoot)
             if self.args.mlpSe or self.args.mlpSev1:
                 if i!=self.len_filter-1:
                     y=self.se_conv[i](y) 
@@ -188,9 +193,7 @@ class MLP3d(pl.LightningModule):
                     y = self.activate(y)
                 else:
                     y = self.activate(self.norms[i](y))
-            if i ==self.len_filter - 3:
-                  bs,c,num_p=y.size()
-                  y=y.view(bs,c,cuberoot, cuberoot, cuberoot)
+
    
         if self.last_op is not None:
             y = self.last_op(y)
@@ -200,7 +203,7 @@ class MLP3d(pl.LightningModule):
     
 
 class CNN3D(nn.Module):
-    def __init__(self, channel_in, channel_out, kennel=1, stride=1, padding=0):
+    def __init__(self, channel_in, channel_out, kennel=3, stride=1, padding=1):
         super(CNN3D, self).__init__()
         self.conv1 = nn.Conv3d(channel_in, channel_out, kernel_size=kennel, stride=stride, padding=padding)
         # self.pool1 = nn.MaxPool3d(kernel_size=2, stride=2)
@@ -425,16 +428,21 @@ class ChannelSELayer(nn.Module):
         return output_tensor
 
 if __name__=="__main__":
-    class args_():
-        def __init__(self) -> None:
-            self.test_code=True
-            self.mlp_first_dim=12
-            self.mlpSev1=False
-            self.mlpSe=True
-            self.mlpSemax=False
-    args_=args_()
-    net=MLP3d(filter_channels=[12, 512, 256, 128, 1], res_layers= [2,3,4],args=args_).cuda()
-    # net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()
-    input=torch.randn(2,12,8000).cuda()
-    print(net(input).size())
-    print(1)
+    # class args_():
+    #     def __init__(self) -> None:
+    #         self.test_code=True
+    #         self.mlp_first_dim=12
+    #         self.mlpSev1=False
+    #         self.mlpSe=False
+    #         self.mlpSemax=False
+    # args_=args_()
+    # net=MLP3d(filter_channels=[12, 512, 256, 128, 1], res_layers= [2,3,4],args=args_).cuda()
+    # # net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()
+    # input=torch.randn(2,12,8000).cuda()
+    # print(net(input).size())
+    # print(1)
+
+    net3d=CNN3D(12,128,3,1,1).cuda()
+    input=torch.randn(2,12,20,20,20).cuda()
+    print(net3d(input).size())
+

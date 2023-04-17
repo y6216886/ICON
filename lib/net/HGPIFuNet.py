@@ -21,6 +21,7 @@ from lib.dataset.mesh_util import feat_select, read_smpl_constants
 from lib.net.NormalNet import NormalNet
 from lib.net.MLP import MLP
 from lib.net.MLP3DV1 import MLPMixer
+from lib.net.MLP3D import MLP3d
 from lib.net.spatial import SpatialEncoder
 from lib.dataset.PointFeat import PointFeat
 from lib.dataset.mesh_util import SMPLX
@@ -148,7 +149,7 @@ class HGPIFuNet(BasePIFuNet):
         self.pamir_keys = ["voxel_verts", "voxel_faces", "pad_v_num", "pad_f_num"]
         self.pifu_keys = []
         if args.mlp3d:
-            self.if_regressor = MLPMixer(
+            self.if_regressor = MLP3d(
                 filter_channels=channels_IF,
                 name="if",
                 res_layers=self.opt.res_layers,

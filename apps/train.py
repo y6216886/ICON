@@ -24,7 +24,7 @@ from pytorch_lightning.loggers import WandbLogger
 import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -64,8 +64,8 @@ if __name__ == "__main__":
     parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter_test.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
-    parser.add_argument("-test", "--test_mode", default=False, action="store_true")
-    parser.add_argument("--test_code", default=False, action="store_true")
+    parser.add_argument("-test", "--test_mode", default=True, action="store_true")
+    parser.add_argument("--test_code", default=True, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=True, action="store_true")
     parser.add_argument("--name",type=str)
@@ -75,9 +75,10 @@ if __name__ == "__main__":
 
     ####model
     parser.add_argument("--mlpSe", default=False, action="store_true")
-    parser.add_argument("--mlpSev1", default=True, action="store_true")
+    parser.add_argument("--mlpSev1", default=False, action="store_true")
     parser.add_argument("--mlpSemax", default=False, action="store_true")
-    parser.add_argument("--mlp3d", default=True, action="store_true")
+    parser.add_argument("--mlp3d", default=False, action="store_true")
+    parser.add_argument("--conv3d_start", type=int, default=2)
 
     ######
     
@@ -202,9 +203,9 @@ if __name__ == "__main__":
             print("loading filter from cfg")
             resume_path=cfg.resume_path
     elif cfg.test_mode or args.resume:
-        #/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt
+        resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpse/last.ckpt"
-        resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpChannelSELayerv1/last.ckpt"
+        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpChannelSELayerv1/last.ckpt"
         # resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
         print("loading prtrained filter model from ",resume_path)    
         if not os.path.exists(resume_path):
