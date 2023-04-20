@@ -445,17 +445,18 @@ if __name__=="__main__":
             self.mlpSemax=False
             self.conv3d_kernelsize=3
             self.pad_mode="replicate"
+            self.conv_start=0
             # args.conv3d_kernelsize,padding_,args.pad_mode)
     args_=args_()
-    # net=MLP3d(filter_channels=[12, 512, 256, 128, 1], res_layers= [2,3,4],args=args_).cuda()
-    # # net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()
-    # input=torch.randn(2,12,8000).cuda()
-    # print(net(input).size())
-    # print(1)
+    net=MLP3d(filter_channels=[12, 512, 256, 128, 1], res_layers= [2,3,4],args=args_).cuda()
+    # net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()
+    input=torch.randn(2,12,8000).cuda()
+    print(net(input).size())
+    print(1)
 
     # net3d=CNN3D(12,128,3,1,1,padding_mode_="replicate").cuda()
-    padding_=1
-    net3d=CNN3D(12,256, kennel=args_.conv3d_kernelsize, stride=1, padding=padding_, padding_mode_=args_.pad_mode).cuda()
-    input=torch.randn(2,12,20,20,20).cuda()
-    print(net3d(input).size())
+    # padding_=1
+    # net3d=CNN3D(12,256, kennel=args_.conv3d_kernelsize, stride=1, padding=padding_, padding_mode_=args_.pad_mode).cuda()
+    # input=torch.randn(2,12,20,20,20).cuda()
+    # print(net3d(input).size())
 

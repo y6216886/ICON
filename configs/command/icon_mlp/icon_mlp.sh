@@ -10,6 +10,8 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 ###parser.add_argument(--mlpSev1, default=False, action=store_true) ##channel se
 
 
+CUDA_VISIBLE_DEVICES=6,7 python -m apps.train -cfg configs/train/icon_mlp/icon-filter_mlp3d_mixermlp.yaml --gpus 0 --num_gpus 1  --mlp3d #-test
+
 # CUDA_VISIBLE_DEVICES=2,3 python -m apps.train -cfg configs/train/icon_mlp/icon-filter.yaml --gpus 0 --num_gpus 2  --mlpSe
 # CUDA_VISIBLE_DEVICES=5 python -m apps.train -cfg configs/train/icon_mlp/icon-filter.yaml -test --gpus 0 --mlpSe
 
@@ -29,9 +31,9 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 # CUDA_VISIBLE_DEVICES=6,7 python -m apps.train_and_eval -cfg configs/train/icon_mlp/icon-filter_spatialse_from_1st_layer_conv3d_1.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 1 #--test_code 
 # CUDA_VISIBLE_DEVICES=2,3 python -m apps.train_and_eval -cfg configs/train/icon_mlp/icon-filter_spatialse_from_1st_layer_conv3d_2.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 2
 # CUDA_VISIBLE_DEVICES=2,3 python -m apps.train_and_eval -cfg configs/train/icon_mlp/icon-filter_spatialse_from_1st_layer_conv3d_3.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 3
-CUDA_VISIBLE_DEVICES=1,2 python -m apps.train_and_eval -cfg configs/train/icon_mlp/icon-filter_spatialse_from_1st_layer_conv3d_4.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 4
+# CUDA_VISIBLE_DEVICES=1,2 python -m apps.train_and_eval -cfg configs/train/icon_mlp/icon-filter_spatialse_from_1st_layer_conv3d_4.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 4
 
 
 
-CUDA_VISIBLE_DEVICES=1,2 python -m apps.train -cfg configs/train/icon/icon-filter_test.yaml --gpus 0 --num_gpus 2
+# CUDA_VISIBLE_DEVICES=1,2 python -m apps.train -cfg configs/train/icon/icon-filter_test.yaml --gpus 0 --num_gpus 2
 # python /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/train_nerf.py -d 2 3 --occ 0.8

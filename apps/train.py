@@ -24,7 +24,7 @@ from pytorch_lightning.loggers import WandbLogger
 import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -64,11 +64,11 @@ if __name__ == "__main__":
     parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter_test.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
-    parser.add_argument("-test", "--test_mode", default=True, action="store_true")
+    parser.add_argument("-test", "--test_mode", default=False, action="store_true")
     parser.add_argument("--test_code", default=True, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
-    parser.add_argument("--offline",default=True, action="store_true")
-    parser.add_argument("--name",type=str)
+    parser.add_argument("--offline",default=False, action="store_true")
+    parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
@@ -79,18 +79,29 @@ if __name__ == "__main__":
     parser.add_argument("--mlpSemax", default=False, action="store_true")
     parser.add_argument("--mlp3d", default=False, action="store_true")
     parser.add_argument("--conv3d_start", type=int, default=2)
+    parser.add_argument("--conv3d_kernelsize", type=int, default=1)
+    parser.add_argument("--pad_mode", type=str, default='zeros')
+
+    ####uncertainty
+    parser.add_argument("--uncertainty", default=False, action="store_true")
+    parser.add_argument("--beta_min", type=float, default=0.03)
+    parser.add_argument("--beta_plus", type=float, default=3.)
+    
 
     ######
     
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
-    # if os.path.exists(os.path.join(cfg.results_path,cfg.name,"codes")) and not args.test_mode and not args.resume:
-    #      raise Exception("Sorry, experiment name exists, modify the experiment name!")
-    # name_dict=["name",cfg.name+gettime()]
-    # cfg.merge_from_list(name_dict)
+    if args.name!="baseline/icon-filter_batch2_newresumev1":
+        exp_name=args.name
+        if os.path.exists(os.path.join(cfg.results_path,args.name,"codes")) and not args.test_mode and not args.resume:
+            print("Experiment name exists, modify the experiment name!")
+            exp_name=exp_name+gettime()
+        name_dict=["name",exp_name]
+        cfg.merge_from_list(name_dict)
     # cfg.gpus=[int(i) for i in args.gpus]
-    print("experimentname",cfg.name,cfg.name)
+    print("experimentname",cfg.name)
     cfg.freeze()
     print("note cfg is freeze",cfg.batch_size)
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
@@ -189,7 +200,7 @@ if __name__ == "__main__":
 
         cfg.merge_from_list(cfg_show_list)
 
-    if not cfg.test_mode:   
+    if not cfg.test_mode and not args.test_code:   
         save_code(cfg, args)
 
 
@@ -203,10 +214,10 @@ if __name__ == "__main__":
             print("loading filter from cfg")
             resume_path=cfg.resume_path
     elif cfg.test_mode or args.resume:
-        resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt"
+        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpse/last.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpChannelSELayerv1/last.ckpt"
-        # resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
+        resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
         print("loading prtrained filter model from ",resume_path)    
         if not os.path.exists(resume_path):
             NotADirectoryError("checkpoint {} not exists".format(resume_path))

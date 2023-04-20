@@ -131,7 +131,9 @@ class Seg3dLossless(nn.Module):
                 coords2D_chunk=torch.cat([coords2D_chunk, torch.zeros(bs,chunk_temp-chunk_pointnum,c, device=coords2D.device)],dim=1)
         #####chunk inference
             occupancys = self.query_func(**kwargs, points=coords2D_chunk)
-            occ_list.append(occupancys)
+            if occupancys.size(1)!=1:
+                occ_list.append(occupancys[:,:1,:])  ##We construct an uncertainty field
+            else: occ_list.append(occupancys)
         if B!=chunk_temp:
             occupancys=torch.cat(occ_list,2)[:,:,:B]
         if type(occupancys) is list:

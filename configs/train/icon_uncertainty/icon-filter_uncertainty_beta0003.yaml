@@ -1,4 +1,4 @@
-name: baseline/icon-filter_batch2_withnormal_debugv1_0417
+name: baseline/icon-filter_batch2_withnormal_uncertainty_betamin0003_betaplus5
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 # resume_path: "./data/ckpt/icon-filter.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"

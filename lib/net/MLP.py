@@ -93,6 +93,8 @@ class MLP(pl.LightningModule):
         if args.mlp_first_dim!=0:
             filter_channels[0]=args.mlp_first_dim
             print(colored("I have modified mlp filter channles{}".format(filter_channels),"red"))
+        if args.uncertainty:
+            filter_channels[-1]+=1
         self.filters = nn.ModuleList()
         self.norms = nn.ModuleList()
         self.res_layers = res_layers
@@ -284,18 +286,15 @@ class SpatialSELayer(nn.Module):
     def forward(self, input_tensor, weights=None):
         """
         :param weights: weights for few shot learning
-        :param input_tensor: X, shape = (batch_size, num_channels, H, W)
+        :param input_tensor: X, shape = (batch_size, num_channels, H)
         :return: output_tensor
         """
         # spatial squeeze
         batch_size, channel, a= input_tensor.size()
 
-        if weights is not None:
-            weights = torch.mean(weights, dim=0)
-            weights = weights.view(1, channel, 1, 1)
-            out = F.conv2d(input_tensor, weights)
-        else:
-            out = self.conv(input_tensor)
+
+ 
+        out = self.conv(input_tensor)
         squeeze_tensor = self.sigmoid(out)
 
         # spatial excitation

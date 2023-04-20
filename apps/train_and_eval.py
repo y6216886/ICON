@@ -78,7 +78,14 @@ if __name__ == "__main__":
     parser.add_argument("--mlpSemax", default=False, action="store_true")
     parser.add_argument("--mlp3d", default=False, action="store_true")
     parser.add_argument("--conv3d_start", type=int, default=2)
+    parser.add_argument("--conv3d_kernelsize", type=int, default=1)
+    parser.add_argument("--pad_mode", type=str, default='zeros')
+    ####uncertainty
+    parser.add_argument("--uncertainty", default=False, action="store_true")
+    parser.add_argument("--beta_min", type=float, default=0.03)
+    parser.add_argument("--beta_plus", type=float, default=3.)
 
+    ######
     ######
     args = parser.parse_args()
     cfg = get_cfg_defaults()

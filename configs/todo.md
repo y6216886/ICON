@@ -77,6 +77,12 @@ study the dim of each dim
 
 0417 gpu023 gpu025 gpu026  conv first layer 1-4
 
+0418 gpu021 conv3d zeros conv5 conv7
+
+gpu025 conv3d start from 1 2 3
+
+gpu025 check icon baseline 0419
+
 ---
 
 ### How to extend the 3D human digitilization task to embrace the trends of data centric AI?
@@ -88,3 +94,11 @@ study the dim of each dim
 ### How to modify MLP for nerf, 3d human digitalization, etc.
 
 ### Single view synthesis for human body xxx
+
+### Uncertainty during training
+
+### Fine granularity (e.g., face, hands, hair, foot) details are far from promising
+
+### Depth feature
+
+depth feature is the most important feature for mlp input, try to use kl loss to align the distribution of occupancy and smpl depth?

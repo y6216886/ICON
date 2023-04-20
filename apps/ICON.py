@@ -47,8 +47,10 @@ class ICON(pl.LightningModule):
             self.cfg,
             self.cfg.projection_mode,
             error_term=nn.SmoothL1Loss() if self.use_sdf else nn.MSELoss(),
+            # error_term=nn.BCELoss(),
             args=args
         )
+        # print("noting bceloss")
 
         self.evaluator = Evaluator(device=torch.device(f"cuda:{self.cfg.gpus[0]}"))
 
@@ -185,7 +187,8 @@ class ICON(pl.LightningModule):
         )
 
         preds_G, error_G = self.netG(in_tensor_dict)
-
+        if preds_G.size(1)!=1:
+            preds_G=preds_G[:,:1,:]
         acc, iou, prec, recall = self.evaluator.calc_acc(
             preds_G.flatten(),
             in_tensor_dict["label"].flatten(),
@@ -258,7 +261,8 @@ class ICON(pl.LightningModule):
         )
 
         preds_G, error_G = self.netG(in_tensor_dict)
-
+        if preds_G.size(1)!=1:
+            preds_G=preds_G[:,:1,:]
         acc, iou, prec, recall = self.evaluator.calc_acc(
             preds_G.flatten(),
             in_tensor_dict["label"].flatten(),
@@ -691,9 +695,9 @@ class ICON(pl.LightningModule):
             #     img_tensor=image.transpose(2, 0, 1),
             #     global_step=step_id,
             # )
-            stack=image.transpose(2, 0, 1)
+            # image=image.transpose(2, 0, 1)
             if self.trainer.global_rank == 0:
-                self.logger.experiment.log({"Occupancy": [wandb.Image(img) for img in stack]})
+                self.logger.experiment.log({"Occupancy": [wandb.Image(image)]})
             # self.logger.log_image(key=f"Occupancy-{dataset}/{step_id}", images=[image.transpose(2, 0, 1)],step=step_id)
     def test_single(self, batch):
 

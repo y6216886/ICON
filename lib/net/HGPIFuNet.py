@@ -49,6 +49,7 @@ class HGPIFuNet(BasePIFuNet):
 
         super(HGPIFuNet, self).__init__(projection_mode=projection_mode, error_term=error_term)
         self.cfg=cfg
+        self.args=args
         self.l1_loss = nn.SmoothL1Loss()
         self.opt = cfg.net
         self.root = cfg.root
@@ -149,7 +150,7 @@ class HGPIFuNet(BasePIFuNet):
         self.pamir_keys = ["voxel_verts", "voxel_faces", "pad_v_num", "pad_f_num"]
         self.pifu_keys = []
         if args.mlp3d:
-            self.if_regressor = MLP3d(
+            self.if_regressor = MLPMixer(
                 filter_channels=channels_IF,
                 name="if",
                 res_layers=self.opt.res_layers,
@@ -157,6 +158,14 @@ class HGPIFuNet(BasePIFuNet):
                 last_op=nn.Sigmoid() if not self.cfg.test_mode else None,
                 args=args
             )
+            # self.if_regressor = MLP3d(
+            #     filter_channels=channels_IF,
+            #     name="if",
+            #     res_layers=self.opt.res_layers,
+            #     norm=self.opt.norm_mlp,
+            #     last_op=nn.Sigmoid() if not self.cfg.test_mode else None,
+            #     args=args
+            # )
         else:
             self.if_regressor = MLP(
                 filter_channels=channels_IF,
@@ -411,6 +420,26 @@ class HGPIFuNet(BasePIFuNet):
 
         return preds_list
 
+    # def get_error(self, preds_if_list, labels):
+    #     """calcaulate error
+
+    #     Args:
+    #         preds_list (list): list of torch.tensor(B, 3, N)
+    #         labels (torch.tensor): (B, N_knn, N)
+
+    #     Returns:
+    #         torch.tensor: error
+    #     """
+    #     error_if = 0
+
+    #     for pred_id in range(len(preds_if_list)):
+    #         pred_if = preds_if_list[pred_id]
+    #         error_if += self.error_term(pred_if, labels)
+
+    #     error_if /= len(preds_if_list)
+
+    #     return error_if
+
     def get_error(self, preds_if_list, labels):
         """calcaulate error
 
@@ -422,11 +451,15 @@ class HGPIFuNet(BasePIFuNet):
             torch.tensor: error
         """
         error_if = 0
-
+        # error_if_uncertain = 0
         for pred_id in range(len(preds_if_list)):
             pred_if = preds_if_list[pred_id]
-            error_if += self.error_term(pred_if, labels)
-
+            if pred_if.size(1)==1:
+                error_if += self.error_term(pred_if, labels)
+            elif pred_if.size(1)==2:
+                beta=pred_if[:,1:2,:] + self.args.beta_min
+                error_if +=((pred_if[:,:1,:]-labels)**2/(2*beta**2)).mean()
+                error_if += self.args.beta_plus + torch.log(beta).mean() # +3 to make it positive
         error_if /= len(preds_if_list)
 
         return error_if
