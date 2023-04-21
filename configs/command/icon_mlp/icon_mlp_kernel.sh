@@ -43,7 +43,7 @@ CUDA_VISIBLE_DEVICES=2,3 python -m apps.train_and_eval -cfg configs/train/icon_m
 
 CUDA_VISIBLE_DEVICES=2,3 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 2 --conv3d_kernelsize 3 --pad_mode zero  --name baseline/3dmlp/convstart2_kernel3_padzero --test_code 
 
-CUDA_VISIBLE_DEVICES=2,3 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 1 --conv3d_kernelsize 3 --pad_mode zero  --name baseline/3dmlp/convstart1_kernel3_padzero --test_code 
+CUDA_VISIBLE_DEVICES=2,3 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 0 --conv3d_kernelsize 3 --pad_mode zero  --name baseline/3dmlp/convstart0_kernel3_padzero_withoutcmap --test_code 
 
 
 

@@ -33,7 +33,7 @@ torch.backends.cudnn.benchmark = True
 class ICON(pl.LightningModule):
     def __init__(self, cfg,args=None):
         super(ICON, self).__init__()
-
+        self.args=args
         self.cfg = cfg
         self.batch_size = self.cfg.batch_size
         self.lr_G = self.cfg.lr_G
@@ -186,6 +186,12 @@ class ICON(pl.LightningModule):
             }
         )
 
+        if self.args.use_clip:
+                    in_tensor_dict.update(
+            {
+                "clip_feature":batch["clip_feature"]
+            }
+        )
         preds_G, error_G = self.netG(in_tensor_dict)
         if preds_G.size(1)!=1:
             preds_G=preds_G[:,:1,:]
@@ -195,6 +201,7 @@ class ICON(pl.LightningModule):
             0.5,
             use_sdf=self.cfg.sdf,
         )
+
 
         # metrics processing
         metrics_log = {
@@ -259,7 +266,12 @@ class ICON(pl.LightningModule):
                 for k in getattr(self, f"{self.prior_type}_keys")
             }
         )
-
+        if self.args.use_clip:
+                    in_tensor_dict.update(
+            {
+                "clip_feature":batch["clip_feature"]
+            }
+        )
         preds_G, error_G = self.netG(in_tensor_dict)
         if preds_G.size(1)!=1:
             preds_G=preds_G[:,:1,:]
@@ -533,11 +545,16 @@ class ICON(pl.LightningModule):
             )
             T_normal_F, T_noraml_B = self.render.get_rgb_image()
             in_tensor_dict.update({'T_normal_F': T_normal_F, 'T_normal_B': T_noraml_B})
-
+        if self.args.use_clip:
+                    in_tensor_dict.update(
+            {
+                "clip_feature":batch["clip_feature"]
+            }
+        )
         with torch.no_grad():
             features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
             sdf = self.reconEngine(
-                opt=self.cfg, netG=self.netG, features=features, proj_matrix=None
+                opt=self.cfg, netG=self.netG, features=features, proj_matrix=None, clip_feature=in_tensor_dict["clip_feature"]
             )
 
         def tensor2arr(x):
@@ -666,15 +683,14 @@ class ICON(pl.LightningModule):
         return all
 
     def render_func(self, in_tensor_dict, dataset="title", idx=0):
-
         for name in in_tensor_dict.keys():
             if in_tensor_dict[name] is not None:
                 in_tensor_dict[name] = in_tensor_dict[name][0:1]
 
         self.netG.eval()
         features, inter = self.netG.filter(in_tensor_dict, return_inter=True) #1 12 128 128,  1 6 512 512
-        sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None)
-
+        if self.args.use_clip: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None, clip_feature=in_tensor_dict["clip_feature"])
+        else: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None)
         if sdf is not None:
             render = self.reconEngine.display(sdf)
 
@@ -719,7 +735,7 @@ class ICON(pl.LightningModule):
         with torch.no_grad():
             features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
             sdf = self.reconEngine(
-                opt=self.cfg, netG=self.netG, features=features, proj_matrix=None
+                opt=self.cfg, netG=self.netG, features=features, proj_matrix=None, clip_feature=in_tensor_dict["clip_feature"]
             )
         verts_pr, faces_pr = self.reconEngine.export_mesh(sdf)
 

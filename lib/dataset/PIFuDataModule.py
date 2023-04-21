@@ -1,6 +1,7 @@
 import numpy as np
 from torch.utils.data import DataLoader
 from .PIFuDataset import PIFuDataset
+from .PIFuDataset_clip_feature import PIFuDataset as PIFuDataset_clip
 import pytorch_lightning as pl
 
 
@@ -10,7 +11,7 @@ class PIFuDataModule(pl.LightningDataModule):
         super(PIFuDataModule, self).__init__()
         self.cfg = cfg
         self.overfit = self.cfg.overfit
-
+        self.args=args
         if self.overfit:
             self.batch_size = 1
         else:
@@ -27,14 +28,23 @@ class PIFuDataModule(pl.LightningDataModule):
         np.random.seed(np.random.get_state()[1][0] + worker_id)
 
     def setup(self, stage):
+        if self.args.use_clip:
+            if stage == 'fit':
+                self.train_dataset = PIFuDataset_clip(cfg=self.cfg, split="train",args=self.args)
+                self.val_dataset = PIFuDataset_clip(cfg=self.cfg, split="val",args=self.args)
+                self.data_size = {'train': len(self.train_dataset), 'val': len(self.val_dataset)}
 
-        if stage == 'fit':
-            self.train_dataset = PIFuDataset(cfg=self.cfg, split="train",args=self.args)
-            self.val_dataset = PIFuDataset(cfg=self.cfg, split="val",args=self.args)
-            self.data_size = {'train': len(self.train_dataset), 'val': len(self.val_dataset)}
+            if stage == 'test':
+                self.test_dataset = PIFuDataset_clip(cfg=self.cfg, split="test",args=self.args)
 
-        if stage == 'test':
-            self.test_dataset = PIFuDataset(cfg=self.cfg, split="test",args=self.args)
+        else:
+            if stage == 'fit':
+                self.train_dataset = PIFuDataset(cfg=self.cfg, split="train",args=self.args)
+                self.val_dataset = PIFuDataset(cfg=self.cfg, split="val",args=self.args)
+                self.data_size = {'train': len(self.train_dataset), 'val': len(self.val_dataset)}
+
+            if stage == 'test':
+                self.test_dataset = PIFuDataset(cfg=self.cfg, split="test",args=self.args)
 
     def train_dataloader(self):
 
