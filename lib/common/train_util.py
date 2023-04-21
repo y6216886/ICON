@@ -406,7 +406,7 @@ def calc_error_color(opt, netG, netC, cuda, dataset, num_tests):
 # pytorch lightning training related fucntions
 
 
-def query_func(opt, netG, features, points, proj_matrix=None):
+def query_func(opt, netG, features, points, proj_matrix=None, clip_feature=None):
     '''
         - points: size of (bz, N, 3)
         - proj_matrix: size of (bz, 4, 4)
@@ -423,7 +423,7 @@ def query_func(opt, netG, features, points, proj_matrix=None):
     calib_tensor = torch.stack([torch.eye(4).float()], dim=0).type_as(samples)
 
     preds = netG.query(
-        features=features, points=samples, calibs=calib_tensor, regressor=netG.if_regressor
+        features=features, points=samples, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature
     )
 
     if type(preds) is list:

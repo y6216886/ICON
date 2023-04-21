@@ -101,6 +101,11 @@ class MLP(pl.LightningModule):
         self.norm = norm
         self.last_op = last_op
         self.name = name
+        if self.args.use_clip:
+            self.clip_feature=768
+            self.clip_fuse_layer=[int(i) for i in self.args.clip_fuse_layer] #[1,2,3]
+            print("clip_fuse_layer", self.clip_fuse_layer)
+
         self.activate = nn.LeakyReLU(inplace=True)
         assert [self.args.mlpSe, self.args.mlpSev1, self.args.mlpSemax].count(True) in [0,1], "mlp se strategy cannot be embodied simultaneously"
         if self.args.mlpSe: ##this strategy yields best results, while not surpasses baseline yet. 
@@ -119,29 +124,53 @@ class MLP(pl.LightningModule):
             for filters_nums_ in filter_channels[:-1]:
                 self.se_conv_spatial.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
                 self.se_conv_channel.append(ChannelSELayer(filters_nums_)) 
+        if self.args.use_clip:
+            for l in range(0, len(filter_channels) - 1):
+                if l in self.res_layers and l not in self.clip_fuse_layer:
+                    self.filters.append(
+                        nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
+                    )
+                elif l in self.res_layers and l in self.clip_fuse_layer:
+                    self.filters.append(nn.Conv1d(filter_channels[l]+ filter_channels[0] + self.clip_feature, filter_channels[l + 1], 1))
+                elif l not in self.res_layers and l in self.clip_fuse_layer:
+                    self.filters.append(nn.Conv1d(filter_channels[l] + self.clip_feature, filter_channels[l + 1], 1))
+                elif l not in self.res_layers and l not in self.clip_fuse_layer:
+                    self.filters.append(nn.Conv1d(filter_channels[l], filter_channels[l + 1], 1))
 
-        for l in range(0, len(filter_channels) - 1):
-            if l in self.res_layers:
-                self.filters.append(
-                    nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
-                )
-            else:
-                self.filters.append(nn.Conv1d(filter_channels[l], filter_channels[l + 1], 1))
+                if l != len(filter_channels) - 2:
+                    if norm == 'group':
+                        self.norms.append(nn.GroupNorm(32, filter_channels[l + 1]))
+                    elif norm == 'batch':
+                        self.norms.append(nn.BatchNorm1d(filter_channels[l + 1]))
+                    elif norm == 'instance':
+                        self.norms.append(nn.InstanceNorm1d(filter_channels[l + 1]))
+                    elif norm == 'weight':
+                        self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
+                        # print(self.filters[l].weight_g.size(),
+                        #       self.filters[l].weight_v.size())
+        else:
+            for l in range(0, len(filter_channels) - 1):
+                if l in self.res_layers:
+                    self.filters.append(
+                        nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
+                    )
+                else:
+                    self.filters.append(nn.Conv1d(filter_channels[l], filter_channels[l + 1], 1))
 
-            if l != len(filter_channels) - 2:
-                if norm == 'group':
-                    self.norms.append(nn.GroupNorm(32, filter_channels[l + 1]))
-                elif norm == 'batch':
-                    self.norms.append(nn.BatchNorm1d(filter_channels[l + 1]))
-                elif norm == 'instance':
-                    self.norms.append(nn.InstanceNorm1d(filter_channels[l + 1]))
-                elif norm == 'weight':
-                    self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
-                    # print(self.filters[l].weight_g.size(),
-                    #       self.filters[l].weight_v.size())
+                if l != len(filter_channels) - 2:
+                    if norm == 'group':
+                        self.norms.append(nn.GroupNorm(32, filter_channels[l + 1]))
+                    elif norm == 'batch':
+                        self.norms.append(nn.BatchNorm1d(filter_channels[l + 1]))
+                    elif norm == 'instance':
+                        self.norms.append(nn.InstanceNorm1d(filter_channels[l + 1]))
+                    elif norm == 'weight':
+                        self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
+                        # print(self.filters[l].weight_g.size(),
+                        #       self.filters[l].weight_v.size())
         self.len_filter=len(self.filters)
 
-    def forward(self, feature):
+    def forward(self, feature, clip_feature=None): ##todo fuse clip feature into
         '''
         feature may include multiple view inputs
         args:
@@ -150,9 +179,11 @@ class MLP(pl.LightningModule):
             [B, C_out, N] prediction
         '''
         y = feature
+        if self.args.use_clip: clip_feature=clip_feature.unsqueeze(-1).repeat(1,1,8000)
         tmpy = feature
         len_=len(self.filters)
         for i, f in enumerate(self.filters):
+            ####se net
             if self.args.mlpSe or self.args.mlpSev1:
                 if i!=self.len_filter-1:
                     y=self.se_conv[i](y) 
@@ -161,12 +192,19 @@ class MLP(pl.LightningModule):
                     y_spa=self.se_conv_spatial[i](y) ##
                     y_cha=self.se_conv_channel[i](y) ##
                     y=torch.max(y_spa, y_cha)
-            y = f(y if i not in self.res_layers else torch.cat([y, tmpy], 1))
+            #####
+            if self.args.use_clip and i in self.clip_fuse_layer:
+                
+                y = f(torch.cat([y, clip_feature], 1) if i not in self.res_layers else torch.cat([y, tmpy, clip_feature], 1))
+            else: y = f(y if i not in self.res_layers else torch.cat([y, tmpy], 1))
+
+            ###activation
             if i != len(self.filters) - 1:
                 if self.norm not in ['batch', 'group', 'instance']:
                     y = self.activate(y)
                 else:
                     y = self.activate(self.norms[i](y))
+            ###
 ##bug do not activate the last channel
 
 
@@ -347,11 +385,14 @@ if __name__=="__main__":
             self.test_code=True
             self.mlp_first_dim=12
             self.mlpSev1=False
-            self.mlpSe=True
+            self.mlpSe=False
             self.mlpSemax=False
+            self.uncertainty=False
+            self.use_clip=True
     args_=args_()
-    net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()
+    net=MLP(filter_channels=[12,128,256,128,1], res_layers=[2,4] ,args=args_).cuda()
     # net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()
     input=torch.randn(2,12,8000).cuda()
-    print(net(input).size())
+    input_clip=torch.randn(2,768).cuda()
+    print(net(input, input_clip).size())
     print(1)

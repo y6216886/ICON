@@ -8,6 +8,7 @@ logging.getLogger("lightning").setLevel(logging.ERROR)
 logging.getLogger("trimesh").setLevel(logging.ERROR)
 import sys
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON")
+sys.path.append("/home/young/code/human_reconstruction/")
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning import loggers as pl_loggers
@@ -86,9 +87,13 @@ if __name__ == "__main__":
     parser.add_argument("--uncertainty", default=False, action="store_true")
     parser.add_argument("--beta_min", type=float, default=0.03)
     parser.add_argument("--beta_plus", type=float, default=3.)
-    
-
     ######
+
+    #####useclip
+    parser.add_argument("--use_clip", default=True, action="store_true")
+    parser.add_argument("--clip_fuse_layer", type=str, default="23") ##1 2 3
+    
+    #####
     
     args = parser.parse_args()
     cfg = get_cfg_defaults()

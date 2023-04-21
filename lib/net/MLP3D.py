@@ -146,6 +146,11 @@ class MLP3d(pl.LightningModule):
         if  args.conv3d_kernelsize==7: padding_=2
         print("conv3d with kernelsize {} padding {} padding mode {}".format(args.conv3d_kernelsize,padding_,args.pad_mode))
         for l in range(self.conv3d_start, len(filter_channels) - 1):
+            if  args.conv3d_kernelsize==1: padding_=0
+            elif  args.conv3d_kernelsize==3: padding_=1
+            elif  args.conv3d_kernelsize==7: padding_=2
+            else: AssertionError("con3d kernel size not specified")
+            print("conv3d with kernelsize {} padding {} padding mode {}".format(args.conv3d_kernelsize,padding_,args.pad_mode))
             if l in self.res_layers:
                 self.filters.append(
                     CNN3D(filter_channels[l] + filter_channels[0], filter_channels[l + 1], kennel=args.conv3d_kernelsize, stride=1, padding=padding_, padding_mode_=args.pad_mode)
@@ -381,12 +386,8 @@ class SpatialSELayer3d(nn.Module):
         # spatial squeeze
         batch_size, channel, *a= input_tensor.size()
 
-        if weights is not None:
-            weights = torch.mean(weights, dim=0)
-            weights = weights.view(1, channel, 1, 1)
-            out = F.conv3d(input_tensor, weights)
-        else:
-            out = self.conv(input_tensor)
+
+        out = self.conv(input_tensor)
         squeeze_tensor = self.sigmoid(out)
 
         # spatial excitation
@@ -443,7 +444,7 @@ if __name__=="__main__":
             self.mlpSemax=False
             self.conv3d_kernelsize=3
             self.pad_mode="replicate"
-            self.conv_start=0
+            self.conv3d_start=4
             # args.conv3d_kernelsize,padding_,args.pad_mode)
     args_=args_()
     net=MLP3d(filter_channels=[12, 512, 256, 128, 1], res_layers= [2,3,4],args=args_).cuda()

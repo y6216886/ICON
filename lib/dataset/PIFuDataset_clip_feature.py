@@ -13,6 +13,7 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
+
 import sys
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/")
 import sys
@@ -33,6 +34,8 @@ import torch
 import vedo
 import torchvision.transforms as transforms
 
+
+from tqdm import tqdm
 cape_gender = {
     "male":
         ['00032', '00096', '00122', '00127', '00145', '00215', '02474', '03284', '03375', '03394'],
@@ -151,6 +154,37 @@ class PIFuDataset():
         self.device = torch.device(f"cuda:{cfg.gpus[0]}")
         self.render = Render(size=512, device=self.device)
 
+        """
+        ###generate clip feature
+        from testcode.testclip import getfeature
+        import clip
+        os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+        device1 = "cuda" if torch.cuda.is_available() else "cpu"
+        model1, preprocess1 = clip.load("ViT-L/14", device=device1)
+        # if self.args.use_clip:
+        #     for index in tqdm(range(len(self.subject_list) * len(self.rotations))):
+        #         rid = index % len(self.rotations)
+        #         mid = index // len(self.rotations)
+
+        #         rotation = self.rotations[rid]
+        #         subject = self.subject_list[mid].split("/")[-1]
+        #         if not self.test:
+        #             dataset = self.subject_list[mid].split("/")[-3]
+        #         else:
+        #             dataset = self.subject_list[mid].split("/")[-2]
+        #         # print(self.subject_list,mid,self.subject_list[mid])
+        #         render_folder = "/".join([dataset + f"_{self.opt.rotation_num}views", subject])
+        #         img_path=osp.join(self.root, render_folder, 'render', f'{rotation:03d}.png')
+        #         clip_feature=getfeature(img_path, device1, preprocess1)
+        #         clip_feature=clip_feature.cpu().numpy()
+        #         clip_save_path=osp.join(self.root, 'clip_feature', render_folder ) #, f'{rotation:03d}.npy')
+        #         # print(clip_save_path, img_path)
+        #         os.makedirs(clip_save_path, exist_ok=True)
+        #         np.save(osp.join(clip_save_path,f'{rotation:03d}.npy'), clip_feature)
+        """
+        
+
+
     def render_normal(self, verts, faces):
 
         # render optimized mesh (normal, T_normal, image [-1,1])
@@ -196,7 +230,7 @@ class PIFuDataset():
 
     def __len__(self):
         if self.args.test_code:
-            return min(15, len(self.subject_list) * len(self.rotations))
+            return 4
         else:
             return len(self.subject_list) * len(self.rotations)
 
@@ -225,6 +259,7 @@ class PIFuDataset():
             'scale': self.datasets_dict[dataset]["scale"],
             'calib_path': osp.join(self.root, render_folder, 'calib', f'{rotation:03d}.txt'),
             'image_path': osp.join(self.root, render_folder, 'render', f'{rotation:03d}.png'),
+            'clip_feature_path':osp.join(self.root, render_folder, 'clip_feature', f'{rotation:03d}.npy'),
             'smpl_path': osp.join(self.datasets_dict[dataset]["smpl_dir"], f"{subject}.obj"),
             'vis_path': osp.join(self.root, render_folder, 'vis', f'{rotation:03d}.pt')
         }
@@ -258,6 +293,7 @@ class PIFuDataset():
         # load training data
         data_dict.update(self.load_calib(data_dict))
 
+
         # image/normal/depth loader
         for name, channel in zip(self.in_total, self.in_total_dim):
 
@@ -274,6 +310,18 @@ class PIFuDataset():
                 data_dict.update(
                     {name: self.imagepath2tensor(data_dict[f'{name}_path'], channel, inv=False)}
                 )
+
+        if self.args.use_clip:
+            clip_save_path=osp.join(self.root, 'clip_feature', render_folder ) #, f'{rotation:03d}.npy')
+            clip_feature=np.load(osp.join(clip_save_path,f'{rotation:03d}.npy'))
+            # print(data_dict['image_path'], osp.join(clip_save_path,f'{rotation:03d}.npy'))
+            clip_feature=np.squeeze(clip_feature)
+            data_dict.update(
+                    {"clip_feature":clip_feature}
+                )
+
+                
+        
 
         data_dict.update(self.load_mesh(data_dict))
         data_dict.update(
@@ -319,7 +367,12 @@ class PIFuDataset():
         image = (image * mask)[:channel]
 
         return (image * (0.5 - inv) * 2.0).float()
+    
+    def load_clip_feature(self, path):
+        clip_feature=np.load(path)
 
+        return {'clip': clip_feature}
+    
     def load_calib(self, data_dict):
         calib_data = np.loadtxt(data_dict['calib_path'], dtype=float)
         extrinsic = calib_data[:4, :4]
@@ -702,6 +755,7 @@ if __name__=="__main__":
     class args_():
         def __init__(self) -> None:
             self.test_code=True
+            self.use_clip=True
     args_=args_()
     from torchvision.utils import save_image
     try:
@@ -712,7 +766,23 @@ if __name__=="__main__":
     from torch.utils.data import DataLoader
     # from tqdm import tqdm
     cfg1 = get_cfg_defaults()
+
     cfg1.merge_from_file(config_file)
+    # cfg_test_mode = [
+    #         "test_mode",
+    #         True,
+    #         "dataset.types",
+    #         ["cape"],
+    #         "dataset.scales",
+    #         [100.0],
+    #         "dataset.rotation_num",
+    #         3,
+    #         "mcube_res",
+    #         256,
+    #         "clean_mesh",
+    #         True,
+    #     ]
+    # cfg1.merge_from_list(cfg_test_mode)
     pifu= PIFuDataset(cfg=cfg1, split='train',args=args_)
     test_data_loader = DataLoader(
             pifu,
@@ -726,7 +796,7 @@ if __name__=="__main__":
         print(i)
         imgtensor=torch.cat([j['normal_F'],j['normal_B'],j['T_normal_F'],j['T_normal_B']],dim=0)
         # save_image( imgtensor, "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/examples/normals.png",nrow=2, normalize=True)
-        break
+        # break
         for key in j.keys():
             try:
                 print(key,  j[key].size())

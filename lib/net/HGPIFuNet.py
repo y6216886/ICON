@@ -331,7 +331,7 @@ class HGPIFuNet(BasePIFuNet):
         else:
             return features_out
 
-    def query(self, features, points, calibs, transforms=None, regressor=None):
+    def query(self, features, points, calibs, transforms=None, regressor=None, clip_feature=None):
         xyz = self.projection(points, calibs, transforms)
         (xy, z) = xyz.split([2, 1], dim=1)
 
@@ -413,7 +413,9 @@ class HGPIFuNet(BasePIFuNet):
 
             point_feat = torch.cat(point_feat_list, 1)
             # out of image plane is always set to 0
-            preds = regressor(point_feat) ###sdf feature in channle [:,6,:]
+            if self.args.use_clip:
+                   preds = regressor(point_feat, clip_feature) 
+            else: preds = regressor(point_feat) ###sdf feature in channle [:,6,:]
             preds = in_cube * preds
 
             preds_list.append(preds)
@@ -475,8 +477,16 @@ class HGPIFuNet(BasePIFuNet):
         sample_tensor = in_tensor_dict["sample"]
         calib_tensor = in_tensor_dict["calib"]
         label_tensor = in_tensor_dict["label"]
+
         in_feat = self.filter(in_tensor_dict)
-        preds_if_list = self.query(
+        ####
+        if self.args.use_clip:
+            clip_feature=in_tensor_dict["clip_feature"]
+            preds_if_list = self.query(
+            in_feat, sample_tensor, calib_tensor, regressor=self.if_regressor, clip_feature=clip_feature
+        )
+        ####
+        else: preds_if_list = self.query(
             in_feat, sample_tensor, calib_tensor, regressor=self.if_regressor
         )
         error = self.get_error(preds_if_list, label_tensor)
