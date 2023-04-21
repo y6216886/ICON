@@ -538,8 +538,8 @@ def accumulate(outputs, rot_num, split):
 
     hparam_log_dict = {}
 
-    metrics = outputs[0].keys()
-    datasets = split.keys()
+    metrics = outputs[0].keys() ##"chamfer, p2s, nc"
+    datasets = split.keys() ##"thuman, cape"
 
     for dataset in datasets:
         for metric in metrics:

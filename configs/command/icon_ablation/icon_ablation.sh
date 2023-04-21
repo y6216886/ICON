@@ -13,9 +13,9 @@ num_gpu=2
 # CUDA_VISIBLE_DEVICES=2,3 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wonorm.yaml  -test --gpus 0 --mlp_first_dim 10 #--test_code
 
 # CUDA_VISIBLE_DEVICES=2,3 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wosdf.yaml --gpus 0 --num_gpus 2  --mlp_first_dim 12   ##have 12 channels
-CUDA_VISIBLE_DEVICES=1 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wosdf.yaml -test --gpus 0 --mlp_first_dim 12 
+# CUDA_VISIBLE_DEVICES=1 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wosdf.yaml -test --gpus 0 --mlp_first_dim 12 
 
-# CUDA_VISIBLE_DEVICES=3,2 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wocmap.yaml --gpus 0 --num_gpus 2 --mlp_first_dim 10 #have 10 channels
+CUDA_VISIBLE_DEVICES=1,4 WANDB__SERVICE_WAIT=300 python -m apps.train_and_eval -cfg configs/train/icon_study_feature/icon-filter_wocmap.yaml --gpus 0 --num_gpus 2 --mlp_first_dim 10 --mlp3d --conv3d_start 0 --conv3d_kernelsize 1 --pad_mode zeros --name mlp3d_convstart0_kernel1_padzeros_wocmap  #have 10 channels
 # CUDA_VISIBLE_DEVICES=3,2 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wocmap.yaml -test --gpus 0 --mlp_first_dim 10
 
 # CUDA_VISIBLE_DEVICES=3,2 WANDB__SERVICE_WAIT=300 python -m apps.train -cfg configs/train/icon_study_feature/icon-filter_wovis.yaml  --gpus 0 --num_gpus 2

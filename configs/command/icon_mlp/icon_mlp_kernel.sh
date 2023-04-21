@@ -39,13 +39,21 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 # CUDA_VISIBLE_DEVICES=1,6 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d_start4_kernel5_paddmode_zeros.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 4 --conv3d_kernelsize 5 --pad_mode zero #--test_code 
 # CUDA_VISIBLE_DEVICES=1,6 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d_start4_kernel7_paddmode_zeros.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 4 --conv3d_kernelsize 7 --pad_mode zero #--test_code 
 
-CUDA_VISIBLE_DEVICES=2,3 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 3 --conv3d_kernelsize 3 --pad_mode zero --name baseline/3dmlp/convstart3_kernel3_padzero  --test_code 
+# CUDA_VISIBLE_DEVICES=2,3 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 3 --conv3d_kernelsize 3 --pad_mode zero --name baseline/3dmlp/convstart3_kernel3_padzero  --test_code 
 
-CUDA_VISIBLE_DEVICES=2,3 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 2 --conv3d_kernelsize 3 --pad_mode zero  --name baseline/3dmlp/convstart2_kernel3_padzero --test_code 
+# CUDA_VISIBLE_DEVICES=2,3 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 2 --conv3d_kernelsize 3 --pad_mode zero  --name baseline/3dmlp/convstart2_kernel3_padzero --test_code 
 
-CUDA_VISIBLE_DEVICES=2,3 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 1 --conv3d_kernelsize 3 --pad_mode zero  --name baseline/3dmlp/convstart1_kernel3_padzero --test_code 
+# CUDA_VISIBLE_DEVICES=1,4 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 0 --conv3d_kernelsize 3 --pad_mode zeros  --name baseline/3dmlp/convstart0_kernel3_padzero #--test_code 
+
+# CUDA_VISIBLE_DEVICES=0,7 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 1 --conv3d_kernelsize 3 --pad_mode zeros  --name baseline/3dmlp/convstart1_kernel3_padzero
+
+# CUDA_VISIBLE_DEVICES=0,1 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 2 --conv3d_kernelsize 3 --pad_mode zeros  --name baseline/3dmlp/convstart2_kernel3_padzero
 
 
+CUDA_VISIBLE_DEVICES=5 WANDB__SERVICE_WAIT=300 python -m apps.train  -test --name baseline/3dmlp/convstart0_kernel1_padzero-2023-04-20-15-03  --mlp3d --conv3d_start 0 --conv3d_kernelsize 1 --pad_mode zeros
 
-CUDA_VISIBLE_DEVICES=1,2 python -m apps.train -cfg configs/train/icon/icon-filter_test.yaml --gpus 0 --num_gpus 2
+# CUDA_VISIBLE_DEVICES=1,4 python -m apps.train_and_eval -cfg configs/train/icon_mlp/3dmlp_kernel/icon-filter_withnormal_conv3d_wocmap.yaml --gpus 0 --num_gpus 2 --mlp3d --conv3d_start 1 --conv3d_kernelsize 3 --pad_mode zero  --name baseline/3dmlp/convstart1_kernel3_padzero_wocmap #--mlp_first_dim 10
+
+
+# CUDA_VISIBLE_DEVICES=1,2 python -m apps.train -cfg configs/train/icon/icon-filter_test.yaml --gpus 0 --num_gpus 2
 # python /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/train_nerf.py -d 2 3 --occ 0.8

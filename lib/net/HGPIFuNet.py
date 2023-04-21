@@ -150,15 +150,7 @@ class HGPIFuNet(BasePIFuNet):
         self.pamir_keys = ["voxel_verts", "voxel_faces", "pad_v_num", "pad_f_num"]
         self.pifu_keys = []
         if args.mlp3d:
-            self.if_regressor = MLPMixer(
-                filter_channels=channels_IF,
-                name="if",
-                res_layers=self.opt.res_layers,
-                norm=self.opt.norm_mlp,
-                last_op=nn.Sigmoid() if not self.cfg.test_mode else None,
-                args=args
-            )
-            # self.if_regressor = MLP3d(
+            # self.if_regressor = MLPMixer(
             #     filter_channels=channels_IF,
             #     name="if",
             #     res_layers=self.opt.res_layers,
@@ -166,6 +158,14 @@ class HGPIFuNet(BasePIFuNet):
             #     last_op=nn.Sigmoid() if not self.cfg.test_mode else None,
             #     args=args
             # )
+            self.if_regressor = MLP3d(
+                filter_channels=channels_IF,
+                name="if",
+                res_layers=self.opt.res_layers,
+                norm=self.opt.norm_mlp,
+                last_op=nn.Sigmoid() if not self.cfg.test_mode else None,
+                args=args
+            )
         else:
             self.if_regressor = MLP(
                 filter_channels=channels_IF,

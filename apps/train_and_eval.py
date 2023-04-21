@@ -78,7 +78,7 @@ if __name__ == "__main__":
     parser.add_argument("--mlpSemax", default=False, action="store_true")
     parser.add_argument("--mlp3d", default=False, action="store_true")
     parser.add_argument("--conv3d_start", type=int, default=2)
-    parser.add_argument("--conv3d_kernelsize", type=int, default=1)
+    parser.add_argument("--conv3d_kernelsize", type=int, default=1) ###3 5 7 is not applicable, using them results in collapsed solution
     parser.add_argument("--pad_mode", type=str, default='zeros')
     ####uncertainty
     parser.add_argument("--uncertainty", default=False, action="store_true")
@@ -90,11 +90,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
-    # if os.path.exists(os.path.join(cfg.results_path,cfg.name,"codes")) and not args.test_mode and not args.resume:
-    #      raise Exception("Sorry, experiment name exists, modify the experiment name!")
-    # name_dict=["name",cfg.name+gettime()]
-    # cfg.merge_from_list(name_dict)
+    if args.name!="baseline/icon-filter_batch2_newresumev1":
+        exp_name=args.name
+        if os.path.exists(os.path.join(cfg.results_path,args.name,"codes")) and not args.test_mode and not args.resume:
+            print("Experiment name exists, modify the experiment name!")
+            exp_name=exp_name+gettime()
+        name_dict=["name",exp_name]
+        cfg.merge_from_list(name_dict)
     # cfg.gpus=[int(i) for i in args.gpus]
+    print("experimentname",cfg.name)
     print("experimentname",cfg.name,cfg.name)
     cfg.freeze()
     print("note cfg is freeze",cfg.batch_size)

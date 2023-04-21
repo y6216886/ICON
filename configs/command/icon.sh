@@ -28,7 +28,9 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 
 
 
-CUDA_VISIBLE_DEVICES=6,5 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter.yaml --gpus 0 --num_gpus 2
+# CUDA_VISIBLE_DEVICES=1,2 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter_withoutBN.yaml --gpus 0 --num_gpus 2 --name withoutBN
+
+CUDA_VISIBLE_DEVICES=1 WANDB__SERVICE_WAIT=300 python -m apps.train  data/results/baseline/3dmlp/convstart0_kernel1_padzero-2023-04-20-15-03
 
 # CUDA_VISIBLE_DEVICES=6,7 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter_bce.yaml --gpus 0 --num_gpus 2  
 # python /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/train_nerf.py -d 0 2 3 --occ 0.8

@@ -79,9 +79,19 @@ study the dim of each dim
 
 0418 gpu021 conv3d zeros conv5 conv7
 
-gpu025 conv3d start from 1 2 3
+gpu025 conv3d start from 1 2 3 ##the point position are random, is it reasonable to use conv3d?
 
 gpu025 check icon baseline 0419
+
+gpu018 check without cmap
+
+gpu017  mlp3d conv3d start from 0  (1)with cmap  (2)without cmap
+
+gpu017 convkernel=3, mlp3d conv3d start from 0,1,2  ##kernel size >3 leads to collapse error
+
+gpu017 convkernel=1 without using cmap
+
+gpu023 icon without batchnorm
 
 ---
 
@@ -96,6 +106,8 @@ gpu025 check icon baseline 0419
 ### Single view synthesis for human body xxx
 
 ### Uncertainty during training
+
+image feature from clip , concate it with input of mlp
 
 ### Fine granularity (e.g., face, hands, hair, foot) details are far from promising
 

@@ -609,7 +609,8 @@ class ICON(pl.LightningModule):
                 rot_num=3,
                 split={
                     "cape-easy": (0, 50),
-                    "cape-hard": (50, 100)
+                    "cape-hard": (50, 100),
+                    "cape-all": (0, 150)
                 },
 
             )

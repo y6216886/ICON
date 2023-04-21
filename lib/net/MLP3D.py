@@ -141,14 +141,12 @@ class MLP3d(pl.LightningModule):
                     self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
                     # print(self.filters[l].weight_g.size(),
                     #       self.filters[l].weight_v.size())
+        if  args.conv3d_kernelsize==1: padding_=0
+        if  args.conv3d_kernelsize==3: padding_=1
+        if  args.conv3d_kernelsize==7: padding_=2
+        print("conv3d with kernelsize {} padding {} padding mode {}".format(args.conv3d_kernelsize,padding_,args.pad_mode))
         for l in range(self.conv3d_start, len(filter_channels) - 1):
             if l in self.res_layers:
-                
-                if  args.conv3d_kernelsize==1: padding_=0
-                if  args.conv3d_kernelsize==3: padding_=1
-                if  args.conv3d_kernelsize==7: padding_=2
-                print("conv3d with kernelsize {} padding {} padding mode {}".format(args.conv3d_kernelsize,padding_,args.pad_mode))
-                
                 self.filters.append(
                     CNN3D(filter_channels[l] + filter_channels[0], filter_channels[l + 1], kennel=args.conv3d_kernelsize, stride=1, padding=padding_, padding_mode_=args.pad_mode)
                     # CNN3D(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
