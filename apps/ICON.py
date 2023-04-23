@@ -551,6 +551,10 @@ class ICON(pl.LightningModule):
                 "clip_feature":batch["clip_feature"]
             }
         )
+        else: in_tensor_dict.update(
+            {
+                "clip_feature":None
+            })
         with torch.no_grad():
             features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
             sdf = self.reconEngine(
@@ -607,7 +611,7 @@ class ICON(pl.LightningModule):
         # make_test_gif("/".join(self.export_dir.split("/")[:-2]))
         if not self.cfg.test_mode:
 
-            accu_outputs = accumulate(
+            accu_outputs = accumulate(  ###ddp will cause error, i.e., idx > len output 
                 outputs,
                 rot_num=3,
                 # split={

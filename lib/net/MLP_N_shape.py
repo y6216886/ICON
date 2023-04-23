@@ -85,14 +85,14 @@ import torch.nn.functional as F
 
 #         return y
 
-class MLP(pl.LightningModule):
-    def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None, args=None):
+class MLP_UNET(pl.LightningModule):
+    def __init__(self, filter_channels, name=None, res_layers=[], norm='batch', last_op=None, args=None):
 
-        super(MLP, self).__init__()
+        super(MLP_UNET, self).__init__()
         self.args=args
         if args.mlp_first_dim!=0:
             filter_channels[0]=args.mlp_first_dim
-            print(colored("I have modified mlp filter channles{}".format(filter_channels),"red"))
+        print(colored(" mlp filter channles{}".format(filter_channels),"red"))
         if args.uncertainty:
             filter_channels[-1]+=1
         self.filters = nn.ModuleList()
@@ -150,26 +150,42 @@ class MLP(pl.LightningModule):
                         #       self.filters[l].weight_v.size())
         else:
             for l in range(0, len(filter_channels) - 1):
-                if l in self.res_layers:
-                    self.filters.append(
-                        nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
-                    )
+                if l < len(filter_channels)//2:
+                    if l in self.res_layers:
+                        self.filters.append(
+                            nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
+                        )
+                    else:
+                        self.filters.append(nn.Conv1d(filter_channels[l], filter_channels[l + 1], 1))
+                    if l != len(filter_channels) - 2:
+                        if norm == 'group':
+                            self.norms.append(nn.GroupNorm(32, filter_channels[l + 1]))
+                        elif norm == 'batch':
+                            self.norms.append(nn.BatchNorm1d(filter_channels[l + 1]))
+                        elif norm == 'instance':
+                            self.norms.append(nn.InstanceNorm1d(filter_channels[l + 1]))
+                        elif norm == 'weight':
+                            self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
+                            # print(self.filters[l].weight_g.size(),
+                            #       self.filters[l].weight_v.size())
                 else:
-                    self.filters.append(nn.Conv1d(filter_channels[l], filter_channels[l + 1], 1))
-
-                if l != len(filter_channels) - 2:
-                    if norm == 'group':
-                        self.norms.append(nn.GroupNorm(32, filter_channels[l + 1]))
-                    elif norm == 'batch':
-                        self.norms.append(nn.BatchNorm1d(filter_channels[l + 1]))
-                    elif norm == 'instance':
-                        self.norms.append(nn.InstanceNorm1d(filter_channels[l + 1]))
-                    elif norm == 'weight':
-                        self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
-                        # print(self.filters[l].weight_g.size(),
-                        #       self.filters[l].weight_v.size())
+                    if l in self.res_layers:
+                        self.filters.append(
+                            nn.Conv1d(filter_channels[l]*2 + filter_channels[0], filter_channels[l + 1], 1)
+                        )
+                    else:
+                        self.filters.append(nn.Conv1d(filter_channels[l]*2, filter_channels[l + 1], 1))
+                    if l != len(filter_channels) - 2:
+                        if norm == 'group':
+                            self.norms.append(nn.GroupNorm(32, filter_channels[l + 1]))
+                        elif norm == 'batch':
+                            self.norms.append(nn.BatchNorm1d(filter_channels[l + 1]))
+                        elif norm == 'instance':
+                            self.norms.append(nn.InstanceNorm1d(filter_channels[l + 1]))
+                        elif norm == 'weight':
+                            self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
+               
         self.len_filter=len(self.filters)
-        if self.args.dropout!=0: self.dropout=nn.Dropout(self.args.dropout)
 
     def forward(self, feature, clip_feature=None): ##todo fuse clip feature into
         '''
@@ -182,6 +198,7 @@ class MLP(pl.LightningModule):
         y = feature
         if self.args.use_clip: clip_feature=clip_feature.unsqueeze(-1).repeat(1,1,8000)
         tmpy = feature
+        temp_feature=[]
         len_=len(self.filters)
         for i, f in enumerate(self.filters):
             ####se net
@@ -194,15 +211,14 @@ class MLP(pl.LightningModule):
                     y_cha=self.se_conv_channel[i](y) ##
                     y=torch.max(y_spa, y_cha)
             #####
-            if self.args.use_clip and i in self.clip_fuse_layer:
-                input=torch.cat([y, clip_feature], 1) if i not in self.res_layers else torch.cat([y, tmpy, clip_feature], 1)
-                if self.args.dropout!=0 and self.training: y= self.dropout(y)
-                y = f(input)
-            else: 
-                input=y if i not in self.res_layers else torch.cat([y, tmpy], 1)
-                if self.args.dropout!=0 and self.training: y= self.dropout(y)
-                y = f(input)
-
+            if i<(len_//2):
+                if self.args.use_clip and i in self.clip_fuse_layer:
+                    
+                    y = f(torch.cat([y, clip_feature], 1) if i not in self.res_layers else torch.cat([y, tmpy, clip_feature], 1))
+                else: y = f(y if i not in self.res_layers else torch.cat([y, tmpy], 1))
+                temp_feature.append(y)
+            else:
+                y=f(torch.cat([y, temp_feature[-(i-(len_//2)+1)]],1) if i not in self.res_layers else torch.cat([y, tmpy, temp_feature[-(i-(len_//2)+1)]], 1))
             ###activation
             if i != len(self.filters) - 1:
                 if self.norm not in ['batch', 'group', 'instance']:
@@ -222,95 +238,6 @@ class MLP(pl.LightningModule):
     
 
 
-# class MLP_v1(pl.LightningModule):
-#     def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None, args=None):
-
-#         super(MLP, self).__init__()
-#         self.args=args
-#         if args.mlp_first_dim!=0:
-#             filter_channels[0]=args.mlp_first_dim
-#             print(colored("I have modified mlp filter channles{}".format(filter_channels),"red"))
-#         self.filters = nn.ModuleList()
-#         self.norms = nn.ModuleList()
-#         self.res_layers = res_layers
-#         self.norm = norm
-#         self.last_op = last_op
-#         self.name = name
-#         self.activate = nn.LeakyReLU(inplace=True)
-#         assert [self.args.mlpSe, self.args.mlpSev1, self.args.mlpSemax].count(True) in [0,1], "mlp se strategy cannot be embodied simultaneously"
-#         if self.args.mlpSe:
-#             self.se_conv = nn.ModuleList()
-#             for filters_nums_ in filter_channels[1:-1]:
-#                 self.se_conv.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
-#                 # self.se_conv.append(ChannelSELayer(filters_nums_))  #1457 gpu memory for bs 2
-#         elif self.args.mlpSev1:
-#             self.se_conv = nn.ModuleList()
-#             for filters_nums_ in filter_channels[1:-1]:
-#                 # self.se_conv.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
-#                 self.se_conv.append(ChannelSELayer(filters_nums_))  #1457 gpu memory for bs 2
-#         elif self.args.mlpSemax:
-#             self.se_conv_spatial = nn.ModuleList()
-#             self.se_conv_channel = nn.ModuleList()
-#             for filters_nums_ in filter_channels[1:-1]:
-#                 self.se_conv_spatial.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
-#                 self.se_conv_channel.append(ChannelSELayer(filters_nums_)) 
-
-#         for l in range(0, len(filter_channels) - 1):
-#             if l in self.res_layers:
-#                 self.filters.append(
-#                     nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
-#                 )
-#             else:
-#                 self.filters.append(nn.Conv1d(filter_channels[l], filter_channels[l + 1], 1))
-
-#             if l != len(filter_channels) - 2:
-#                 if norm == 'group':
-#                     self.norms.append(nn.GroupNorm(32, filter_channels[l + 1]))
-#                 elif norm == 'batch':
-#                     self.norms.append(nn.BatchNorm1d(filter_channels[l + 1]))
-#                 elif norm == 'instance':
-#                     self.norms.append(nn.InstanceNorm1d(filter_channels[l + 1]))
-#                 elif norm == 'weight':
-#                     self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
-#                     # print(self.filters[l].weight_g.size(),
-#                     #       self.filters[l].weight_v.size())
-#         self.len_filter=len(self.filters)
-
-#     def forward(self, feature):
-#         '''
-#         feature may include multiple view inputs
-#         args:
-#             feature: [B, C_in, N]
-#         return:
-#             [B, C_out, N] prediction
-#         '''
-#         y = feature
-#         tmpy = feature
-#         len_=len(self.filters)
-#         for i, f in enumerate(self.filters):
-
-#             y = f(y if i not in self.res_layers else torch.cat([y, tmpy], 1))
-#             if i != len(self.filters) - 1:
-#                 if self.norm not in ['batch', 'group', 'instance']:
-#                     y = self.activate(y)
-#                 else:
-#                     y = self.activate(self.norms[i](y))
-#             if self.args.mlpSe or self.args.mlpSev1:
-#                 if i!=self.len_filter-1:
-#                     y=self.se_conv[i](y) ##bug do not activate the last channel
-#             elif self.args.mlpSemax:
-#                 if i!=self.len_filter-1:
-#                     y_spa=self.se_conv_spatial[i](y) ##
-#                     y_cha=self.se_conv_channel[i](y) ##
-#                     y=torch.max(y_spa, y_cha)
-
-
-
-#         if self.last_op is not None:
-#             y = self.last_op(y)
-
-#         return y
-    
 
 class SpatialSELayer(nn.Module):
     """
@@ -393,11 +320,15 @@ if __name__=="__main__":
             self.mlpSe=False
             self.mlpSemax=False
             self.uncertainty=False
-            self.use_clip=True
-            self.dropout=0.2
+            self.use_clip=False
+            self.clip_fuse_layer="23"
     args_=args_()
-    net=MLP(filter_channels=[12,128,256,128,1], res_layers=[2,4] ,args=args_).cuda()
-    # net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()
+    net=MLP_UNET(filter_channels=[13, 512, 256, 128, 1], res_layers=[2,3,4] ,args=args_).cuda()
+    state_dict=torch.load("/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_unet/last.ckpt")
+    model_dict = net.state_dict()
+    model_dict.update(state_dict['state_dict'])
+    net.load_state_dict(model_dict)
+    # net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()  
     input=torch.randn(2,12,8000).cuda()
     input_clip=torch.randn(2,768).cuda()
     print(net(input, input_clip).size())

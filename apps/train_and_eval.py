@@ -24,7 +24,7 @@ from pytorch_lightning.loggers import WandbLogger
 import wandb
 from termcolor import colored
 # print(colored("For debug setting cuda visible diveices here!","red")
-# os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -33,7 +33,6 @@ def save_code(cfg,args):
     import datetime
     import shutil
     from distutils.dir_util import copy_tree
-    now = datetime.datetime.now()
     # timestr=str(now.month)+str(now.day)+str(now.hour)+str(now.minute)+str(now.second)
     experiment_dir = os.path.join(cfg.results_path,cfg.name,"codes")
     print("saving code to path:",experiment_dir)
@@ -56,7 +55,17 @@ def gettime():
     print("Time string:", time_string)
     return time_string
 
-
+@rank_zero_only
+def checkname(args,cfg):
+    if args.name!="baseline/icon-filter_batch2_newresumev1"  and not args.test_mode: ###conflict with ddp
+        exp_name=args.name
+        if os.path.exists(os.path.join(cfg.results_path,args.name,"codes")) and not args.test_mode and not args.resume:
+            print("Experiment name exists, modify the experiment name!")
+            exp_name=exp_name+gettime()
+        name_dict=["name",exp_name]
+        cfg.merge_from_list(name_dict)
+    print("experimentname",cfg.name)
+    return cfg
 
 if __name__ == "__main__":
     
@@ -68,7 +77,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_code", default=False, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=False, action="store_true")
-    parser.add_argument("--name",type=str)
+    parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
@@ -86,22 +95,32 @@ if __name__ == "__main__":
     parser.add_argument("--beta_plus", type=float, default=3.)
 
     ######
+    #####useclip
+    parser.add_argument("--use_clip", default=False, action="store_true")
+    parser.add_argument("--clip_fuse_layer", type=str, default="23") ##1 2 3
+    
+    #####
+    ###mlp unet
+    parser.add_argument("--use_unet", default=False, action="store_true")
+    parser.add_argument('--mlp_dim', nargs='+', type=int, default=[13, 512, 256, 128, 1]) #res_layers 13,128,256,512,256,128,1
+    parser.add_argument('--res_layers', nargs='+', type=int, default=[2,3,4]) #2,3,4,5,6
     ######
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
-    if args.name!="baseline/icon-filter_batch2_newresumev1":
-        exp_name=args.name
-        if os.path.exists(os.path.join(cfg.results_path,args.name,"codes")) and not args.test_mode and not args.resume:
-            print("Experiment name exists, modify the experiment name!")
-            exp_name=exp_name+gettime()
+    cfg.merge_from_list(["net.mlp_dim",args.mlp_dim, "net.res_layers",args.res_layers])
+    exp_name=args.name
+    if args.name!="baseline/icon-filter_batch2_newresumev1"  and not args.test_mode and not args.resume: ###conflict with ddp
+        if os.path.exists(os.path.join(cfg.results_path,args.name,"codes")):
+            AssertionError("Experiment name exists, modify the experiment name!")
         name_dict=["name",exp_name]
         cfg.merge_from_list(name_dict)
+    else:
+        print("not modifying name")
+
+    # cfg=checkname(args,cfg)
     # cfg.gpus=[int(i) for i in args.gpus]
-    print("experimentname",cfg.name)
-    print("experimentname",cfg.name,cfg.name)
     cfg.freeze()
-    print("note cfg is freeze",cfg.batch_size)
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
     if not args.offline: 

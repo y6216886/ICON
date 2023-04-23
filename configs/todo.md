@@ -93,7 +93,10 @@ gpu017 convkernel=1 without using cmap
 
 gpu023 icon without batchnorm
 
+gpu022 unet mlp 2023 0422
+
 ---
+### N net MLP i.e., converse U net
 
 ### How to extend the 3D human digitilization task to embrace the trends of data centric AI?
 
