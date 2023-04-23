@@ -105,6 +105,11 @@ if __name__ == "__main__":
     parser.add_argument('--mlp_dim', nargs='+', type=int, default=[13, 512, 256, 128, 1]) #res_layers 13,128,256,512,256,128,1
     parser.add_argument('--res_layers', nargs='+', type=int, default=[2,3,4]) #2,3,4,5,6
     ######
+
+    ###dropout
+    parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
+    ######
+
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)

@@ -196,11 +196,11 @@ class MLP(pl.LightningModule):
             #####
             if self.args.use_clip and i in self.clip_fuse_layer:
                 input=torch.cat([y, clip_feature], 1) if i not in self.res_layers else torch.cat([y, tmpy, clip_feature], 1)
-                if self.args.dropout!=0 and self.training: y= self.dropout(y)
+                if self.args.dropout!=0 and self.training and i>0: y= self.dropout(y)
                 y = f(input)
             else: 
                 input=y if i not in self.res_layers else torch.cat([y, tmpy], 1)
-                if self.args.dropout!=0 and self.training: y= self.dropout(y)
+                if self.args.dropout!=0 and self.training and i>0: y= self.dropout(y)
                 y = f(input)
 
             ###activation
@@ -393,7 +393,7 @@ if __name__=="__main__":
             self.mlpSe=False
             self.mlpSemax=False
             self.uncertainty=False
-            self.use_clip=True
+            self.use_clip=False
             self.dropout=0.2
     args_=args_()
     net=MLP(filter_channels=[12,128,256,128,1], res_layers=[2,4] ,args=args_).cuda()
