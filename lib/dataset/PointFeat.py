@@ -78,7 +78,6 @@ class PointFeat:
             if self.args.perturb_sdf!=0:
                 perturb=(torch.rand(pts_sdf.size(), device=pts_sdf.device) -0.5) *2 *self.args.perturb_sdf
                 pts_sdf+=perturb
-                print(perturb.max(), perturb.min())
             out_dict["sdf"] = pts_sdf
 
         if "vis" in out_dict.keys():
