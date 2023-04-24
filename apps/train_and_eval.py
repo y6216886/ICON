@@ -127,10 +127,11 @@ if __name__ == "__main__":
     cfg.freeze()
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
+    os.makedirs("/home/yangyifan/wandb", exist_ok=True)
     if not args.offline: 
-        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath)
+        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir="/home/yangyifan/wandb")
     if args.offline or args.test_code:
-        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath,offline=True)
+        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir="/home/yangyifan/wandb",offline=True)
 
     if cfg.overfit:
         cfg_overfit_list = ["batch_size", 1]
@@ -236,7 +237,7 @@ if __name__ == "__main__":
             resume_path=cfg.resume_path
     elif cfg.test_mode or args.resume:
         #/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt
-        # resume_path="data/ckpt/icon-filter.ckpt"
+        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon_unet_5layer_v1/epoch=00.ckpt"
         resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
         print("loading prtrained filter model from ",resume_path)    
         if not os.path.exists(resume_path):

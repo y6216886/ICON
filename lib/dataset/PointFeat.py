@@ -10,12 +10,13 @@ smplx=SMPLX()
 
 
 class PointFeat:
-    def __init__(self, verts, faces):
+    def __init__(self, verts, faces, args=None):
 
         # verts [B, N_vert, 3]
         # faces [B, N_face, 3]
         # triangles [B, N_face, 3, 3]
-
+        if args:
+            self.args=args
         self.Bsize = verts.shape[0]
         self.mesh = Meshes(verts, faces)
         self.device = verts.device
@@ -70,10 +71,14 @@ class PointFeat:
             else:
                 out_dict[feat_key.split("_")[1]] = None
 
-        if "sdf" in out_dict.keys():
+        if "sdf" in out_dict.keys(): ###add noise to it 
             pts_dist = torch.sqrt(residues) / torch.sqrt(torch.tensor(3))
             pts_signs = 2.0 * (check_sign(self.verts, self.faces[0], points).float() - 0.5)
             pts_sdf = (pts_dist * pts_signs).unsqueeze(-1)
+            if self.args.perturb_sdf!=0:
+                perturb=(torch.rand(pts_sdf.size(), device=pts_sdf.device) -0.5) *2 *self.args.perturb_sdf
+                pts_sdf+=perturb
+                print(perturb.max(), perturb.min())
             out_dict["sdf"] = pts_sdf
 
         if "vis" in out_dict.keys():

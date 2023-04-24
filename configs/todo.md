@@ -120,3 +120,6 @@ image feature from clip , concate it with input of mlp
 depth feature is the most important feature for mlp input, try to use kl loss to align the distribution of occupancy and smpl depth?
 
 ### aumentation methods like augnerf 
+  1.aug sdf  ####has already been done
+  2.aug normal map
+  

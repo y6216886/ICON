@@ -349,7 +349,7 @@ class HGPIFuNet(BasePIFuNet):
             # xyz [B, 3, N]  --> points [B, N, 3]
 
             point_feat_extractor = PointFeat(
-                self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"]
+                self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args
             )
 
             point_feat_out = point_feat_extractor.query(
