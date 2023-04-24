@@ -94,6 +94,7 @@ gpu017 convkernel=1 without using cmap
 gpu023 icon without batchnorm
 
 gpu022 unet mlp 2023 0422
+gpu016 dropout 0.1  gpu017 dropout 0.2
 
 ---
 ### N net MLP i.e., converse U net
@@ -117,3 +118,5 @@ image feature from clip , concate it with input of mlp
 ### Depth feature
 
 depth feature is the most important feature for mlp input, try to use kl loss to align the distribution of occupancy and smpl depth?
+
+### aumentation methods like augnerf 

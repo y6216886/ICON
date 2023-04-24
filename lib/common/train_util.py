@@ -93,7 +93,7 @@ def load_networks(cfg, model, mlp_path, normal_path):
         main_dict = torch.load(mlp_path,
                                  map_location=torch.device(f"cpu"))["state_dict"]
         try:
-            currentepoch=main_dict['epoch']
+            currentepoch=main_dict["epoch"]
         except:currentepoch=0
         main_dict = {
             k: v

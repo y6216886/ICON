@@ -121,7 +121,9 @@ if __name__ == "__main__":
         name_dict=["name",exp_name]
         cfg.merge_from_list(name_dict)
     else:
-        print("not modifying name")
+        name_dict=["name",exp_name]
+        cfg.merge_from_list(name_dict)
+        # print("not modifying name")
 
     # cfg=checkname(args,cfg)
     # cfg.gpus=[int(i) for i in args.gpus]
@@ -222,7 +224,8 @@ if __name__ == "__main__":
         ]
         cfg.merge_from_list(cfg_test_mode)
 
-    save_code(cfg, args)
+    if not args.test_mode and not args.resume:
+        save_code(cfg, args)
 
 
     model = ICON(cfg, args)
@@ -242,7 +245,9 @@ if __name__ == "__main__":
         if not os.path.exists(resume_path):
             NotADirectoryError("checkpoint {} not exists".format(resume_path))
     currentepoch=load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
-    if args.resume: trainer.current_epoch=currentepoch
+    if args.resume: 
+        print("resuming from epoch",currentepoch)
+        trainer.current_epoch=currentepoch
     if args.test_code: 
         trainer.max_epochs=2
         trainer.log_every_n_steps=1

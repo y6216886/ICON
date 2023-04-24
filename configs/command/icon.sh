@@ -31,5 +31,6 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 # CUDA_VISIBLE_DEVICES=1,2 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter_withoutBN.yaml --gpus 0 --num_gpus 2 --name withoutBN
 
 
-CUDA_VISIBLE_DEVICES=2,4 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter.yaml --gpus 0 --num_gpus 2  --name icon_dropout
+# CUDA_VISIBLE_DEVICES=6,7 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter.yaml --gpus 0 --num_gpus 2  --name icon_dropout01 --dropout 0.1
 # python /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/train_nerf.py -d 0 2 3 --occ 0.8
+CUDA_VISIBLE_DEVICES=6,7 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter.yaml --gpus 0 --num_gpus 2  --name icon_wo_residual  --res_layers 8 --resume #--dropout 0.1
