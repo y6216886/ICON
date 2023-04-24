@@ -118,14 +118,11 @@ if __name__ == "__main__":
     if args.name!="baseline/icon-filter_batch2_newresumev1"  and not args.test_mode and not args.resume: ###conflict with ddp
         if os.path.exists(os.path.join(cfg.results_path,args.name,"codes")):
             AssertionError("Experiment name exists, modify the experiment name!")
-        name_dict=["name",exp_name]
-        cfg.merge_from_list(name_dict)
-    else:
-        name_dict=["name",exp_name]
-        cfg.merge_from_list(name_dict)
-        # print("not modifying name")
 
-    # cfg=checkname(args,cfg)
+
+    name_dict=["name",exp_name]
+    cfg.merge_from_list(name_dict)
+
     # cfg.gpus=[int(i) for i in args.gpus]
     cfg.freeze()
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)

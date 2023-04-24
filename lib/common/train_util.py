@@ -90,10 +90,11 @@ def load_networks(cfg, model, mlp_path, normal_path):
     if os.path.exists(mlp_path) and mlp_path.endswith("ckpt"):
         # main_dict = torch.load(mlp_path,
         #                        map_location=torch.device(f"cuda:{cfg.gpus[0]}"))["state_dict"]
-        main_dict = torch.load(mlp_path,
-                                 map_location=torch.device(f"cpu"))["state_dict"]
+        main_dict_whole = torch.load(mlp_path,
+                                 map_location=torch.device(f"cpu"))
+        main_dict=main_dict_whole["state_dict"]
         try:
-            currentepoch=main_dict["epoch"]
+            currentepoch=main_dict_whole["epoch"]
         except:currentepoch=0
         main_dict = {
             k: v
