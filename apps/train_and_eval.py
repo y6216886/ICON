@@ -108,6 +108,7 @@ if __name__ == "__main__":
 
     ###dropout
     parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
+    parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6    
     ######
 
     args = parser.parse_args()
@@ -132,6 +133,10 @@ if __name__ == "__main__":
         wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir="/home/yangyifan/wandb")
     if args.offline or args.test_code:
         wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir="/home/yangyifan/wandb",offline=True)
+    # if not args.offline: 
+    #     wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath)
+    # if args.offline or args.test_code:
+    #     wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath, offline=True)
 
     if cfg.overfit:
         cfg_overfit_list = ["batch_size", 1]
@@ -260,6 +265,9 @@ if __name__ == "__main__":
 ####test_mode_in_cape#####################################
 ##########################################################
     args.num_gpus=1
+    print("setting perturb sdf from",args.perturb_sdf)
+    args.perturb_sdf=0
+    print("to ", args.perturb_sdf)
     cfg_test_mode = [
         "test_mode",
         True,
