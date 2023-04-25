@@ -81,7 +81,7 @@ def obj_loader(path):
 
 
 class HoppeMesh:
-    def __init__(self, verts, faces):
+    def __init__(self, tmesh: trimesh.Trimesh):
         '''
         The HoppeSDF calculates signed distance towards a predefined oriented point cloud
         http://hhoppe.com/recon.pdf
@@ -89,10 +89,10 @@ class HoppeMesh:
         :param points: pts
         :param normals: normals
         '''
-        self.trimesh = trimesh.Trimesh(verts, faces, process=True)
+        self.trimesh = tmesh
         self.verts = np.array(self.trimesh.vertices)
         self.faces = np.array(self.trimesh.faces)
-        self.vert_normals, self.faces_normals = compute_normal(self.verts, self.faces)
+        self.vert_normals = np.array(self.trimesh.vertex_normals)
 
     def contains(self, points):
 
