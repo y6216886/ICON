@@ -547,17 +547,18 @@ def accumulate(outputs, rot_num, split):
             keyword = f"{dataset}-{metric}"
             if keyword not in hparam_log_dict.keys():
                 hparam_log_dict[keyword] = 0
-            # try:
-            #     for idx in range(split[dataset][0] * rot_num, split[dataset][1] * rot_num):
-            #         hparam_log_dict[keyword] += outputs[idx][metric]
-            # except:                print("testing code, idx not enough")
-            count=0
+            try:
+                for idx in range(split[dataset][0] * rot_num, split[dataset][1] * rot_num):
+                    hparam_log_dict[keyword] += outputs[idx][metric]
+            except:                print("maybe you used ddp here, which is not applicable, last idx is {}".format(idx))
+            # count=0
 
-            for idx in range(len(outputs)):
-                hparam_log_dict[keyword] += outputs[idx][metric]
-                count+=1
+            # for idx in range(len(outputs)):
+            #     hparam_log_dict[keyword] += outputs[idx][metric]
+            #     count+=1
+            # hparam_log_dict[keyword] /= count
 
-            hparam_log_dict[keyword] /= count
+            hparam_log_dict[keyword] /= (split[dataset][1] -split[dataset][0]) * rot_num
 
     print(colored(hparam_log_dict, "green"))
 

@@ -257,7 +257,9 @@ if __name__ == "__main__":
     #     wandb_logger.experiment.config.update(cfg)
     if not cfg.test_mode:
         trainer.fit(model=model, datamodule=datamodule)
-        trainer.test(model=model, datamodule=datamodule)
+        trainer_kwargs.update({"gpus": 1})
+        trainer_val = SubTrainer(**trainer_kwargs)
+        trainer_val.test(model=model, datamodule=datamodule)
     else:
         np.random.seed(1993)
         trainer.test(model=model, datamodule=datamodule)

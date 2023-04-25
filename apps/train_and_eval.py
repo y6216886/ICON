@@ -258,14 +258,14 @@ if __name__ == "__main__":
 
 
     trainer.fit(model=model, datamodule=datamodule)
-    trainer.test(model=model, datamodule=datamodule)
+    # trainer.test(model=model, datamodule=datamodule)
 
 
 ##########################################################
 ####test_mode_in_cape#####################################
 ##########################################################
     args.num_gpus=1
-    print("setting perturb sdf from",args.perturb_sdf)
+    print("setting perturb sdf from", args.perturb_sdf)
     args.perturb_sdf=0
     print("to ", args.perturb_sdf)
     cfg_test_mode = [
