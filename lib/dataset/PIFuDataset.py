@@ -13,10 +13,7 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
-import sys
-sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/")
-import sys
-sys.path.append("/home/young/code/human_reconstruction/")
+from threadpoolctl import threadpool_limits
 from lib.renderer.mesh import load_fit_body, compute_normal_batch
 from lib.dataset.body_model import TetraSMPLModel
 from lib.common.render import Render
@@ -200,6 +197,7 @@ class PIFuDataset():
         else:
             return len(self.subject_list) * len(self.rotations)
 
+    @threadpool_limits.wrap(limits=1)
     def __getitem__(self, index):
 
         # only pick the first data if overfitting
