@@ -259,6 +259,9 @@ if __name__ == "__main__":
 
     trainer.fit(model=model, datamodule=datamodule)
     # trainer.test(model=model, datamodule=datamodule)
+    trainer_kwargs.update({"gpus": 1})
+    trainer_val = SubTrainer(**trainer_kwargs)
+    trainer_val.test(model=model, datamodule=datamodule)
 
 
 ##########################################################
