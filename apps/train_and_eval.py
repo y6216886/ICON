@@ -75,13 +75,13 @@ if __name__ == "__main__":
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
-    parser.add_argument("--test_code", default=False, action="store_true")
+    parser.add_argument("--test_code", default=True, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=False, action="store_true")
     parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
-    parser.add_argument("--mlp_first_dim", type=int, default=0) 
+    parser.add_argument("--mlp_first_dim", type=int, default=20) 
     ####model
     parser.add_argument("--mlpSe", default=False, action="store_true") ##spatial se
     parser.add_argument("--mlpSev1", default=False, action="store_true") ##channel se
@@ -92,8 +92,8 @@ if __name__ == "__main__":
     parser.add_argument("--pad_mode", type=str, default='zeros')
     ####uncertainty
     parser.add_argument("--uncertainty", default=False, action="store_true")
-    parser.add_argument("--beta_min", type=float, default=0.03)
-    parser.add_argument("--beta_plus", type=float, default=3.)
+    parser.add_argument("--beta_min", type=float, default=0)
+    parser.add_argument("--beta_plus", type=float, default=0)
 
     ######
     #####useclip
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6    
     ######
     ##global and local
-    parser.add_argument("--pamir_icon", default=False, action="store_true")
+    parser.add_argument("--pamir_icon", default=True, action="store_true")
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
