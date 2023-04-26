@@ -8,6 +8,7 @@ logging.getLogger("lightning").setLevel(logging.ERROR)
 logging.getLogger("trimesh").setLevel(logging.ERROR)
 import sys
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON")
+sys.path.append("/home/young/code/human_reconstruction/")
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning import loggers as pl_loggers
@@ -110,7 +111,8 @@ if __name__ == "__main__":
     parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6    
     ######
-
+    ##global and local
+    parser.add_argument("--pamir_icon", default=False, action="store_true")
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)

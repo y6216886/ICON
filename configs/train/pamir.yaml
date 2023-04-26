@@ -50,9 +50,9 @@ lr_G: 1e-4
 weight_decay: 0.0 
 momentum: 0.0
 batch_size: 2
-num_threads: 16
-gpus: [7]
-test_gpus: [7]
+num_threads: 4
+gpus: [0]
+test_gpus: [0]
 
 sdf: False
 sdf_clip: 15.0
@@ -60,7 +60,7 @@ sdf_clip: 15.0
 fast_dev: 0
 resume: False
 test_mode: False
-mcube_res: 512
+mcube_res: 128
 clean_mesh: True
 num_sanity_val_steps: 1
 

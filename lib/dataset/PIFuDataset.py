@@ -281,7 +281,7 @@ class PIFuDataset():
         )
         data_dict.update(self.load_smpl(data_dict, self.vis))
 
-        if self.prior_type == 'pamir':
+        if self.prior_type == 'pamir' or self.args.pamir_icon:
             data_dict.update(self.load_smpl_voxel(data_dict))
 
         if (self.split != 'test') and (not self.vis):
@@ -374,6 +374,8 @@ class PIFuDataset():
         smplx_param = np.load(data_dict['smplx_param'], allow_pickle=True)
         smplx_pose = smplx_param["body_pose"]    # [1,63]
         smplx_betas = smplx_param["betas"]    # [1,10]
+        print(smplx_pose.max(), smplx_pose.min(),"smplx_pose")
+        print(smplx_betas.max(), smplx_betas.min(),"smplx_betas")
         smplx_pose, smplx_betas = self.add_noise(
             smplx_betas.shape[1],
             smplx_pose[0],
@@ -492,8 +494,8 @@ class PIFuDataset():
 
             # get smpl_vis
             if "smpl_vis" not in return_dict.keys() and "smpl_vis" in self.feat_keys:
-                (xy, z) = torch.as_tensor(smplx_verts, device=self.device).split([2, 1], dim=1) 
-                smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces, device=self.device)).long() 
+                (xy, z) = torch.as_tensor(smplx_verts).split([2, 1], dim=1) #, device=self.device
+                smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces)).long()  #, device=self.device
                 return_dict['smpl_vis'] = smplx_vis
 
             if "smpl_norm" not in return_dict.keys() and "smpl_norm" in self.feat_keys:

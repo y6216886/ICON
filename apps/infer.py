@@ -13,7 +13,9 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
-
+import sys
+sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON")
+sys.path.append("/home/young/code/human_reconstruction/")
 import warnings
 import logging
 
@@ -65,7 +67,37 @@ if __name__ == "__main__":
     parser.add_argument("-out_dir", "--out_dir", type=str, default="./results")
     parser.add_argument('-seg_dir', '--seg_dir', type=str, default=None)
     parser.add_argument("-cfg", "--config", type=str, default="./configs/icon-filter.yaml")
+    parser.add_argument("--mlp_first_dim", type=int, default=0) 
 
+    ####model
+    parser.add_argument("--mlpSe", default=False, action="store_true")
+    parser.add_argument("--mlpSev1", default=False, action="store_true")
+    parser.add_argument("--mlpSemax", default=False, action="store_true")
+    parser.add_argument("--mlp3d", default=False, action="store_true")
+    parser.add_argument("--conv3d_start", type=int, default=2)
+    parser.add_argument("--conv3d_kernelsize", type=int, default=1)
+    parser.add_argument("--pad_mode", type=str, default='zeros')
+
+    ####uncertainty
+    parser.add_argument("--uncertainty", default=False, action="store_true")
+    parser.add_argument("--beta_min", type=float, default=0.03)
+    parser.add_argument("--beta_plus", type=float, default=3.)
+    ######
+
+    #####useclip
+    parser.add_argument("--use_clip", default=False, action="store_true")
+    parser.add_argument("--clip_fuse_layer", type=str, default="23") ##1 2 3
+    #####
+
+    ###mlp unet
+    parser.add_argument("--use_unet", default=False, action="store_true")
+    parser.add_argument('--mlp_dim', nargs='+', type=int, default=[13, 512, 256, 128, 1]) #res_layers 13,128,256,512,256,128,1
+    parser.add_argument('--res_layers', nargs='+', type=int, default=[2,3,4]) #2,3,4,5,6
+    ###
+    
+    ###dropout
+    parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
+    parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
     args = parser.parse_args()
 
     # cfg read and merge
@@ -84,7 +116,7 @@ if __name__ == "__main__":
     device = torch.device(f"cuda:{args.gpu_device}")
 
     # load model and dataloader
-    model = ICON(cfg)
+    model = ICON(cfg, args)
     model = load_checkpoint(model, cfg)
 
     dataset_param = {

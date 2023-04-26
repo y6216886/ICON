@@ -863,6 +863,7 @@ def mesh_move(mesh_lst, step, scale=1.0):
 
 def rescale_smpl(fitted_path, scale=100, translate=(0, 0, 0)):
 
+
     fitted_body = trimesh.load(fitted_path, process=False, maintain_order=True, skip_materials=True)
     resize_matrix = trimesh.transformations.scale_and_translate(scale=(scale), translate=translate)
 

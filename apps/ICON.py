@@ -17,6 +17,7 @@ import wandb
 from lib.common.seg3d_lossless import Seg3dLossless
 from lib.dataset.Evaluator import Evaluator
 from lib.net import HGPIFuNet
+from lib.net.HGPIFuNet_global_local import HGPIFuNet_global_local
 from lib.common.train_util import *
 from lib.common.render import Render
 from lib.dataset.mesh_util import SMPLX, update_mesh_shape_prior_losses, get_visibility
@@ -43,7 +44,16 @@ class ICON(pl.LightningModule):
         self.mcube_res = cfg.mcube_res
         self.clean_mesh_flag = cfg.clean_mesh
 
-        self.netG = HGPIFuNet(
+        if self.args.pamir_icon:
+            self.netG = HGPIFuNet_global_local(
+            self.cfg,
+            self.cfg.projection_mode,
+            error_term=nn.SmoothL1Loss() if self.use_sdf else nn.MSELoss(),
+            # error_term=nn.BCELoss(),
+            args=args
+        )
+
+        else: self.netG = HGPIFuNet(
             self.cfg,
             self.cfg.projection_mode,
             error_term=nn.SmoothL1Loss() if self.use_sdf else nn.MSELoss(),
@@ -131,7 +141,7 @@ class ICON(pl.LightningModule):
         if self.cfg.net.use_filter:
             optim_params_G.append({"params": self.netG.F_filter.parameters(), "lr": self.lr_G})
 
-        if self.cfg.net.prior_type == "pamir":
+        if self.cfg.net.prior_type == "pamir" or self.args.pamir_icon:
             optim_params_G.append({"params": self.netG.ve.parameters(), "lr": self.lr_G})
 
         if self.cfg.optim == "Adadelta":
@@ -179,7 +189,15 @@ class ICON(pl.LightningModule):
         for name in self.in_total:
             in_tensor_dict.update({name: batch[name]})
 
-        in_tensor_dict.update(
+        if self.args.pamir_icon:
+            in_tensor_dict.update(
+            {
+                k: batch[k] if k in batch.keys() else None
+                for k in self.icon_keys+self.pamir_keys
+            }
+        )
+
+        else: in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in getattr(self, f"{self.prior_type}_keys")
@@ -260,7 +278,16 @@ class ICON(pl.LightningModule):
         for name in self.in_total:
             in_tensor_dict.update({name: batch[name]})
 
-        in_tensor_dict.update(
+
+        if self.args.pamir_icon:
+            in_tensor_dict.update(
+            {
+                k: batch[k] if k in batch.keys() else None
+                for k in self.icon_keys+self.pamir_keys
+            }
+        )
+
+        else: in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in getattr(self, f"{self.prior_type}_keys")
@@ -529,7 +556,15 @@ class ICON(pl.LightningModule):
             if name in batch.keys():
                 in_tensor_dict.update({name: batch[name]})
 
-        in_tensor_dict.update(
+        if self.args.pamir_icon:
+            in_tensor_dict.update(
+            {
+                k: batch[k] if k in batch.keys() else None
+                for k in self.icon_keys+self.pamir_keys
+            }
+        )
+
+        else: in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in getattr(self, f"{self.prior_type}_keys")
@@ -730,13 +765,30 @@ class ICON(pl.LightningModule):
             if name in batch.keys():
                 in_tensor_dict.update({name: batch[name]})
 
-        in_tensor_dict.update(
+        if self.args.pamir_icon:
+            in_tensor_dict.update(
+            {
+                k: batch[k] if k in batch.keys() else None
+                for k in self.icon_keys+self.pamir_keys
+            }
+        )
+
+        else: in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in getattr(self, f"{self.prior_type}_keys")
             }
         )
-
+        if self.args.use_clip:
+                    in_tensor_dict.update(
+            {
+                "clip_feature":batch["clip_feature"]
+            }
+        )
+        else: in_tensor_dict.update(
+            {
+                "clip_feature":None
+            })
         with torch.no_grad():
             features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
             sdf = self.reconEngine(

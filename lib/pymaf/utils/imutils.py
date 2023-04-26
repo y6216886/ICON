@@ -114,7 +114,7 @@ def process_image(img_file, hps_type, input_res=512, device=None, seg_path=None)
     in_height, in_width, _ = img_ori.shape
     M = aug_matrix(in_width, in_height, input_res * 2, input_res * 2)
 
-    # from rectangle to square
+    # from rectangle to square  like padding
     img_for_crop = cv2.warpAffine(
         img_ori, M[0:2, :], (input_res * 2, input_res * 2), flags=cv2.INTER_CUBIC
     )
