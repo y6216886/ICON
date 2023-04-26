@@ -233,7 +233,7 @@ class PIFuDataset():
                 {
                     'mesh_path':
                         osp.join(
-                            self.datasets_dict[dataset]["mesh_dir"], f"{subject}.glb"
+                            self.datasets_dict[dataset]["mesh_dir"], f"{subject}/{subject}.glb"
                         ),
                     'smplx_path':
                         osp.join(self.datasets_dict[dataset]["smplx_dir"], f"{subject}.obj"),
