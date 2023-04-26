@@ -96,9 +96,14 @@ def load_networks(cfg, model, mlp_path, normal_path):
         try:
             currentepoch=main_dict_whole["epoch"]
         except:currentepoch=0
+        # main_dict = {
+        #     k: v
+        #     for k, v in main_dict.items() if k in model_dict and v.shape == model_dict[k].shape and
+        #     ("reconEngine" not in k) and ("normal_filter" not in k) and ("voxelization" not in k)
+        # }
         main_dict = {
             k: v
-            for k, v in main_dict.items() if k in model_dict and v.shape == model_dict[k].shape and
+            for k, v in main_dict.items() if k in model_dict and
             ("reconEngine" not in k) and ("normal_filter" not in k) and ("voxelization" not in k)
         }
         print(colored(f"Resume MLP weights from {mlp_path}", "green"))

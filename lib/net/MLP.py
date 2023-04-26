@@ -92,7 +92,7 @@ class MLP(pl.LightningModule):
         self.args=args
         if args.mlp_first_dim!=0:
             filter_channels[0]=args.mlp_first_dim
-            print(colored("I have modified mlp filter channles{}".format(filter_channels),"red"))
+        print(colored("I have modified mlp filter channles{}".format(filter_channels),"red"))
         if args.uncertainty:
             filter_channels[-1]+=1
         self.filters = nn.ModuleList()

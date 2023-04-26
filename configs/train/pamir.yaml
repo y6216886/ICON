@@ -23,7 +23,7 @@ dataset:
   remove_outlier: False
   
   noise_type: ['pose', 'beta']
-  noise_scale: [0.0, 0.0]
+  noise_scale: [0.01, 0.01]
 
   types: ["thuman2"]
   scales: [100.0]
@@ -50,7 +50,7 @@ lr_G: 1e-4
 weight_decay: 0.0 
 momentum: 0.0
 batch_size: 2
-num_threads: 4
+num_threads: 1
 gpus: [0]
 test_gpus: [0]
 

@@ -98,13 +98,13 @@ class Voxelization(nn.Module):
             self.smpl_tetraderon_indices, (self.batch_size, 1, 1)
         )
 
-        smpl_vertex_code_batch = torch.from_numpy(smpl_vertex_code_batch).contiguous().to(
-            self.device
-        )
+        smpl_vertex_code_batch = torch.from_numpy(smpl_vertex_code_batch).contiguous().to(self.device)
+            
+        
         smpl_face_code_batch = torch.from_numpy(smpl_face_code_batch).contiguous().to(self.device)
-        smpl_face_indices_batch = torch.from_numpy(smpl_face_indices_batch).contiguous().to(
-            self.device
-        )
+        smpl_face_indices_batch = torch.from_numpy(smpl_face_indices_batch).contiguous().to(self.device)
+            
+        
         smpl_tetraderon_indices_batch = torch.from_numpy(smpl_tetraderon_indices_batch
                                                         ).contiguous().to(self.device)
 
@@ -136,7 +136,7 @@ class Voxelization(nn.Module):
         assert (vertices.ndimension() == 3)
         bs, nv = vertices.shape[:2]
         device = vertices.device
-        face = self.smpl_face_indices_batch + (torch.arange(bs, dtype=torch.int32).to(device) *
+        face = self.smpl_face_indices_batch + (torch.arange(bs, dtype=torch.int32).to(device) *  #
                                                nv)[:, None, None]
         vertices_ = vertices.reshape((bs * nv, 3))
         return vertices_[face.long()]
@@ -146,7 +146,7 @@ class Voxelization(nn.Module):
         bs, nv = vertices.shape[:2]
         device = vertices.device
         tets = self.smpl_tetraderon_indices_batch + (
-            torch.arange(bs, dtype=torch.int32).to(device) * nv
+            torch.arange(bs, dtype=torch.int32).to(device) * nv   ##
         )[:, None, None]
         vertices_ = vertices.reshape((bs * nv, 3))
         return vertices_[tets.long()]
