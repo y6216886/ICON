@@ -25,7 +25,7 @@ from pytorch_lightning.loggers import WandbLogger
 import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
