@@ -13,10 +13,7 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
-import sys
-sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/")
-import sys
-sys.path.append("/home/young/code/human_reconstruction/")
+from threadpoolctl import threadpool_limits
 from lib.renderer.mesh import load_fit_body, compute_normal_batch
 from lib.dataset.body_model import TetraSMPLModel
 from lib.common.render import Render
@@ -200,6 +197,7 @@ class PIFuDataset():
         else:
             return len(self.subject_list) * len(self.rotations)
 
+    @threadpool_limits.wrap(limits=1)
     def __getitem__(self, index):
 
         # only pick the first data if overfitting
@@ -235,7 +233,7 @@ class PIFuDataset():
                 {
                     'mesh_path':
                         osp.join(
-                            self.datasets_dict[dataset]["mesh_dir"], f"{subject}/{subject}.obj"
+                            self.datasets_dict[dataset]["mesh_dir"], f"{subject}/{subject}.glb"
                         ),
                     'smplx_path':
                         osp.join(self.datasets_dict[dataset]["smplx_dir"], f"{subject}.obj"),
@@ -333,14 +331,17 @@ class PIFuDataset():
         mesh_path = data_dict['mesh_path']
         scale = data_dict['scale']
 
-        verts, faces = obj_loader(mesh_path)
+        tscene: trimesh.Scene = trimesh.load_mesh(mesh_path, process=False)
+        assert len(tscene.geometry) == 1
+        tmesh: trimesh.Trimesh = next(iter(tscene.geometry.values()))
+        tmesh.apply_scale(scale)
 
-        mesh = HoppeMesh(verts * scale, faces)
+        mesh = HoppeMesh(tmesh)
 
         return {
             'mesh': mesh,
-            'verts': torch.as_tensor(verts * scale).float(),
-            'faces': torch.as_tensor(faces).long()
+            'verts': torch.as_tensor(mesh.verts).float(),
+            'faces': torch.as_tensor(mesh.faces).long()
         }
 
     def add_noise(self, beta_num, smpl_pose, smpl_betas, noise_type, noise_scale, type, hashcode):
@@ -577,7 +578,7 @@ class PIFuDataset():
 
     def get_sampling_geo(self, data_dict, is_valid=False, is_sdf=False):
 
-        mesh = data_dict['mesh']
+        mesh: HoppeMesh = data_dict['mesh']
         calib = data_dict['calib']
 
         # Samples are around the true surface with an offset
