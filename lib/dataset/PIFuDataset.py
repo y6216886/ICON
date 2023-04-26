@@ -247,7 +247,7 @@ class PIFuDataset():
             data_dict.update(
                 {
                     'mesh_path':
-                        osp.join(self.datasets_dict[dataset]["mesh_dir"], f"{subject}.obj"),
+                        osp.join(self.datasets_dict[dataset]["mesh_dir"], f"{subject}.glb"),
                     'smpl_param':
                         osp.join(self.datasets_dict[dataset]["smpl_dir"], f"{subject}.npz"),
                 }
@@ -330,7 +330,6 @@ class PIFuDataset():
 
         mesh_path = data_dict['mesh_path']
         scale = data_dict['scale']
-
         tscene: trimesh.Scene = trimesh.load_mesh(mesh_path, process=False)
         assert len(tscene.geometry) == 1
         tmesh: trimesh.Trimesh = next(iter(tscene.geometry.values()))
