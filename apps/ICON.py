@@ -14,6 +14,7 @@
 #
 # Contact: ps-license@tuebingen.mpg.de
 import wandb
+import csv
 from lib.common.seg3d_lossless import Seg3dLossless
 from lib.dataset.Evaluator import Evaluator
 from lib.net import HGPIFuNet
@@ -610,6 +611,7 @@ class ICON(pl.LightningModule):
             Image.fromarray((image_inter).astype(np.uint8)).save(
                 osp.join(self.export_dir, f"{mesh_rot}_inter.png")
             )
+
         except:print("No space left ERROR")
 
         verts_pr, faces_pr = self.reconEngine.export_mesh(sdf)
@@ -638,15 +640,16 @@ class ICON(pl.LightningModule):
         )
 
         test_log = {"chamfer": chamfer, "p2s": p2s, "NC": normal_consist}
+        name_log={"mesh_name":mesh_name,"rotation":mesh_rot}
 
-        return test_log
+        return test_log, name_log
 
     def test_epoch_end(self, outputs):
 
         # make_test_gif("/".join(self.export_dir.split("/")[:-2]))
         if not self.cfg.test_mode:
 
-            accu_outputs = accumulate(  ###ddp will cause error, i.e., idx > len output 
+            accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
                 outputs,
                 rot_num=3,
                 # split={
@@ -660,7 +663,7 @@ class ICON(pl.LightningModule):
 
         elif self.cfg.test_mode:
 
-            accu_outputs = accumulate(
+            accu_outputs, specific_output = accumulate(
                 outputs,
                 rot_num=3,
                 split={
@@ -668,7 +671,6 @@ class ICON(pl.LightningModule):
                     "cape-hard": (50, 100),
                     "cape-all": (0, 150)
                 },
-
             )
         print(colored(self.cfg.name, "green"))
         print(colored(self.cfg.dataset.noise_scale, "green"))
@@ -694,6 +696,32 @@ class ICON(pl.LightningModule):
                 f.writelines("\n")
                 for keys in accu_outputs.keys():
                     f.writelines(str(keys)+" : "+ str(accu_outputs[keys].cpu().item())+"\n")
+        except: print("saving text failed")
+
+        try:
+            # with open(osp.join(self.export_dir, "../specific_test_results.csv"),"a") as f:
+            with open(osp.join(self.export_dir, "../specific_test_results.csv"), 'a', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                col_name_list=['Name']
+                for colname in specific_output.keys():
+                    temp_keys_list=colname.split('#')
+                    dataset_metric= temp_keys_list[-1]
+                    if dataset_metric not in col_name_list:
+                        col_name_list.append(dataset_metric)
+                # Write the header row
+                writer.writerow(col_name_list)
+                rearrange_dict={}
+                for name, value in specific_output.items():
+                    temp_keys_list=name.split('#')
+                    mesh_name=temp_keys_list[0]
+                    if mesh_name not in rearrange_dict.keys():
+                        rearrange_dict[mesh_name] = []
+                    value=value.item()
+                    rearrange_dict[mesh_name].append(value)
+                # Write the data rows
+                for meshname, value in rearrange_dict.items():
+                    writer.writerow([meshname, *value])
+                
         except: print("saving text failed")
 
         np.save(

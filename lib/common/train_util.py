@@ -540,29 +540,37 @@ def bar_log_convert(log_dict, name=None, rot=None):
     return new_log_dict
 
 
-def accumulate(outputs, rot_num, split):
-
+def accumulate(outputs, rot_num, split): 
+    #{'chamfer': tensor(0.9993, devic...='cuda:0'), 'p2s': tensor(0.9510, devic...='cuda:0'), 'NC': tensor(0.0562, devic...='cuda:0')}
+    #{'mesh_name': '00134-longlong-run_t...al1-000070'}
     hparam_log_dict = {}
 
-    metrics = outputs[0].keys() ##"chamfer, p2s, nc"
+    metrics = outputs[0][0].keys() ##"chamfer, p2s, nc"
     datasets = split.keys() ##"thuman, cape"
+    name_log_dict={}
 
     for dataset in datasets:
         for metric in metrics:
             keyword = f"{dataset}-{metric}"
             if keyword not in hparam_log_dict.keys():
                 hparam_log_dict[keyword] = 0
+
             try:
                 for idx in range(split[dataset][0] * rot_num, split[dataset][1] * rot_num):
-                    hparam_log_dict[keyword] += outputs[idx][metric]
+                    hparam_log_dict[keyword] += outputs[idx][0][metric]
+                    name_log_dict[outputs[idx][1]['mesh_name']+"-"+str(outputs[idx][1]['rotation'])+"_"+f"{dataset}#{metric}"]=outputs[idx][0][metric]
+                    
+                    
+
             except:                print("maybe you used ddp here, which is not applicable, last idx is {}".format(idx))
 
 
-            hparam_log_dict[keyword] /= (split[dataset][1] -split[dataset][0]) * rot_num
+            hparam_log_dict[keyword] /= (split[dataset][1] - split[dataset][0]) * rot_num
+
 
     print(colored(hparam_log_dict, "green"))
 
-    return hparam_log_dict
+    return hparam_log_dict, name_log_dict
 
 
 def calc_error_N(outputs, targets):

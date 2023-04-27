@@ -75,8 +75,8 @@ if __name__ == "__main__":
     parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter_test.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
-    parser.add_argument("-test", "--test_mode", default=False, action="store_true")
-    parser.add_argument("--test_code", default=False, action="store_true")
+    parser.add_argument("-test", "--test_mode", default=True, action="store_true")
+    parser.add_argument("--test_code", default=True, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=True, action="store_true")
     parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
@@ -255,7 +255,7 @@ if __name__ == "__main__":
     currentepoch=load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
     if args.resume: trainer.current_epoch=currentepoch
     if args.test_code: 
-        trainer.max_epochs=2
+        trainer.max_epochs=1
         trainer.log_every_n_steps=1
         trainer.val_check_interval=1
     # if trainer.global_rank == 0:
