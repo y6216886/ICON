@@ -29,6 +29,8 @@ import trimesh
 import torch
 import vedo
 import torchvision.transforms as transforms
+import sys
+# sys.path.append("/home/young/code/human_reconstruction")
 
 cape_gender = {
     "male":
@@ -94,7 +96,7 @@ class PIFuDataset():
         if self.split == 'train':
             self.rotations = np.arange(0, 360, 360 / self.opt.rotation_num).astype(np.int32)
         else:
-            self.rotations = range(0, 360, 120)
+            self.rotations = list(range(0, 360, 120))
 
         self.datasets_dict = {}
 
@@ -124,7 +126,7 @@ class PIFuDataset():
                     {"subjects": np.loadtxt(osp.join(dataset_dir, "test.txt"), dtype=str)}
                 )
 
-        self.subject_list = self.get_subject_list(split)
+        self.subject_list = list(self.get_subject_list(split))
         self.smplx = SMPLX()
 
         # PIL to tensor
@@ -259,7 +261,7 @@ class PIFuDataset():
         # image/normal/depth loader
         for name, channel in zip(self.in_total, self.in_total_dim):
 
-            if f'{name}_path' not in data_dict.keys():
+            if f'{name}_path' not in list(data_dict.keys()):
                 data_dict.update(
                     {
                         f'{name}_path':
@@ -290,7 +292,7 @@ class PIFuDataset():
         if not self.vis:
             del data_dict['mesh']
 
-        path_keys = [key for key in data_dict.keys() if '_path' in key or '_dir' in key]
+        path_keys = [key for key in list(data_dict.keys()) if '_path' in key or '_dir' in key]
         for key in path_keys:
             del data_dict[key]
 
@@ -466,98 +468,98 @@ class PIFuDataset():
     def load_smpl(self, data_dict, vis=False):
 
         smpl_type = "smplx" if (
-            'smplx_path' in data_dict.keys() and os.path.exists(data_dict['smplx_path'])
+            'smplx_path' in list(data_dict.keys()) and os.path.exists(data_dict['smplx_path'])
         ) else "smpl"
 
         return_dict = {}
-        try:
-            if 'smplx_param' in data_dict.keys() and \
-                os.path.exists(data_dict['smplx_param']) and \
-                    sum(self.noise_scale) > 0.0:
-                smplx_verts, smplx_dict = self.compute_smpl_verts(
-                    data_dict, self.noise_type, self.noise_scale
-                )
-                smplx_faces = torch.as_tensor(self.smplx.smplx_faces).long()
-                smplx_cmap = torch.as_tensor(np.load(self.smplx.cmap_vert_path)).float()
+        # try:
+        if 'smplx_param' in list(data_dict.keys()) and \
+            os.path.exists(data_dict['smplx_param']) and \
+                sum(self.noise_scale) > 0.0:
+            smplx_verts, smplx_dict = self.compute_smpl_verts(
+                data_dict, self.noise_type, self.noise_scale
+            )
+            smplx_faces = torch.as_tensor(self.smplx.smplx_faces).long()
+            smplx_cmap = torch.as_tensor(np.load(self.smplx.cmap_vert_path)).float()
 
-            else:
-                
-                    smplx_vis = torch.load(data_dict['vis_path']).float()
-                    return_dict.update({'smpl_vis': smplx_vis})
+        else:
+            
+                smplx_vis = torch.load(data_dict['vis_path']).float()
+                return_dict.update({'smpl_vis': smplx_vis})
 
-                    smplx_verts = rescale_smpl(data_dict[f"{smpl_type}_path"], scale=100.0)
-                    smplx_faces = torch.as_tensor(getattr(self.smplx, f"{smpl_type}_faces")).long()
-                    smplx_cmap = self.smplx.cmap_smpl_vids(smpl_type)
+                smplx_verts = rescale_smpl(data_dict[f"{smpl_type}_path"], scale=100.0)
+                smplx_faces = torch.as_tensor(getattr(self.smplx, f"{smpl_type}_faces")).long()
+                smplx_cmap = self.smplx.cmap_smpl_vids(smpl_type)
 
 
-            smplx_verts = projection(smplx_verts, data_dict['calib']).float()
+        smplx_verts = projection(smplx_verts, data_dict['calib']).float()
 
-            # get smpl_vis
-            if "smpl_vis" not in return_dict.keys() and "smpl_vis" in self.feat_keys:
-                (xy, z) = torch.as_tensor(smplx_verts).split([2, 1], dim=1) #, device=self.device
-                smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces)).long()  #, device=self.device
-                return_dict['smpl_vis'] = smplx_vis
+        # get smpl_vis
+        if "smpl_vis" not in list(return_dict.keys()) and "smpl_vis" in self.feat_keys:
+            (xy, z) = torch.as_tensor(smplx_verts).split([2, 1], dim=1) #, device=self.device
+            smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces)).long()  #, device=self.device
+            return_dict['smpl_vis'] = smplx_vis
 
-            if "smpl_norm" not in return_dict.keys() and "smpl_norm" in self.feat_keys:
-                # get smpl_norms
-                smplx_norms = compute_normal_batch(smplx_verts.unsqueeze(0),
-                                                smplx_faces.unsqueeze(0))[0]
-                return_dict["smpl_norm"] = smplx_norms
+        if "smpl_norm" not in list(return_dict.keys()) and "smpl_norm" in self.feat_keys:
+            # get smpl_norms
+            smplx_norms = compute_normal_batch(smplx_verts.unsqueeze(0),
+                                            smplx_faces.unsqueeze(0))[0]
+            return_dict["smpl_norm"] = smplx_norms
 
-            if "smpl_cmap" not in return_dict.keys() and "smpl_cmap" in self.feat_keys:
-                return_dict["smpl_cmap"] = smplx_cmap
+        if "smpl_cmap" not in list(return_dict.keys()) and "smpl_cmap" in self.feat_keys:
+            return_dict["smpl_cmap"] = smplx_cmap
+
+        return_dict.update(
+            {
+                'smpl_verts': smplx_verts,
+                'smpl_faces': smplx_faces,
+                'smpl_cmap': smplx_cmap,
+            }
+        )
+
+        if vis:
+
+            (xy, z) = torch.as_tensor(smplx_verts,device=self.device).split([2, 1], dim=1) 
+            smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces,device=self.device).long())
+
+            T_normal_F, T_normal_B = self.render_normal(
+                (smplx_verts * torch.tensor(np.array([1.0, -1.0, 1.0]),device=self.device)),
+                smplx_faces.to(self.device)
+            )
 
             return_dict.update(
                 {
-                    'smpl_verts': smplx_verts,
-                    'smpl_faces': smplx_faces,
-                    'smpl_cmap': smplx_cmap,
+                    "T_normal_F": T_normal_F.squeeze(0),
+                    "T_normal_B": T_normal_B.squeeze(0)
+                }
+            )
+            query_points = projection(data_dict['samples_geo'], data_dict['calib']).float()
+
+            smplx_sdf, smplx_norm, smplx_cmap, smplx_vis = cal_sdf_batch(
+                smplx_verts.unsqueeze(0).to(self.device),
+                smplx_faces.unsqueeze(0).to(self.device),
+                smplx_cmap.unsqueeze(0).to(self.device),
+                smplx_vis.unsqueeze(0).to(self.device),
+                query_points.unsqueeze(0).contiguous().to(self.device)
+            )
+
+            return_dict.update(
+                {
+                    'smpl_feat':
+                        torch.cat(
+                            (
+                                smplx_sdf[0].detach().cpu(), smplx_cmap[0].detach().cpu(),
+                                smplx_norm[0].detach().cpu(), smplx_vis[0].detach().cpu()
+                            ),
+                            dim=1
+                        )
                 }
             )
 
-            if vis:
-
-                (xy, z) = torch.as_tensor(smplx_verts,device=self.device).split([2, 1], dim=1) 
-                smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces,device=self.device).long())
-
-                T_normal_F, T_normal_B = self.render_normal(
-                    (smplx_verts * torch.tensor(np.array([1.0, -1.0, 1.0]),device=self.device)),
-                    smplx_faces.to(self.device)
-                )
-
-                return_dict.update(
-                    {
-                        "T_normal_F": T_normal_F.squeeze(0),
-                        "T_normal_B": T_normal_B.squeeze(0)
-                    }
-                )
-                query_points = projection(data_dict['samples_geo'], data_dict['calib']).float()
-
-                smplx_sdf, smplx_norm, smplx_cmap, smplx_vis = cal_sdf_batch(
-                    smplx_verts.unsqueeze(0).to(self.device),
-                    smplx_faces.unsqueeze(0).to(self.device),
-                    smplx_cmap.unsqueeze(0).to(self.device),
-                    smplx_vis.unsqueeze(0).to(self.device),
-                    query_points.unsqueeze(0).contiguous().to(self.device)
-                )
-
-                return_dict.update(
-                    {
-                        'smpl_feat':
-                            torch.cat(
-                                (
-                                    smplx_sdf[0].detach().cpu(), smplx_cmap[0].detach().cpu(),
-                                    smplx_norm[0].detach().cpu(), smplx_vis[0].detach().cpu()
-                                ),
-                                dim=1
-                            )
-                    }
-                )
-
-            return return_dict
-        except:
-                print('warning')
-                print(data_dict['vis_path'])
+        return return_dict
+        # except:
+        #         print('warning')
+        #         print(data_dict['vis_path'])
 
     def load_smpl_voxel(self, data_dict):
 
@@ -661,7 +663,7 @@ class PIFuDataset():
         mesh.visual.vertex_colors = [128.0, 128.0, 128.0, 255.0]
         vis_list.append(mesh)
 
-        if 'voxel_verts' in data_dict.keys():
+        if 'voxel_verts' in list(data_dict.keys()):
             print(colored("voxel verts", "green"))
             voxel_verts = data_dict['voxel_verts'] * 2.0
             voxel_faces = data_dict['voxel_faces']
@@ -672,7 +674,7 @@ class PIFuDataset():
             voxel.visual.vertex_colors = [0.0, 128.0, 0.0, 255.0]
             vis_list.append(voxel)
 
-        if 'smpl_verts' in data_dict.keys():
+        if 'smpl_verts' in list(data_dict.keys()):
             print(colored("smpl verts", "green"))
             smplx_verts = data_dict['smpl_verts']
             smplx_faces = data_dict['smpl_faces']

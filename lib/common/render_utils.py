@@ -137,7 +137,9 @@ def dict2obj(d):
     for k in d:
         o.__dict__[k] = dict2obj(d[k])
     return o
+# def dict2obj(d):
 
+#     return d
 
 def face_vertices(vertices, faces):
     """ 
@@ -176,7 +178,7 @@ class Pytorch3dRasterizer(nn.Module):
             'perspective_correct': True,
             'cull_backfaces': True,
         }
-        raster_settings = dict2obj(raster_settings)
+        # raster_settings = dict2obj(raster_settings)
         self.raster_settings = raster_settings
 
     def forward(self, vertices, faces, attributes=None):
@@ -186,12 +188,12 @@ class Pytorch3dRasterizer(nn.Module):
         raster_settings = self.raster_settings
         pix_to_face, zbuf, bary_coords, dists = rasterize_meshes(
             meshes_screen,
-            image_size=raster_settings.image_size,
-            blur_radius=raster_settings.blur_radius,
-            faces_per_pixel=raster_settings.faces_per_pixel,
-            bin_size=raster_settings.bin_size,
-            max_faces_per_bin=raster_settings.max_faces_per_bin,
-            perspective_correct=raster_settings.perspective_correct,
+            image_size=raster_settings["image_size"],
+            blur_radius=raster_settings["blur_radius"],
+            faces_per_pixel=raster_settings["faces_per_pixel"],
+            bin_size=raster_settings["bin_size"],
+            max_faces_per_bin=raster_settings["max_faces_per_bin"],
+            perspective_correct=raster_settings["perspective_correct"],
         )
         vismask = (pix_to_face > -1).float()
         D = attributes.shape[-1]

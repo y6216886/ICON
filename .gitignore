@@ -7,6 +7,7 @@ configs
 !data/tbfo.ttf
 __pycache__
 debug/
+nvdiffrast/
 log/
 results/*
 .vscode

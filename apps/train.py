@@ -21,11 +21,12 @@ import os
 import os.path as osp
 import argparse
 import numpy as np
+import torch
 from pytorch_lightning.loggers import WandbLogger
-import wandb
+# import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -70,13 +71,13 @@ def checkname(args,cfg):
 
 
 if __name__ == "__main__":
-    
+    torch.multiprocessing.set_start_method('spawn',force=True)
     parser = argparse.ArgumentParser()
     parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter_test.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
-    parser.add_argument("--test_code", default=True, action="store_true")
+    parser.add_argument("--test_code", default=False, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=True, action="store_true")
     parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
@@ -238,7 +239,7 @@ if __name__ == "__main__":
     model = ICON(cfg, args)
 
 
-    trainer = SubTrainer(accelerator='ddp' if args.num_gpus>1 else None,**trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
+    trainer = SubTrainer(accelerator='ddp' if args.num_gpus>1 else None, **trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
     # trainer = Trainer(**trainer_kwargs)
     # load checkpoints
     if not cfg.test_mode and not args.resume: 

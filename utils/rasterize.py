@@ -9,6 +9,7 @@ if torch.cuda.is_available():
     torch.cuda.set_device(device)
 else:
     device = torch.device("cpu")
+device = torch.device("cuda:0")
 import os
 import torch
 import matplotlib.pyplot as plt
@@ -44,7 +45,7 @@ sys.path.append(os.path.abspath(''))
 
 
 # Set paths
-DATA_DIR = "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/rasterize/data"
+DATA_DIR = "utils/rasterize/data"
 obj_filename = os.path.join(DATA_DIR, "cow.obj")
 
 # Load obj file
@@ -53,7 +54,7 @@ plt.figure(figsize=(7,7))
 texture_image=mesh.textures.maps_padded()
 
 plt.imshow(texture_image.squeeze().cpu().numpy())
-plt.savefig("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/rasterize/data/txt1.png");
+plt.savefig("utils/rasterize/data/txt1.png");
 plt.axis("off");
 plt.figure(figsize=(7,7))
 texturesuv_image_matplotlib(mesh.textures, subsample=None)
@@ -99,7 +100,7 @@ renderer = MeshRenderer(
 images = renderer(mesh)
 rasterizer_=MeshRasterizer( cameras=cameras, 
         raster_settings=raster_settings)
-for i in tqdm(range(1000)):
+for i in tqdm(range(100)):
     a=rasterizer_(mesh)
 
 plt.figure(figsize=(10, 10))
@@ -112,5 +113,5 @@ images = renderer(mesh, lights=lights)
 ####
 plt.figure(figsize=(10, 10))
 plt.imshow(images[0, ..., :3].cpu().numpy())
-plt.savefig("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/rasterize/data/off2.png");
+plt.savefig("utils/rasterize/data/off2.png");
 plt.show()

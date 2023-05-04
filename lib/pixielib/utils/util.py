@@ -334,6 +334,9 @@ def dict2obj(d):
     for k in d:
         o.__dict__[k] = dict2obj(d[k])
     return o
+# def dict2obj(d):
+
+#     return d
 
 
 # original saved file with DataParallel
