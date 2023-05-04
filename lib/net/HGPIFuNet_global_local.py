@@ -443,10 +443,10 @@ class HGPIFuNet_global_local(BasePIFuNet):
                 if "vis" in self.smpl_feats:
                     
                     point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :])
-                    point_feat_list = [point_local_feat, smpl_feat[:, :-1, :], self.index(vol_feat, xyz)]
+                    point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]] ##, self.index(vol_feat, xyz)
                 else:
                     point_local_feat = self.index(im_feat, xy)
-                    point_feat_list = [point_local_feat, self.index(vol_feat, xyz), smpl_feat[:, :, :]]      
+                    point_feat_list = [point_local_feat, smpl_feat[:, :, :]]       ##, self.index(vol_feat, xyz)
             elif self.prior_type == "icon":
                 if "vis" in self.smpl_feats:
                     

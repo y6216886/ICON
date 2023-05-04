@@ -37,6 +37,19 @@ from kaolin.ops.mesh import check_sign
 from kaolin.metrics.trianglemesh import point_to_mesh_distance
 
 from pytorch3d.loss import (mesh_laplacian_smoothing, mesh_normal_consistency)
+from pytorch3d.renderer import (
+    look_at_view_transform,
+    FoVPerspectiveCameras, 
+    PointLights, 
+    DirectionalLights, 
+    Materials, 
+    RasterizationSettings, 
+    MeshRenderer, 
+    MeshRasterizer,  
+    SoftPhongShader,
+    TexturesUV,
+    TexturesVertex
+)
 
 import tinyobjloader
 
@@ -346,6 +359,9 @@ def get_visibility(xy, z, faces):
         perspective_correct=raster_settings.perspective_correct,
         cull_backfaces=raster_settings.cull_backfaces,
     )
+    
+
+
     vis_vertices_id = torch.unique(faces[torch.unique(pix_to_face), :])
     vis_mask = torch.zeros(size=(z.shape[0], 1))
     vis_mask[vis_vertices_id] = 1.0

@@ -130,11 +130,18 @@ if __name__ == "__main__":
     cfg.freeze()
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
-    os.makedirs("/home/yangyifan/wandb", exist_ok=True)
-    if not args.offline: 
-        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir="/home/yangyifan/wandb")
-    if args.offline or args.test_code:
-        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir="/home/yangyifan/wandb",offline=True)
+    try:
+        os.makedirs("/home/yangyifan/wandb", exist_ok=True)
+        if not args.offline: 
+            wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir="/home/yangyifan/wandb")
+        if args.offline or args.test_code:
+            wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir="/home/yangyifan/wandb",offline=True)
+    except:
+        os.makedirs(args.savepath+"wandb", exist_ok=True)
+        if not args.offline: 
+            wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath+"wandb")
+        if args.offline or args.test_code:
+            wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath+"wandb",offline=True)
     # if not args.offline: 
     #     wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath)
     # if args.offline or args.test_code:

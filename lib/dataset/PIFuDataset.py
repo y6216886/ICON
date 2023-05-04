@@ -374,8 +374,8 @@ class PIFuDataset():
         smplx_param = np.load(data_dict['smplx_param'], allow_pickle=True)
         smplx_pose = smplx_param["body_pose"]    # [1,63]
         smplx_betas = smplx_param["betas"]    # [1,10]
-        print(smplx_pose.max(), smplx_pose.min(),"smplx_pose")
-        print(smplx_betas.max(), smplx_betas.min(),"smplx_betas")
+        # print(smplx_pose.max(), smplx_pose.min(),"smplx_pose")
+        # print(smplx_betas.max(), smplx_betas.min(),"smplx_betas")
         smplx_pose, smplx_betas = self.add_noise(
             smplx_betas.shape[1],
             smplx_pose[0],

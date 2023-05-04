@@ -1,0 +1,24 @@
+--2023-04-28 11:41:07--  https://www.dropbox.com/s/gsutznb4z58hm93/hairstyles.zip?dl=0
+Resolving www.dropbox.com (www.dropbox.com)... 174.37.54.20, 2001::2d4d:baff
+Connecting to www.dropbox.com (www.dropbox.com)|174.37.54.20|:443... failed: Connection timed out.
+Connecting to www.dropbox.com (www.dropbox.com)|2001::2d4d:baff|:443... failed: Network is unreachable.
+--2023-04-28 11:43:18--  https://dl.fbaipublicfiles.com/pytorch3d/data/cow_mesh/cow.obj
+Resolving dl.fbaipublicfiles.com (dl.fbaipublicfiles.com)... 54.192.18.81, 54.192.18.54, 54.192.18.51, ...
+Connecting to dl.fbaipublicfiles.com (dl.fbaipublicfiles.com)|54.192.18.81|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 330659 (323K) [text/plain]
+Saving to: ‘utils/rasterize/data/cow.obj’
+
+     0K .......... .......... .......... .......... .......... 15%  596K 0s
+    50K .......... .......... .......... .......... .......... 30%  921K 0s
+   100K .......... .......... .......... .......... .......... 46% 1.74M 0s
+   150K .......... .......... .......... .......... .......... 61% 1.79M 0s
+   200K .......... .......... .......... .......... .......... 77% 1.15M 0s
+   250K .......... .......... .......... .......... .......... 92% 1.15M 0s
+   300K .......... .......... ..                              100% 2.11M=0.3s
+
+2023-04-28 11:43:19 (1.09 MB/s) - ‘utils/rasterize/data/cow.obj’ saved [330659/330659]
+
+FINISHED --2023-04-28 11:43:19--
+Total wall clock time: 2m 12s
+Downloaded: 1 files, 323K in 0.3s (1.09 MB/s)

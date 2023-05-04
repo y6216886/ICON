@@ -1,5 +1,8 @@
-name: icon3090
+name: icon3090v1
 channels:
+  - conda-forge
+  - defaults
+  - conda-forge/label/broken  
   - pytorch-lts
   - nvidia
   - conda-forge

@@ -11,4 +11,5 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 # python /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/train_nerf.py -d 1 2  --occ 0.8
 
 
-CUDA_VISIBLE_DEVICES=3,5 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertainty.yaml --gpus 0 --num_gpus 2 --name baseline/pertubesdf0005 --perturb_sdf 0.005
+# CUDA_VISIBLE_DEVICES=3,5 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertainty.yaml --gpus 0 --num_gpus 2 --name baseline/pertubesdf0005 --perturb_sdf 0.005
+CUDA_VISIBLE_DEVICES=3 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertainty.yaml --gpus 0 --num_gpus 1 --name baseline/pertubesdf0001 --perturb_sdf 0.001
