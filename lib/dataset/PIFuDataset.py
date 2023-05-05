@@ -481,14 +481,17 @@ class PIFuDataset():
             )
             smplx_faces = torch.as_tensor(self.smplx.smplx_faces).long()
             smplx_cmap = torch.as_tensor(np.load(self.smplx.cmap_vert_path)).float()
-
+            ####add here to speed####
+            smplx_vis = torch.load(data_dict['vis_path']).float()  ##need to perturb  {0,1}
+            return_dict.update({'smpl_vis': smplx_vis})
+            #########################
         else:
             
-                smplx_vis = torch.load(data_dict['vis_path']).float()
+                smplx_vis = torch.load(data_dict['vis_path']).float()  ##need to perturb  {0,1}
                 return_dict.update({'smpl_vis': smplx_vis})
 
-                smplx_verts = rescale_smpl(data_dict[f"{smpl_type}_path"], scale=100.0)
-                smplx_faces = torch.as_tensor(getattr(self.smplx, f"{smpl_type}_faces")).long()
+                smplx_verts = rescale_smpl(data_dict[f"{smpl_type}_path"], scale=100.0) ##need to perturb [-47.408991,35.852061]
+                smplx_faces = torch.as_tensor(getattr(self.smplx, f"{smpl_type}_faces")).long() ##hard to perturb
                 smplx_cmap = self.smplx.cmap_smpl_vids(smpl_type)
 
 

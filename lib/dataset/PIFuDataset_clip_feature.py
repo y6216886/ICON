@@ -514,7 +514,7 @@ class PIFuDataset():
 
         return verts, faces, pad_v_num, pad_f_num
 
-    def load_smpl(self, data_dict, vis=False):
+    def load_smpl(self, data_dict, vis=False): ##add noise affect this
 
         smpl_type = "smplx" if (
             'smplx_path' in data_dict.keys() and os.path.exists(data_dict['smplx_path'])
