@@ -96,6 +96,11 @@ gpu023 icon without batchnorm
 gpu022 unet mlp 2023 0422
 gpu016 dropout 0.1  gpu017 dropout 0.2
 
+gpu021 icon_pamir se sev1
+
+smplx noise num_worker8 6hr for an epoch 8G GPU MEMORY
+smplx noise num_worker1 120hr for an epoch 8G GPU MEMORY
+smplx noise num_worker32 6hr for an epoch
 ---
 ### N net MLP i.e., converse U net
 
