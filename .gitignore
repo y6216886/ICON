@@ -3,6 +3,7 @@ data/*
 data
 command/
 testcode
+nvdiffrast/*
 configs
 !data/tbfo.ttf
 __pycache__
