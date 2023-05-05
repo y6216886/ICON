@@ -496,8 +496,8 @@ class PIFuDataset():
 
         # get smpl_vis
         if "smpl_vis" not in list(return_dict.keys()) and "smpl_vis" in self.feat_keys:
-            (xy, z) = torch.as_tensor(smplx_verts).split([2, 1], dim=1) #, device=self.device
-            smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces)).long()  #, device=self.device
+            (xy, z) = torch.as_tensor(smplx_verts,device=self.device).split([2, 1], dim=1) #, device=self.device
+            smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces,device=self.device)).long()  #, device=self.device
             return_dict['smpl_vis'] = smplx_vis
 
         if "smpl_norm" not in list(return_dict.keys()) and "smpl_norm" in self.feat_keys:

@@ -9,7 +9,7 @@ if torch.cuda.is_available():
     torch.cuda.set_device(device)
 else:
     device = torch.device("cpu")
-device = torch.device("cuda:0")
+device = torch.device("cpu")
 import os
 import torch
 import matplotlib.pyplot as plt

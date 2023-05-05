@@ -347,9 +347,9 @@ def get_visibility(xy, z, faces):
     xyz = (xyz + 1.0) / 2.0
     faces = faces.long()
     # rasterizer = Pytorch3dRasterizer(image_size=2**12)
-    rasterizer = Pytorch3dRasterizer(image_size=2**4)
-    faces=faces.to("cuda:0")
-    xyz=xyz.to("cuda:0")
+    rasterizer = Pytorch3dRasterizer(image_size=2**9)
+    # faces=faces.to("cuda:0")
+    # xyz=xyz.to("cuda:0")
     meshes_screen = Meshes(verts=xyz[None, ...], faces=faces[None, ...])
     raster_settings = rasterizer.raster_settings
     pix_to_face, zbuf, bary_coords, dists = rasterize_meshes(
