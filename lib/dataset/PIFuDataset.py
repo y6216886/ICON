@@ -482,9 +482,10 @@ class PIFuDataset():
             smplx_faces = torch.as_tensor(self.smplx.smplx_faces).long()
             smplx_cmap = torch.as_tensor(np.load(self.smplx.cmap_vert_path)).float()
             ####add here to speed####
-            smplx_vis = torch.load(data_dict['vis_path']).float()  ##need to perturb  {0,1}
-            return_dict.update({'smpl_vis': smplx_vis})
+            smplx_vis = torch.load(data_dict['vis_path']).float()  
+            return_dict.update({'smpl_vis': smplx_vis}) ##speed a little not too much
             #########################
+
         else:
             
                 smplx_vis = torch.load(data_dict['vis_path']).float()  ##need to perturb  {0,1}
