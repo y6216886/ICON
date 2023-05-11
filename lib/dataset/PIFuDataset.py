@@ -362,15 +362,15 @@ class PIFuDataset():
         #     smpl_pose[noise_idx] += (np.random.rand(len(noise_idx)) -
         #                              0.5) * 2.0 * np.pi * noise_scale[noise_type.index("pose")]
         #     smpl_pose = smpl_pose.astype(np.float32)
-        print(self.args.noise,self.args.noise[0],self.args.noise[1])
-        if 'beta' in noise_type and self.args.noise[1] > 0.0:
+        # print(self.args.noise_scale,self.args.noise_scale[0],self.args.noise_scale[1])
+        if 'beta' in noise_type and self.args.noise_scale[1] > 0.0:
             smpl_betas += (np.random.rand(beta_num) -
-                           0.5) * 2.0 * self.args.noise[1]
+                           0.5) * 2.0 * self.args.noise_scale[1]
             smpl_betas = smpl_betas.astype(np.float32)
 
-        if 'pose' in noise_type and self.args.noise[0] > 0.0:
+        if 'pose' in noise_type and self.args.noise_scale[0] > 0.0:
             smpl_pose[noise_idx] += (np.random.rand(len(noise_idx)) -
-                                     0.5) * 2.0 * np.pi * self.args.noise[0]
+                                     0.5) * 2.0 * np.pi * self.args.noise_scale[0]
             smpl_pose = smpl_pose.astype(np.float32)
         if type == 'smplx':
             return torch.as_tensor(smpl_pose[None, ...]), torch.as_tensor(smpl_betas[None, ...])
