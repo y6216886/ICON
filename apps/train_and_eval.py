@@ -113,6 +113,10 @@ if __name__ == "__main__":
     ######
     ##global and local
     parser.add_argument("--pamir_icon", default=False, action="store_true")
+    
+    parser.add_argument('--noise_scale', nargs='+', type=float) #2,3,4,5,6
+    
+    
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
@@ -125,7 +129,7 @@ if __name__ == "__main__":
 
     name_dict=["name",exp_name]
     cfg.merge_from_list(name_dict)
-
+    print("noise scale",args.noise_scale)
     # cfg.gpus=[int(i) for i in args.gpus]
     cfg.freeze()
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)

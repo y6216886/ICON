@@ -31,8 +31,10 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 
 # CUDA_VISIBLE_DEVICES=2 python -m apps.train -cfg configs/train/pamir_normal_debug/pamir_img_nb_nf_test.yaml --gpus 0
 
-CUDA_VISIBLE_DEVICES=0 python -m apps.train_and_eval -cfg configs/train/pamir/pamir_img.yaml -gpus 0 --num_gpus 1 --name baseline/pamir_perturb_sdf_02  --perturb_sdf 0.2
+# CUDA_VISIBLE_DEVICES=1 python -m apps.train_and_eval -cfg configs/train/pamir/pamir_img_noise.yaml --gpus 0 --num_gpus 1 --name baseline/pamir_perturb_smpl_1  
 
-CUDA_VISIBLE_DEVICES=0 python -m apps.train_and_eval -cfg configs/train/pamir/pamir_img.yaml -gpus 0 --num_gpus 1 --name baseline/pamir_perturb_sdf_02  --perturb_sdf 0.2
+# CUDA_VISIBLE_DEVICES=5 python -m apps.train_and_eval -cfg configs/train/pamir/pamir_img_noise.yaml --gpus 0 --num_gpus 1 --name baseline/pamir_perturb_smpl_01
 
-CUDA_VISIBLE_DEVICES=0 python -m apps.train_and_eval -cfg configs/train/pamir/pamir_img.yaml -gpus 0 --num_gpus 1 --name baseline/pamir_perturb_sdf_02  --perturb_sdf 0.2
+CUDA_VISIBLE_DEVICES=1 python -m apps.train_and_eval -cfg configs/train/pamir/pamir_img_noise.yaml --gpus 0 --num_gpus 1 --name baseline/pamir_perturb_smpl_001v1  
+
+# CUDA_VISIBLE_DEVICES=2 python -m apps.train_and_eval -cfg configs/train/pamir/pamir_img_noise.yaml --gpus 0 --num_gpus 1 --name baseline/pamir_perturb_smpl_05v1 

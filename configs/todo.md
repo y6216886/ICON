@@ -101,6 +101,11 @@ gpu021 icon_pamir se sev1
 smplx noise num_worker8 6hr for an epoch 8G GPU MEMORY
 smplx noise num_worker1 120hr for an epoch 8G GPU MEMORY
 smplx noise num_worker32 6hr for an epoch
+
+0507
+gpu020 icon pamir mlpse 0.1 and 1
+pu024 icon pamir 
+gpu023 pamir
 ---
 ### N net MLP i.e., converse U net
 

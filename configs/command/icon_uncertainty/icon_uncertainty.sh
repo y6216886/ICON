@@ -16,4 +16,11 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 
 # CUDA_VISIBLE_DEVICES=2 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertainty.yaml --gpus 0 --num_gpus 1 --name baseline/pertubesdf01 --perturb_sdf 0.1
 # CUDA_VISIBLE_DEVICES=3 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertainty.yaml --gpus 0 --num_gpus 1 --name baseline/pertubesdf02 --perturb_sdf 0.2
-CUDA_VISIBLE_DEVICES=4 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertainty.yaml --gpus 0 --num_gpus 1 --name baseline/pertubesdf05 --perturb_sdf 0.5
+
+# CUDA_VISIBLE_DEVICES=2 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_noise.yaml --gpus 0 --num_gpus 1 --name baseline/icon_smlpnoise_001v1 --dataset.noise_scale 0.01 0.01 
+
+# CUDA_VISIBLE_DEVICES=6 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_noise.yaml --gpus 0 --num_gpus 1 --name baseline/icon_smlpnoise_05v2 --dataset.noise_scale 0.5 0.5 
+
+# CUDA_VISIBLE_DEVICES=0 python -m apps.train -cfg configs/train/icon_uncertainty/icon-filter_noise.yaml --gpus 0 --num_gpus 1 --name baseline/icon_smpl_noise_01 --test_mode
+
+CUDA_VISIBLE_DEVICES=0 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_noise.yaml --gpus 0 --num_gpus 1 --name baseline/icon_smlpnoise_tess 
