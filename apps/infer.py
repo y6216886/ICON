@@ -98,6 +98,7 @@ if __name__ == "__main__":
     ###dropout
     parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
+    parser.add_argument('--pamir_icon', default=False, action="store_true") #2,3,4,5,6
     args = parser.parse_args()
 
     # cfg read and merge
