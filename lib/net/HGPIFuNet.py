@@ -460,9 +460,13 @@ class HGPIFuNet(BasePIFuNet):
             if pred_if.size(1)==1:
                 error_if += self.error_term(pred_if, labels)
             elif pred_if.size(1)==2:
-                beta=pred_if[:,1:2,:] + self.args.beta_min
-                error_if +=((pred_if[:,:1,:]-labels)**2/(2*beta**2)).mean()
-                error_if += self.args.beta_plus + torch.log(beta).mean() # +3 to make it positive
+                # beta=pred_if[:,1:2,:] + self.args.beta_min
+                # error_if +=((pred_if[:,:1,:]-labels)**2/(2*beta**2)).mean()
+                # error_if += self.args.beta_plus + torch.log(beta).mean() # +3 to make it positive
+                beta=pred_if[:,1:2,:]
+                beta_exp=torch.exp(beta)
+                error_if +=((pred_if[:,:1,:]-labels)**2/(beta_exp)).mean()
+                error_if += self.args.beta_plus + beta.mean() # +3 to make it positive
         error_if /= len(preds_if_list)
 
         return error_if
