@@ -1,6 +1,7 @@
 name: icon-filter
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
-resume_path: "./data/ckpt/icon-filter.ckpt"
+# resume_path: "./data/ckpt/icon-filter.ckpt"
+resume_path: "/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon_pamir_perturb_smpl_01_mlpse/last.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
 results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
@@ -22,5 +23,5 @@ net:
   smpl_dim: 7
 
 # user defined
-mcube_res: 512    # occupancy field resolution, higher --> more details
+mcube_res: 128    # occupancy field resolution, higher --> more details
 clean_mesh: False # if True, will remove floating pieces

@@ -35,6 +35,8 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 
 # CUDA_VISIBLE_DEVICES=5 python -m apps.train_and_eval -cfg configs/train/pamir/pamir_img_noise.yaml --gpus 0 --num_gpus 1 --name baseline/pamir_perturb_smpl_01
 
-CUDA_VISIBLE_DEVICES=1 python -m apps.train_and_eval -cfg configs/train/pamir/pamir_img_noise.yaml --gpus 0 --num_gpus 1 --name baseline/pamir_perturb_smpl_001v1  
+# CUDA_VISIBLE_DEVICES=5 python -m apps.train_and_eval -cfg configs/train/pamir/pamir_img_noise.yaml --gpus 0 --num_gpus 1 --name baseline/pamir_perturb_smpl_001v1  --noise_scale 0.01 0.01
 
 # CUDA_VISIBLE_DEVICES=2 python -m apps.train_and_eval -cfg configs/train/pamir/pamir_img_noise.yaml --gpus 0 --num_gpus 1 --name baseline/pamir_perturb_smpl_05v1 
+
+CUDA_VISIBLE_DEVICES=5 python -m apps.train_and_eval -cfg configs/train/pamir/pamir_img_noise.yaml --gpus 0 --num_gpus 1 --name baseline/pamir_perturb_smpl_02  --noise_scale 0.2 0.2

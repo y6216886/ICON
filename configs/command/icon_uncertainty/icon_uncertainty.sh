@@ -23,4 +23,6 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 
 # CUDA_VISIBLE_DEVICES=0 python -m apps.train -cfg configs/train/icon_uncertainty/icon-filter_noise.yaml --gpus 0 --num_gpus 1 --name baseline/icon_smpl_noise_01 --test_mode
 
-CUDA_VISIBLE_DEVICES=0 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_noise.yaml --gpus 0 --num_gpus 1 --name baseline/icon_smlpnoise_tess 
+# CUDA_VISIBLE_DEVICES=0 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_noise.yaml --gpus 0 --num_gpus 1 --name baseline/icon_smlpnoise_tess 
+
+CUDA_VISIBLE_DEVICES=4 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_noise.yaml --gpus 0 --num_gpus 1 --name baseline/icon_smlpnoise_02v2 --noise_scale 0.2 0.2 

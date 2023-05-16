@@ -277,7 +277,9 @@ class TestDataset():
         N_body = data_dict["body_pose"].shape[1]
         data_dict["body_pose"] = data_dict["body_pose"][:, :, :, :2].reshape(1, N_body, -1)
         data_dict["global_orient"] = data_dict["global_orient"][:, :, :, :2].reshape(1, 1, -1)
-
+        
+        # data_pamir_icon=self.compute_voxel_verts(data_dict["body_pose"],data_dict["global_orient"],data_dict['betas'],data_dict['trans'],data_dict['scale'] ) #body_pose, global_orient, betas, trans, scale
+        # data_dict.update(data_pamir_icon)
         return data_dict
 
     def render_normal(self, verts, faces):

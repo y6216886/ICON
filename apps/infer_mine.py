@@ -22,7 +22,7 @@ import logging
 warnings.filterwarnings("ignore")
 logging.getLogger("lightning").setLevel(logging.ERROR)
 logging.getLogger("trimesh").setLevel(logging.ERROR)
-
+from lib.common.train_util import load_networks
 from tqdm.auto import tqdm
 from lib.common.render import query_color, image2vid
 from lib.renderer.mesh import compute_normal_batch
@@ -66,8 +66,9 @@ if __name__ == "__main__":
     parser.add_argument("-in_dir", "--in_dir", type=str, default="./examples/my_test_img")
     parser.add_argument("-out_dir", "--out_dir", type=str, default="./results")
     parser.add_argument('-seg_dir', '--seg_dir', type=str, default=None)
-    parser.add_argument("-cfg", "--config", type=str, default="./configs/icon-filter.yaml")
+    parser.add_argument("-cfg", "--config", type=str, default="configs/icon-pamir-filter.yaml")
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
+    parser.add_argument("--PE_sdf", type=int, default=0) 
 
     ####model
     parser.add_argument("--mlpSe", default=False, action="store_true")
@@ -77,7 +78,6 @@ if __name__ == "__main__":
     parser.add_argument("--conv3d_start", type=int, default=2)
     parser.add_argument("--conv3d_kernelsize", type=int, default=1)
     parser.add_argument("--pad_mode", type=str, default='zeros')
-    parser.add_argument("--mlp_first_dim", type=int, default=20) 
 
     ####uncertainty
     parser.add_argument("--uncertainty", default=False, action="store_true")
@@ -100,6 +100,7 @@ if __name__ == "__main__":
     parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
     parser.add_argument('--pamir_icon', default=False, action="store_true") #2,3,4,5,6
+
     args = parser.parse_args()
 
     # cfg read and merge
@@ -114,13 +115,14 @@ if __name__ == "__main__":
     cfg.merge_from_list(cfg_show_list)
     cfg.freeze()
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "5"
     device = torch.device(f"cuda:{args.gpu_device}")
 
     # load model and dataloader
     model = ICON(cfg, args)
-    model = load_checkpoint(model, cfg)
-
+    # model = load_checkpoint(model, cfg)
+    load_networks(cfg, model, mlp_path=cfg.resume_path, normal_path=cfg.normal_path)
+    model=model.cuda()
     dataset_param = {
         'image_dir': args.in_dir,
         'seg_dir': args.seg_dir,
@@ -262,14 +264,14 @@ if __name__ == "__main__":
             T_mask_F, T_mask_B = dataset.render.get_silhouette_image()
 
             with torch.no_grad():
-                in_tensor["normal_F"], in_tensor["normal_B"] = model.netG.normal_filter(in_tensor)
+                in_tensor["normal_F"], in_tensor["normal_B"] = model.netG.normal_filter(in_tensor) ###MARK
 
-            diff_F_smpl = torch.abs(in_tensor["T_normal_F"] - in_tensor["normal_F"])
+            diff_F_smpl = torch.abs(in_tensor["T_normal_F"] - in_tensor["normal_F"])  #smpl mask
             diff_B_smpl = torch.abs(in_tensor["T_normal_B"] - in_tensor["normal_B"])
 
             losses["normal"]["value"] = (diff_F_smpl + diff_F_smpl).mean()
 
-            # silhouette loss
+            # silhouette loss  ### how to improve this!!!
             smpl_arr = torch.cat([T_mask_F, T_mask_B], dim=-1)[0]
             gt_arr = torch.cat([in_tensor["normal_F"][0], in_tensor["normal_B"][0]],
                                dim=2).permute(1, 2, 0)
@@ -412,7 +414,7 @@ if __name__ == "__main__":
             {"smpl_norm": compute_normal_batch(in_tensor["smpl_verts"], in_tensor["smpl_faces"])}
         )
 
-        if cfg.net.prior_type == "pamir":
+        if cfg.net.prior_type == "pamir" or args.pamir_icon:
             in_tensor.update(
                 dataset.compute_voxel_verts(
                     optimed_pose,

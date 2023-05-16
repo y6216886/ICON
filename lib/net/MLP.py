@@ -94,7 +94,8 @@ class MLP(pl.LightningModule):
             filter_channels[0]=args.mlp_first_dim
         print(colored("I have modified mlp filter channles{}".format(filter_channels),"red"))
         if args.uncertainty:
-            filter_channels[-1]+=1
+            print("uncertainty")
+            filter_channels[-1]+=1  #We follow the authors’ suggestion and train the network to predict the log of the observation noise scalar, s, for numerical stability.
         self.filters = nn.ModuleList()
         self.norms = nn.ModuleList()
         self.res_layers = res_layers
@@ -170,6 +171,15 @@ class MLP(pl.LightningModule):
                         #       self.filters[l].weight_v.size())
         self.len_filter=len(self.filters)
         if self.args.dropout!=0: self.dropout=nn.Dropout(self.args.dropout)
+        if self.args.uncertainty:
+            self.mlp_uncertainty=nn.Sequential(nn.Conv1d(1, 4, 1),
+                                               nn.ELU(inplace=True),
+                                               nn.Dropout(p=0.2),
+                                               nn.Conv1d(4, 8, 1),
+                                               nn.ELU(inplace=True),
+                                               nn.Dropout(p=0.2),
+                                               nn.Conv1d(8, 1, 1),
+            )
 
     def forward(self, feature, clip_feature=None): ##todo fuse clip feature into
         '''
@@ -212,12 +222,11 @@ class MLP(pl.LightningModule):
             ###
 ##bug do not activate the last channel
 
-
-
-
         if self.last_op is not None:
             y = self.last_op(y)
-
+        if self.args.uncertainty:
+            y_uncertainty=self.mlp_uncertainty(y)
+            return torch.cat([y,y_uncertainty],dim=1)
         return y
     
 

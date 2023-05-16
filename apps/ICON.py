@@ -46,6 +46,7 @@ class ICON(pl.LightningModule):
         self.clean_mesh_flag = cfg.clean_mesh
 
         if self.args.pamir_icon:
+            print("using HGPIFuNet_global_local for pamir icon")
             self.netG = HGPIFuNet_global_local(
             self.cfg,
             self.cfg.projection_mode,

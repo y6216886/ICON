@@ -26,7 +26,7 @@ from pytorch_lightning.loggers import WandbLogger
 # import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -84,6 +84,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
+    parser.add_argument("--PE_sdf", type=int, default=0) 
 
     ####model
     parser.add_argument("--mlpSe", default=False, action="store_true")
@@ -93,6 +94,7 @@ if __name__ == "__main__":
     parser.add_argument("--conv3d_start", type=int, default=2)
     parser.add_argument("--conv3d_kernelsize", type=int, default=1)
     parser.add_argument("--pad_mode", type=str, default='zeros')
+
 
     ####uncertainty
     parser.add_argument("--uncertainty", default=False, action="store_true")
@@ -117,7 +119,7 @@ if __name__ == "__main__":
 
     ##global and local
     parser.add_argument("--pamir_icon", default=False, action="store_true")
-    parser.add_argument('--noise_scale', nargs='+', type=float, default=[0.2,0.2]) #2,3,4,5,6
+    parser.add_argument('--noise_scale', nargs='+', type=float, default=[0,0]) #2,3,4,5,6
     ######
     args = parser.parse_args()
     cfg = get_cfg_defaults()

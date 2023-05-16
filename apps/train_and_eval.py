@@ -82,6 +82,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
+    parser.add_argument("--PE_sdf", type=int, default=0)  
     ####model
     parser.add_argument("--mlpSe", default=False, action="store_true") ##spatial se
     parser.add_argument("--mlpSev1", default=False, action="store_true") ##channel se
@@ -113,9 +114,7 @@ if __name__ == "__main__":
     ######
     ##global and local
     parser.add_argument("--pamir_icon", default=False, action="store_true")
-    
-    parser.add_argument('--noise_scale', nargs='+', type=float) #2,3,4,5,6
-    
+    parser.add_argument('--noise_scale', nargs='+', type=float) ##max smpl pose 1.45  min -1.18  smpl betas max 1.04 min -0.35
     
     args = parser.parse_args()
     cfg = get_cfg_defaults()
@@ -130,7 +129,6 @@ if __name__ == "__main__":
     name_dict=["name",exp_name]
     cfg.merge_from_list(name_dict)
     print("noise scale",args.noise_scale)
-    # cfg.gpus=[int(i) for i in args.gpus]
     cfg.freeze()
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)

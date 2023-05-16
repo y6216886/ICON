@@ -7,7 +7,36 @@ from kaolin.ops.mesh import check_sign
 from kaolin.metrics.trianglemesh import point_to_mesh_distance
 import time
 smplx=SMPLX()
+import torch.nn as nn
 
+class PosEmbedding(nn.Module):
+    def __init__(self, max_logscale, N_freqs, logscale=True):
+        """
+        Defines a function that embeds x to (x, sin(2^k x), cos(2^k x), ...)
+        """
+        super().__init__()
+        self.funcs = [torch.sin, torch.cos]
+
+        if logscale:
+            self.freqs = 2**torch.linspace(0, max_logscale, N_freqs)
+        else:
+            self.freqs = torch.linspace(1, 2**max_logscale, N_freqs)
+
+    def forward(self, x):
+        """
+        Inputs:
+            x: (B, 3)
+
+        Outputs:
+            out: (B, 6*N_freqs+3)
+        """
+        out = [x]
+        for freq in self.freqs:
+            for func in self.funcs:
+                out += [func(freq*x)]
+
+        return torch.cat(out, -1)
+    
 
 class PointFeat:
     def __init__(self, verts, faces, args=None):
@@ -36,6 +65,7 @@ class PointFeat:
 
         self.verts = verts
         self.triangles = face_vertices(self.verts, self.faces)
+        self.embedding_sdf = PosEmbedding(self.args.PE_sdf-1, self.args.PE_sdf)
 
     def query(self, points, feats={}):
         """
@@ -78,6 +108,9 @@ class PointFeat:
             if self.args.perturb_sdf!=0:
                 perturb=(torch.rand(pts_sdf.size(), device=pts_sdf.device) -0.5) *2 *self.args.perturb_sdf
                 pts_sdf+=perturb
+            if self.args.PE_sdf!=0:
+                pts_sdf= self.embedding_sdf(pts_sdf)
+            
             out_dict["sdf"] = pts_sdf
 
         if "vis" in out_dict.keys():
