@@ -93,9 +93,9 @@ class MLP(pl.LightningModule):
         if args.mlp_first_dim!=0:
             filter_channels[0]=args.mlp_first_dim
         print(colored("I have modified mlp filter channles{}".format(filter_channels),"red"))
-        if args.uncertainty:
-            print("uncertainty")
-            filter_channels[-1]+=1  #We follow the authors’ suggestion and train the network to predict the log of the observation noise scalar, s, for numerical stability.
+        # if args.uncertainty:
+        #     print("uncertainty")
+        #     filter_channels[-1]+=1  #We follow the authors’ suggestion and train the network to predict the log of the observation noise scalar, s, for numerical stability.
         self.filters = nn.ModuleList()
         self.norms = nn.ModuleList()
         self.res_layers = res_layers
