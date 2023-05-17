@@ -18,7 +18,8 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 
 # CUDA_VISIBLE_DEVICES=2 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_noise01 --noise_scale 0.1 0.1
 
-CUDA_VISIBLE_DEVICES=6 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_pamir_icon_noise01 --noise_scale 0.1 0.1 --pamir_icon --mlp_first_dim 45
+# CUDA_VISIBLE_DEVICES=6 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_pamir_icon_noise01 --noise_scale 0.1 0.1 --pamir_icon --mlp_first_dim 45
 
 # python /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/train_nerf.py -d 0 2 3 --occ 0.8
 
+CUDA_VISIBLE_DEVICES=6 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_kl --kl_div

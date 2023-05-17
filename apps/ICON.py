@@ -215,6 +215,7 @@ class ICON(pl.LightningModule):
         preds_G, error_G = self.netG(in_tensor_dict)
         if preds_G.size(1)!=1:
             preds_G=preds_G[:,:1,:]
+
         acc, iou, prec, recall = self.evaluator.calc_acc(
             preds_G.flatten(),
             in_tensor_dict["label"].flatten(),
@@ -222,9 +223,17 @@ class ICON(pl.LightningModule):
             use_sdf=self.cfg.sdf,
         )
 
-
+        if self.args.kl_div:
+                metrics_log = {
+            "train_loss": error_G[0].item(),
+            "kl_loss":error_G[1].item(),
+            "train_acc": acc.item(),
+            "train_iou": iou.item(),
+            "train_prec": prec.item(),
+            "train_recall": recall.item(),
+        }
         # metrics processing
-        metrics_log = {
+        else: metrics_log = {
             "train_loss": error_G.item(),
             "train_acc": acc.item(),
             "train_iou": iou.item(),
@@ -243,8 +252,9 @@ class ICON(pl.LightningModule):
                 self.render_func(in_tensor_dict, dataset="train")
 
         metrics_return = {k.replace("train_", ""): torch.tensor(v) for k, v in metrics_log.items()}
-
-        metrics_return.update({"loss": error_G, "log": tf_log, "progress_bar": bar_log})
+        if self.args.kl_div:
+            metrics_return.update({"loss": error_G[0], "kl_loss":error_G[1],  "log": tf_log, "progress_bar": bar_log})
+        else:metrics_return.update({"loss": error_G, "log": tf_log, "progress_bar": bar_log})
 
         return metrics_return
 
@@ -254,7 +264,16 @@ class ICON(pl.LightningModule):
             outputs = outputs[0]
 
         # metrics processing
-        metrics_log = {
+        if self.args.kl_div:
+            metrics_log = {
+            "train_avgloss": batch_mean(outputs, "loss"),
+            "train_avg_kl_loss": batch_mean(outputs, "kl_loss"),
+            "train_avgiou": batch_mean(outputs, "iou"),
+            "train_avgprec": batch_mean(outputs, "prec"),
+            "train_avgrecall": batch_mean(outputs, "recall"),
+            "train_avgacc": batch_mean(outputs, "acc"),
+        }
+        else: metrics_log = {
             "train_avgloss": batch_mean(outputs, "loss"),
             "train_avgiou": batch_mean(outputs, "iou"),
             "train_avgprec": batch_mean(outputs, "prec"),
@@ -314,8 +333,16 @@ class ICON(pl.LightningModule):
         if batch_idx % int(self.cfg.freq_show_val) == 0:
             with torch.no_grad():
                 self.render_func(in_tensor_dict, dataset="val", idx=batch_idx) ##this function is computational reduntant
-
-        metrics_return = {
+        if self.args.kl_div:
+            metrics_return = {
+            "val_loss": error_G[0],
+            "kl_loss": error_G[1],
+            "val_acc": acc,
+            "val_iou": iou,
+            "val_prec": prec,
+            "val_recall": recall,
+        }
+        else: metrics_return = {
             "val_loss": error_G,
             "val_acc": acc,
             "val_iou": iou,

@@ -95,6 +95,7 @@ if __name__ == "__main__":
     parser.add_argument("--uncertainty", default=False, action="store_true")
     parser.add_argument("--beta_min", type=float, default=0)
     parser.add_argument("--beta_plus", type=float, default=0)
+    parser.add_argument("--kl_div", default=False, action="store_true")
 
     ######
     #####useclip

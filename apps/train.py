@@ -77,9 +77,9 @@ if __name__ == "__main__":
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
-    parser.add_argument("--test_code", default=False, action="store_true")
+    parser.add_argument("--test_code", default=True, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
-    parser.add_argument("--offline",default=True, action="store_true")
+    parser.add_argument("--offline",default=False, action="store_true")
     parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
@@ -100,6 +100,7 @@ if __name__ == "__main__":
     parser.add_argument("--uncertainty", default=True, action="store_true")
     parser.add_argument("--beta_min", type=float, default=0.03)
     parser.add_argument("--beta_plus", type=float, default=3.)
+    parser.add_argument("--kl_div", default=True, action="store_true")
     ######
 
     #####useclip
@@ -117,7 +118,7 @@ if __name__ == "__main__":
     parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
 
-    ##global and local
+    ##global and local  
     parser.add_argument("--pamir_icon", default=False, action="store_true")
     parser.add_argument('--noise_scale', nargs='+', type=float, default=[0,0]) #2,3,4,5,6
     ######
@@ -258,7 +259,7 @@ if __name__ == "__main__":
     currentepoch=load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
     if args.resume: trainer.current_epoch=currentepoch
     if args.test_code: 
-        trainer.max_epochs=1
+        trainer.max_epochs=2
         trainer.log_every_n_steps=1
         trainer.val_check_interval=1
     # if trainer.global_rank == 0:
