@@ -114,7 +114,7 @@ if __name__ == "__main__":
     ######
     ##global and local
     parser.add_argument("--pamir_icon", default=False, action="store_true")
-    parser.add_argument('--noise_scale', nargs='+', type=float) ##max smpl pose 1.45  min -1.18  smpl betas max 1.04 min -0.35
+    parser.add_argument('--noise_scale', nargs='+', type=float, default=[0.,0.]) ##max smpl pose 1.45  min -1.18  smpl betas max 1.04 min -0.35
     
     args = parser.parse_args()
     cfg = get_cfg_defaults()

@@ -532,7 +532,7 @@ class HGPIFuNet_global_local(BasePIFuNet):
                 beta=pred_if[:,1:2,:]
                 beta_exp=torch.exp(beta)
                 error_if +=((pred_if[:,:1,:]-labels)**2/(beta_exp)).mean()
-                error_if += self.args.beta_plus + beta.mean() # +3 to make it positive
+                error_if += beta.mean() # +3 to make it positive
         error_if /= len(preds_if_list)
 
         return error_if
