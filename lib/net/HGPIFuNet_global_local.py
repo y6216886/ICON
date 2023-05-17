@@ -31,7 +31,26 @@ from termcolor import colored
 from lib.net.BasePIFuNet import BasePIFuNet
 import torch.nn as nn
 import torch
-import time
+# import time
+import torch.nn.functional as F
+import torch
+import math
+
+def soft_assignment(x,y,weights):
+    miu = torch.mean(x)
+    sigma = torch.std(x)
+    x_hat = miu + weights*sigma
+    x_hat = x_hat.repeat(x.size(0),1)
+    x = x[:,None]
+    y = y[:,None]
+    x_dist = 10*torch.exp(-(x_hat-x)**2/5)
+    x_p = F.softmax(x_dist,dim=1)
+    x_p = torch.sum(x_p,dim=0)/len(x)
+    y_dist = 10 * torch.exp(-(x_hat - y) ** 2 / 5)
+    y_p = F.softmax(y_dist, dim=1)
+    y_p = torch.sum(y_p,dim=0)/len(x)
+    return x_p,y_p
+
 
 class HGPIFuNet_global_local(BasePIFuNet):
     """
@@ -232,6 +251,10 @@ class HGPIFuNet_global_local(BasePIFuNet):
         print(colored(summary_log, "yellow"))
 
         self.normal_filter = NormalNet(self.cfg)
+        n_bins=11
+        self.mark = math.log(6)/math.log(10)
+        self.bins = torch.logspace(0,self.mark, n_bins)-1
+        self.bins=self.bins.cuda()
 
         init_net(self)
 
@@ -534,6 +557,16 @@ class HGPIFuNet_global_local(BasePIFuNet):
                 error_if +=((pred_if[:,:1,:]-labels)**2/(beta_exp)).mean()
                 error_if += beta.mean() # +3 to make it positive
         error_if /= len(preds_if_list)
+
+        if self.args.kl_div and pred_if.size(1)==2:
+                disp_est=pred_if[:,:1,:].flatten()
+                disp_gt=labels.flatten()
+                disp_loss = torch.abs(disp_est - disp_gt)
+                uncert_loss = beta_exp.flatten() # act: relu, uncert_est is log(sigma)
+
+                disp_p, uncert_p = soft_assignment(disp_loss, uncert_loss, self.bins)
+                kl_loss = F.kl_div(uncert_p.log(),disp_p, reduction='sum')
+                return error_if+kl_loss, kl_loss
 
         return error_if
 
