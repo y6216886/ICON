@@ -85,6 +85,24 @@ import torch.nn.functional as F
 
 #         return y
 
+class MLP_uncertainty(pl.LightningModule):
+    def __init__(self):
+
+        super(MLP_uncertainty, self).__init__()
+        self.net=nn.Sequential(nn.Conv1d(1, 4, 1),
+                                            nn.ELU(inplace=True),
+                                            nn.Dropout(p=0.2),
+                                            nn.Conv1d(4, 8, 1),
+                                            nn.ELU(inplace=True),
+                                            nn.Dropout(p=0.2),
+                                            nn.Conv1d(8, 1, 1),
+                )
+        for m in self.modules():
+            if isinstance(m, nn.Conv1d):
+                m.bias.data.zero_()
+    def forward(self,x):
+        return self.net(x)
+        
 class MLP(pl.LightningModule):
     def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None, args=None):
 
@@ -172,14 +190,7 @@ class MLP(pl.LightningModule):
         self.len_filter=len(self.filters)
         if self.args.dropout!=0: self.dropout=nn.Dropout(self.args.dropout)
         if self.args.uncertainty:
-            self.mlp_uncertainty=nn.Sequential(nn.Conv1d(1, 4, 1),
-                                               nn.ELU(inplace=True),
-                                               nn.Dropout(p=0.2),
-                                               nn.Conv1d(4, 8, 1),
-                                               nn.ELU(inplace=True),
-                                               nn.Dropout(p=0.2),
-                                               nn.Conv1d(8, 1, 1),
-            )
+            self.mlp_uncertainty=MLP_uncertainty()
 
     def forward(self, feature, clip_feature=None): ##todo fuse clip feature into
         '''

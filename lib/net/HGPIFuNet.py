@@ -489,16 +489,15 @@ class HGPIFuNet(BasePIFuNet):
                 beta=pred_if[:,1:2,:]
                 beta_exp=torch.exp(beta)
                 # error_if +=((pred_if[:,:1,:]-labels)**2/(beta_exp)).mean()
-                error_if +=(F.mse_loss(pred_if[:,:1,:],labels,reduce=False)/(beta_exp)).mean() 
-                error_if += beta.mean() # +3 to make it positive
+                l1_loss=F.l1_loss(pred_if[:,:1,:],labels,reduce=False)
+                error_if +=(l1_loss/beta_exp).mean() 
+                error_if += 0.01*beta.mean() #+3 #to make it positive
                 print(beta.mean(),"beta.mean()", beta_exp, 'beta_exp')  #tensor(-3.4107, device='cuda:0') beta.mean() tensor([[[0.0745, 0.0627, 0.0730,  ..., 0.0225, 0.0444, 0.0225]]],          device='cuda:0') beta_exp                                                                                                     | 5/66 [02:01<15:59, 15.73s/it]
 
         error_if /= len(preds_if_list)
 
         if self.args.kl_div and pred_if.size(1)==2:
-                disp_est=pred_if[:,:1,:].flatten()
-                disp_gt=labels.flatten()
-                disp_loss = torch.abs(disp_est - disp_gt)
+                disp_loss = l1_loss.flatten()
                 uncert_loss = beta_exp.flatten() # act: relu, uncert_est is log(sigma)
 
                 disp_p, uncert_p = soft_assignment(disp_loss, uncert_loss, self.bins)
