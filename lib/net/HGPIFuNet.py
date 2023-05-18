@@ -488,8 +488,11 @@ class HGPIFuNet(BasePIFuNet):
                 # error_if += self.args.beta_plus + torch.log(beta).mean() # +3 to make it positive
                 beta=pred_if[:,1:2,:]
                 beta_exp=torch.exp(beta)
-                error_if +=((pred_if[:,:1,:]-labels)**2/(beta_exp)).mean()
+                # error_if +=((pred_if[:,:1,:]-labels)**2/(beta_exp)).mean()
+                error_if +=(F.mse_loss(pred_if[:,:1,:],labels,reduce=False)/(beta_exp)).mean() 
                 error_if += beta.mean() # +3 to make it positive
+                print(beta.mean(),"beta.mean()", beta_exp, 'beta_exp')  #tensor(-3.4107, device='cuda:0') beta.mean() tensor([[[0.0745, 0.0627, 0.0730,  ..., 0.0225, 0.0444, 0.0225]]],          device='cuda:0') beta_exp                                                                                                     | 5/66 [02:01<15:59, 15.73s/it]
+
         error_if /= len(preds_if_list)
 
         if self.args.kl_div and pred_if.size(1)==2:
