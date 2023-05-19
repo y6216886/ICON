@@ -33,10 +33,11 @@ from lib.dataset.mesh_util import (
     remesh, tensor2variable, rot6d_to_rotmat
 )
 
-from lib.dataset.TestDataset import TestDataset
+from lib.dataset.TestDataset import TestDataset, TestDatasetv1
 from lib.net.local_affine import LocalAffine
 from pytorch3d.structures import Meshes
 from apps.ICON import ICON
+from lib.dataset.Evaluator import Evaluator
 
 import os
 from termcolor import colored
@@ -47,8 +48,12 @@ import trimesh
 import pickle
 import numpy as np
 import torch
-
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 torch.backends.cudnn.benchmark = True
+SEED = 1993
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
 
 if __name__ == "__main__":
 
@@ -61,13 +66,16 @@ if __name__ == "__main__":
     parser.add_argument("-patience", "--patience", type=int, default=5)
     parser.add_argument("-vis_freq", "--vis_freq", type=int, default=1000)
     parser.add_argument("-loop_cloth", "--loop_cloth", type=int, default=200)
-    parser.add_argument("-hps_type", "--hps_type", type=str, default="pixie")
+    parser.add_argument("-hps_type", "--hps_type", type=str, default="pymaf")
     parser.add_argument("-export_video", action="store_true")
     parser.add_argument("-in_dir", "--in_dir", type=str, default="examples/cape")
-    parser.add_argument("-out_dir", "--out_dir", type=str, default="./results/cape")
+    # parser.add_argument("-in_dir", "--in_dir", type=str, default="examples/cape_00127-shortlong-hips-000230")
+    parser.add_argument("-out_dir", "--out_dir", type=str, default="examples/cape")
     parser.add_argument('-seg_dir', '--seg_dir', type=str, default=None)
-    parser.add_argument("-cfg", "--config", type=str, default="configs/icon-pamir-filter.yaml")
-    parser.add_argument("--mlp_first_dim", type=int, default=0) 
+    # parser.add_argument("-cfg", "--config", type=str, default="configs/icon-pamir-filter.yaml")
+    parser.add_argument("-cfg", "--config", type=str, default="configs/icon-pamir-filterv1.yaml")
+    # parser.add_argument("-cfg", "--config", type=str, default="configs/icon-filter.yaml")
+    parser.add_argument("--mlp_first_dim", type=int, default=20) 
     parser.add_argument("--PE_sdf", type=int, default=0) 
 
     ####model
@@ -99,7 +107,10 @@ if __name__ == "__main__":
     ###dropout
     parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
-    parser.add_argument('--pamir_icon', default=False, action="store_true") #2,3,4,5,6
+    parser.add_argument('--pamir_icon', default=True, action="store_true") #2,3,4,5,6
+
+    parser.add_argument('--calc_metric', default=True, action="store_true")
+    
 
     args = parser.parse_args()
 
@@ -136,12 +147,12 @@ if __name__ == "__main__":
         print(colored("PIXIE isn't compatible with PaMIR, thus switch to PyMAF", "red"))
         dataset_param["hps_type"] = "pymaf"
 
-    dataset = TestDataset(dataset_param, device)
+    dataset = TestDatasetv1(dataset_param, device, args)
 
     print(colored(f"Dataset Size: {len(dataset)}", "green"))
 
     pbar = tqdm(dataset)
-
+    evaluator = Evaluator(device=torch.device(f"cuda:0"))
     for data in pbar:
 
         pbar.set_description(f"{data['name']}")
@@ -223,7 +234,7 @@ if __name__ == "__main__":
             optimed_orient_mat = rot6d_to_rotmat(optimed_orient.view(-1, 6)).unsqueeze(0)
             optimed_pose_mat = rot6d_to_rotmat(optimed_pose.view(-1, 6)).unsqueeze(0)
 
-            if dataset_param["hps_type"] != "pixie": ## It seems that icon do not estimated smpl with existing method in an end to end way.
+            if dataset_param["hps_type"] != "pixie": 
                 smpl_out = dataset.smpl_model(
                     betas=optimed_betas,
                     body_pose=optimed_pose_mat,
@@ -265,10 +276,12 @@ if __name__ == "__main__":
 
             with torch.no_grad():
                 in_tensor["normal_F"], in_tensor["normal_B"] = model.netG.normal_filter(in_tensor) ###MARK
-
+            # mask_F=(in_tensor["T_normal_F"].sum(dim=1) != 0.0).float()
+            # mask_B=(in_tensor["T_normal_B"].sum(dim=1) != 0.0).float()
+            # diff_F_smpl = torch.abs(in_tensor["T_normal_F"] - in_tensor["normal_F"]*mask_F)  #smpl mask
+            # diff_B_smpl = torch.abs(in_tensor["T_normal_B"] - in_tensor["normal_B"]*mask_B)
             diff_F_smpl = torch.abs(in_tensor["T_normal_F"] - in_tensor["normal_F"])  #smpl mask
             diff_B_smpl = torch.abs(in_tensor["T_normal_B"] - in_tensor["normal_B"])
-
             losses["normal"]["value"] = (diff_F_smpl + diff_F_smpl).mean()
 
             # silhouette loss  ### how to improve this!!!
@@ -586,7 +599,29 @@ if __name__ == "__main__":
                 [data["ori_image"], rgb_norm],
                 os.path.join(args.out_dir, cfg.name, f"vid/{data['name']}_cloth.mp4"),
             )
+        if args.calc_metric:
+            resolutions = (
+            np.logspace(
+                start=5,
+                stop=np.log2(cfg.mcube_res),
+                base=2,
+                num=int(np.log2(cfg.mcube_res) - 4),
+                endpoint=True,
+            ) + 1.0
+        )
+            result_eval={
+                    "verts_gt": data['verts_gt']*data['scale'].item(),
+                    "faces_gt": data['faces_gt'],
+                    "verts_pr": final.vertices, 
+                    "faces_pr": final.faces,
+                    "recon_size": (resolutions[-1] - 1.0),
+                    "calib": data["calib"],
+                }
 
+            evaluator.set_mesh(result_eval)
+            chamfer, p2s = evaluator.calculate_chamfer_p2s(num_samples=1000)
+            print("chamfer, p2s")
+            print(chamfer.item(), p2s.item())
         # garment extraction from deepfashion images
         if not (args.seg_dir is None):
             if final is not None:

@@ -37,3 +37,12 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 # CUDA_VISIBLE_DEVICES=6 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_kl_pamir_icon --kl_div --pamir_icon --mlp_first_dim 45
 
 # CUDA_VISIBLE_DEVICES=0 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/test --kl_div
+
+# CUDA_VISIBLE_DEVICES=4 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean001
+
+# CUDA_VISIBLE_DEVICES=3 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean001_kl --kl_div
+
+# CUDA_VISIBLE_DEVICES=7 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean01_kl --kl_div 
+
+CUDA_VISIBLE_DEVICES=6 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean001_pamir_icon  --pamir_icon --mlp_first_dim 45
+

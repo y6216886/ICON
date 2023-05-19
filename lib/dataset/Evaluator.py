@@ -25,7 +25,7 @@ from pytorch3d.ops import sample_points_from_meshes
 from pytorch3d.loss.point_mesh_distance import _PointFaceDistance
 from pytorch3d.structures import Pointclouds
 from PIL import Image
-
+from pytorch3d.io import IO
 
 def point_mesh_distance(meshes, pcls):
 
@@ -71,13 +71,17 @@ class Evaluator:
         for k, v in result_dict.items():
             setattr(self, k, v)
 
-        self.verts_pr -= self.recon_size / 2.0
-        self.verts_pr /= self.recon_size / 2.0
+        # self.verts_pr -= self.recon_size / 2.0
+        # self.verts_pr /= self.recon_size / 2.0
         self.verts_gt = projection(self.verts_gt, self.calib)
         self.verts_gt[:, 1] *= -1
 
-        self.src_mesh = self.render.VF2Mesh(self.verts_pr, self.faces_pr)
-        self.tgt_mesh = self.render.VF2Mesh(self.verts_gt, self.faces_gt)
+        self.src_mesh = self.render.VF2Mesh(self.verts_pr , self.faces_pr)
+        self.tgt_mesh = self.render.VF2Mesh(self.verts_gt , self.faces_gt)
+        IO().save_mesh(self.src_mesh, "results/cape/icon-filter/obj/srcmesh.obj")
+        IO().save_mesh(self.tgt_mesh, "results/cape/icon-filter/obj/targetmesh.obj")
+
+
 
     def calculate_normal_consist(self, normal_path):
 
