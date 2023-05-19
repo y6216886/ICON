@@ -79,7 +79,7 @@ if __name__ == "__main__":
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
     parser.add_argument("--test_code", default=False, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
-    parser.add_argument("--offline",default=False, action="store_true")
+    parser.add_argument("--offline",default=True, action="store_true")
     parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
