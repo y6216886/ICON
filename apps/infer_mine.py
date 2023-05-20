@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
         pbar.set_description(f"{data['name']}")
 
-        in_tensor = {"smpl_faces": data["smpl_faces"], "image": data["image"]}
+        in_tensor = {"smpl_faces": data["smpl_faces"], "image": data["image"]}  #data["smpl_verts"]
 
         # The optimizer and variables
         optimed_pose = torch.tensor(
@@ -259,6 +259,10 @@ if __name__ == "__main__":
                 smpl_verts = (smpl_verts + optimed_trans) * data["scale"]
                 smpl_joints = (smpl_joints + optimed_trans) * data["scale"]
 
+            #######
+            smpl_verts=data["smpl_verts"]
+            #######
+            
             smpl_joints *= torch.tensor([1.0, 1.0, -1.0]).to(device)
 
             if data["type"] == "smpl":

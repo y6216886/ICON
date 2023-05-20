@@ -251,7 +251,7 @@ class HGPIFuNet_global_local(BasePIFuNet):
         print(colored(summary_log, "yellow"))
 
         self.normal_filter = NormalNet(self.cfg)
-        n_bins=11
+        n_bins=5
         self.mark = math.log(6)/math.log(10)
         self.bins = torch.logspace(0,self.mark, n_bins)-1
         self.bins=self.bins.cuda()

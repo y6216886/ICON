@@ -591,12 +591,27 @@ class TestDatasetv1():
         data_dict["global_orient"] = data_dict["global_orient"][:, :, :, :2].reshape(1, 1, -1)
         
         if self.args.calc_metric:
+            self.smplx = SMPLX()
             image_root_path=os.path.split(img_path)[0]
             data_dict.update(self.load_calib(os.path.join(image_root_path, img_name+".txt")))
             data_dict.update(self.load_mesh(os.path.join(image_root_path, img_name+".glb"), 100))
+            smplx_verts =self.rescale_smpl(os.path.join(image_root_path, img_name+".obj"), 100)
+            data_dict.update({'smpl_verts': smplx_verts})
+                    
         # data_pamir_icon=self.compute_voxel_verts(data_dict["body_pose"],data_dict["global_orient"],data_dict['betas'],data_dict['trans'],data_dict['scale'] ) #body_pose, global_orient, betas, trans, scale
         # data_dict.update(data_pamir_icon)
         return data_dict
+
+
+    def rescale_smpl(self, fitted_path, scale=100, translate=(0, 0, 0)):
+
+
+        fitted_body = trimesh.load(fitted_path, process=False, maintain_order=True, skip_materials=True)
+        resize_matrix = trimesh.transformations.scale_and_translate(scale=(scale), translate=translate)
+
+        fitted_body.apply_transform(resize_matrix)
+
+        return np.array(fitted_body.vertices)
 
     def render_normal(self, verts, faces):
 

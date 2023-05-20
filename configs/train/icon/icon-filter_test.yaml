@@ -23,7 +23,7 @@ dataset:
   remove_outlier: False
 
   noise_type: ['pose', 'beta']
-  noise_scale: [0.1, 0.1]
+  noise_scale: [0.0, 0.0]
 
   types: ["thuman2"]
   scales: [100.0]

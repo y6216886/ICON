@@ -71,15 +71,15 @@ class Evaluator:
         for k, v in result_dict.items():
             setattr(self, k, v)
 
-        # self.verts_pr -= self.recon_size / 2.0
-        # self.verts_pr /= self.recon_size / 2.0
+        self.verts_pr -= self.recon_size / 2.0
+        self.verts_pr /= self.recon_size / 2.0
         self.verts_gt = projection(self.verts_gt, self.calib)
         self.verts_gt[:, 1] *= -1
 
         self.src_mesh = self.render.VF2Mesh(self.verts_pr , self.faces_pr)
         self.tgt_mesh = self.render.VF2Mesh(self.verts_gt , self.faces_gt)
-        IO().save_mesh(self.src_mesh, "results/cape/icon-filter/obj/srcmesh.obj")
-        IO().save_mesh(self.tgt_mesh, "results/cape/icon-filter/obj/targetmesh.obj")
+        # IO().save_mesh(self.src_mesh, "results/cape/icon-filter/obj/srcmesh.obj")
+        # IO().save_mesh(self.tgt_mesh, "results/cape/icon-filter/obj/targetmesh.obj")
 
 
 

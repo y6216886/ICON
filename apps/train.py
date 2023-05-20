@@ -26,7 +26,7 @@ from pytorch_lightning.loggers import WandbLogger
 # import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -97,10 +97,10 @@ if __name__ == "__main__":
 
 
     ####uncertainty
-    parser.add_argument("--uncertainty", default=True, action="store_true")
+    parser.add_argument("--uncertainty", default=False, action="store_true")
     parser.add_argument("--beta_min", type=float, default=0.03)
     parser.add_argument("--beta_plus", type=float, default=3.)
-    parser.add_argument("--kl_div", default=True, action="store_true")
+    parser.add_argument("--kl_div", default=False, action="store_true")
     ######
 
     #####useclip
@@ -252,8 +252,8 @@ if __name__ == "__main__":
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpse/last.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpChannelSELayerv1/last.ckpt"
-        resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
-        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_debugv1_0417/epoch=02.ckpt"
+        # resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
+        resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/uncertainty_logv1_betamean001_pamir_icon/epoch=05.ckpt"
         if not os.path.exists(resume_path):
             NotADirectoryError("checkpoint {} not exists".format(resume_path))
     currentepoch=load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
