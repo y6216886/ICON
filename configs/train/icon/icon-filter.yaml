@@ -45,7 +45,7 @@ net:
   norm_w: 0.001
   dc_w: 1.0
   hourglass_dim: 6
-  voxel_dim: 32
+  voxel_dim: 7
   smpl_dim: 7
 
 lr_G: 1e-4
