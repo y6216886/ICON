@@ -43,10 +43,10 @@ def soft_assignment(x,y,weights):
     x_hat = x_hat.repeat(x.size(0),1)
     x = x[:,None]
     y = y[:,None]
-    x_dist = 10*torch.exp(-(x_hat-x)**2/2) #/5
+    x_dist = 10*torch.exp(-(x_hat-x)**2) #/5
     x_p = F.softmax(x_dist,dim=1)
     x_p = torch.sum(x_p,dim=0)/len(x)
-    y_dist = 10 * torch.exp(-(x_hat - y) ** 2/2) #/ 5
+    y_dist = 10 * torch.exp(-(x_hat - y) ** 2) #/ 5
     y_p = F.softmax(y_dist, dim=1)
     y_p = torch.sum(y_p,dim=0)/len(x)
     return x_p,y_p
@@ -230,7 +230,7 @@ class HGPIFuNet(BasePIFuNet):
         print(colored(summary_log, "yellow"))
 
         self.normal_filter = NormalNet(self.cfg)
-        n_bins=5
+        n_bins=8
         self.mark = math.log(6)/math.log(10)
         self.bins = torch.logspace(0,self.mark, n_bins)-1
         self.bins=self.bins.cuda()

@@ -26,7 +26,7 @@ from pytorch_lightning.loggers import WandbLogger
 # import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -83,8 +83,8 @@ if __name__ == "__main__":
     parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
-    parser.add_argument("--mlp_first_dim", type=int, default=52) 
-    parser.add_argument("--PE_sdf", type=int, default=16) 
+    parser.add_argument("--mlp_first_dim", type=int, default=0) 
+    parser.add_argument("--PE_sdf", type=int, default=0) 
 
     ####model
     parser.add_argument("--mlpSe", default=False, action="store_true")
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
 
     ##global and local  
-    parser.add_argument("--pamir_icon", default=True, action="store_true")
+    parser.add_argument("--pamir_icon", default=False, action="store_true")
     parser.add_argument('--noise_scale', nargs='+', type=float, default=[0,0]) #2,3,4,5,6
     ######
     args = parser.parse_args()
@@ -252,8 +252,8 @@ if __name__ == "__main__":
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpse/last.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpChannelSELayerv1/last.ckpt"
-        # resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
-        resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/uncertainty_logv1_betamean001_pamir_icon/epoch=05.ckpt"
+        resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
+        # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/uncertainty_logv1_betamean001_pamir_icon/epoch=05.ckpt"
         if not os.path.exists(resume_path):
             NotADirectoryError("checkpoint {} not exists".format(resume_path))
     currentepoch=load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)

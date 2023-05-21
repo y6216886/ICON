@@ -48,8 +48,19 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 
 # CUDA_VISIBLE_DEVICES=3 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean1_kl_bin5 --kl_div
 
-# CUDA_VISIBLE_DEVICES=4 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean1_kl_bin5_/5 --kl_div
+# CUDA_VISIBLE_DEVICES=6 python -m apps.train -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean1_kl_bin5 --kl_div -test
 
-# CUDA_VISIBLE_DEVICES=5 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean1_kl_bin5_/2 --kl_div
+# CUDA_VISIBLE_DEVICES=4 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean1_kl_bin5_/5 --kl_div -test
+
+# CUDA_VISIBLE_DEVICES=4 python -m apps.train -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean1_kl_bin5_/5 --kl_div -test
+
+# CUDA_VISIBLE_DEVICES=5 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean1_kl_bin5_/2 --kl_div 
+# CUDA_VISIBLE_DEVICES=5 python -m apps.train -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean1_kl_bin5_/2 --kl_div -test
+
+
 
 # CUDA_VISIBLE_DEVICES=3 python -m apps.train -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean001_pamir_icon  --pamir_icon --mlp_first_dim 45 -test
+
+# CUDA_VISIBLE_DEVICES=1 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean1_kl_bin5_times_2 --kl_div 
+
+CUDA_VISIBLE_DEVICES=7 python -m apps.train_and_eval -cfg configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml --gpus 0 --num_gpus 1  --uncertainty --name baseline/uncertainty_logv1_betamean1_kl_bin8 --kl_div 
