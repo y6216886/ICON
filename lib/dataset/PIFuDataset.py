@@ -231,20 +231,33 @@ class PIFuDataset():
         # print(dataset)
         # print(self.datasets_dict[dataset]["mesh_dir"], f"{subject}/{subject}.obj")
         if dataset == 'thuman2':
-            data_dict.update(
-                {
-                    'mesh_path':
-                        osp.join(
-                            self.datasets_dict[dataset]["mesh_dir"], f"{subject}/{subject}.glb"
-                        ),
-                    'smplx_path':
-                        osp.join(self.datasets_dict[dataset]["smplx_dir"], f"{subject}.obj"),
-                    'smpl_param':
-                        osp.join(self.datasets_dict[dataset]["smpl_dir"], f"{subject}.pkl"),
-                    'smplx_param':
-                        osp.join(self.datasets_dict[dataset]["smplx_dir"], f"{subject}.pkl"),
-                }
-            )
+            if self.args.smplx2smpl:
+                data_dict.update(
+                    {
+                        'mesh_path':
+                            osp.join(
+                                self.datasets_dict[dataset]["mesh_dir"], f"{subject}/{subject}.glb"
+                            ),
+                        'smpl_param':
+                            osp.join(self.datasets_dict[dataset]["smpl_dir"], f"{subject}.pkl")}
+                )
+            
+            else:
+                data_dict.update(
+                    {
+                        'mesh_path':
+                            osp.join(
+                                self.datasets_dict[dataset]["mesh_dir"], f"{subject}/{subject}.glb"
+                            ),
+                        'smplx_path':
+                            osp.join(self.datasets_dict[dataset]["smplx_dir"], f"{subject}.obj"),
+                        'smpl_param':
+                            osp.join(self.datasets_dict[dataset]["smpl_dir"], f"{subject}.pkl"),
+                        'smplx_param':
+                            osp.join(self.datasets_dict[dataset]["smplx_dir"], f"{subject}.pkl"),
+                    }
+                )
+
         elif dataset == 'cape':
             data_dict.update(
                 {
@@ -479,7 +492,7 @@ class PIFuDataset():
         smpl_type = "smplx" if (
             'smplx_path' in list(data_dict.keys()) and os.path.exists(data_dict['smplx_path'])
         ) else "smpl"
-
+        print(smpl_type,"smpl_type")
         return_dict = {}
         # try:
         if 'smplx_param' in list(data_dict.keys()) and \
