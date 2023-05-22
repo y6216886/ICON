@@ -131,19 +131,19 @@ class HGFilter(nn.Module):
                     nn.Conv2d(opt.hourglass_dim, 256, kernel_size=1, stride=1, padding=0)
                 )
 
-    def forward(self, x):#x:normal map
+    def forward(self, x):#x:normal map 1,3, 512, 512
         x = F.relu(self.bn1(self.conv1(x)), True)
         # tmpx = x
         if self.opt.hg_down == 'ave_pool':
-            x = F.avg_pool2d(self.conv2(x), 2, stride=2)
+            x = F.avg_pool2d(self.conv2(x), 2, stride=2) #1,128,128,128
         elif self.opt.hg_down in ['conv64', 'conv128']:
             x = self.conv2(x)
             x = self.down_conv2(x)
         else:
             raise NameError('Unknown Fan Filter setting!')
 
-        x = self.conv3(x)
-        x = self.conv4(x)
+        x = self.conv3(x) #1,128,128,128
+        x = self.conv4(x) #1,256,128,128
 
         previous = x
 

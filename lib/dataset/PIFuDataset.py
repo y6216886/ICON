@@ -14,6 +14,8 @@
 #
 # Contact: ps-license@tuebingen.mpg.de
 from threadpoolctl import threadpool_limits
+import sys
+sys.path.append("/home/young/code/human_reconstruction/")
 from lib.renderer.mesh import load_fit_body, compute_normal_batch
 from lib.dataset.body_model import TetraSMPLModel
 from lib.common.render import Render
@@ -41,6 +43,7 @@ cape_gender = {
 
 class PIFuDataset():
     def __init__(self, cfg, split='train', vis=False, args=None):
+        self.cfg=cfg
         self.test=cfg.test_mode
         self.split = split
         self.root = cfg.root
@@ -121,6 +124,11 @@ class PIFuDataset():
                 self.datasets_dict[dataset].update(
                     {"subjects": np.loadtxt(osp.join(dataset_dir, "all.txt"), dtype=str)}
                 )
+            elif split == 'val':
+                self.datasets_dict[dataset].update(
+                    {"subjects": np.loadtxt(osp.join(dataset_dir, "val.txt"), dtype=str)}
+                )
+
             else:
                 self.datasets_dict[dataset].update(
                     {"subjects": np.loadtxt(osp.join(dataset_dir, "test.txt"), dtype=str)}
@@ -185,7 +193,7 @@ class PIFuDataset():
                 print(f"load from {split_txt}")
                 subject_list += np.loadtxt(split_txt, dtype=str).tolist()
 
-        if self.split != 'test':
+        if self.split not in ['test', 'val'] :
             subject_list += subject_list[:self.bsize - len(subject_list) % self.bsize]
             print(colored(f"total: {len(subject_list)}", "yellow"))
             random.shuffle(subject_list)
@@ -209,12 +217,15 @@ class PIFuDataset():
         rid = index % len(self.rotations)
         mid = index // len(self.rotations)
 
+
+
         rotation = self.rotations[rid]
         subject = self.subject_list[mid].split("/")[-1]
-        if not self.test:
-            dataset = self.subject_list[mid].split("/")[-3]
-        else:
-            dataset = self.subject_list[mid].split("/")[-2]
+        # if not self.test:
+        #     dataset = self.subject_list[mid].split("/")[-3]
+        # else:
+        #     dataset = self.subject_list[mid].split("/")[-2]
+        dataset = self.cfg.dataset.types[0]
         # print(self.subject_list,mid,self.subject_list[mid])
         render_folder = "/".join([dataset + f"_{self.opt.rotation_num}views", subject])
         # setup paths
@@ -295,9 +306,9 @@ class PIFuDataset():
         data_dict.update(self.load_smpl(data_dict, self.vis))
 
         if self.prior_type == 'pamir' or self.args.pamir_icon:
-            data_dict.update(self.load_smpl_voxel(data_dict))
+             data_dict.update(self.load_smpl_voxel(data_dict))
 
-        if (self.split != 'test') and (not self.vis):
+        if (self.split not in ['val', 'test']) and (not self.vis):
 
             del data_dict['verts']
             del data_dict['faces']
@@ -438,12 +449,13 @@ class PIFuDataset():
             gender = "male" if pid in cape_gender["male"] else "female"
             smpl_pose = smpl_param['pose'].flatten()
             smpl_betas = np.zeros((1, 10))
+            
         else:
             gender = 'male'
             smpl_pose = rotation_matrix_to_angle_axis(torch.as_tensor(smpl_param["full_pose"][0])
                                                      ).numpy()
             smpl_betas = smpl_param["betas"]
-
+        
         smpl_path = osp.join(self.smplx.model_dir, f"smpl/SMPL_{gender.upper()}.pkl")
         tetra_path = osp.join(self.smplx.tedra_dir, f"tetra_{gender}_adult_smpl.npz")
 
@@ -470,12 +482,21 @@ class PIFuDataset():
                 smpl_param["scale"] + smpl_param["translation"]
             ) * self.datasets_dict[data_dict["dataset"]]["scale"]
 
+        # faces = (
+        #     np.loadtxt(
+        #         osp.join(self.smplx.tedra_dir, "tetrahedrons_male_adult.txt"),
+        #         dtype=np.int32,
+        #     ) - 1
+        # )
+
         faces = (
             np.loadtxt(
-                osp.join(self.smplx.tedra_dir, "tetrahedrons_male_adult.txt"),
+                osp.join(self.smplx.tedra_dir, f'tetrahedrons_{gender}_adult.txt'),  ##this is an important bug that hurts performance of my model
                 dtype=np.int32,
             ) - 1
         )
+        
+        
 
         pad_v_num = int(8000 - verts.shape[0])
         pad_f_num = int(25100 - faces.shape[0])
@@ -484,15 +505,30 @@ class PIFuDataset():
                        constant_values=0.0).astype(np.float32)
         faces = np.pad(faces, ((0, pad_f_num), (0, 0)), mode="constant",
                        constant_values=0.0).astype(np.int32)
+        
+        # root_path="data/thuman2/smplobj"
+        # self.save_obj_mesh(os.path.join(root_path, f'{data_dict["subject"]}.obj'), verts, faces)
+        # smpl_model.save_mesh_to_obj(os.path.join(root_path, f'{data_dict["subject"]}.obj'))
+        # print("saving obj now!!")
+
 
         return verts, faces, pad_v_num, pad_f_num
+    
+    def save_obj_mesh(self, mesh_path, verts, faces):
+        file = open(mesh_path, 'w')
+        for v in verts:
+            file.write('v %.4f %.4f %.4f\n' % (v[0], v[1], v[2]))
+        for f in faces:
+            f_plus = f + 1
+            file.write('f %d %d %d\n' % (f_plus[0], f_plus[1], f_plus[2]))
+        file.close()
 
     def load_smpl(self, data_dict, vis=False):
 
         smpl_type = "smplx" if (
             'smplx_path' in list(data_dict.keys()) and os.path.exists(data_dict['smplx_path'])
         ) else "smpl"
-        print(smpl_type,"smpl_type")
+        # print(smpl_type,"smpl_type")
         return_dict = {}
         # try:
         if 'smplx_param' in list(data_dict.keys()) and \
@@ -729,9 +765,13 @@ class PIFuDataset():
 
 
 if __name__=="__main__":
+    from tqdm import tqdm
     class args_():
         def __init__(self) -> None:
-            self.test_code=True
+            self.test_code=False
+            self.smplx2smpl=False
+            self.pamir_icon=True
+            self.noise_scale=[0,0]
     args_=args_()
     from torchvision.utils import save_image
     try:
@@ -742,27 +782,86 @@ if __name__=="__main__":
     from torch.utils.data import DataLoader
     # from tqdm import tqdm
     cfg1 = get_cfg_defaults()
+
     cfg1.merge_from_file(config_file)
-    pifu= PIFuDataset(cfg=cfg1, split='train',args=args_)
+    # cfg_test_mode = [
+    #         "test_mode",
+    #         True,
+    #         "dataset.types",
+    #         ["cape"],
+    #         "dataset.scales",
+    #         [100.0],
+    #         "dataset.rotation_num",
+    #         3,
+    #         "mcube_res",
+    #         256,
+    #         "clean_mesh",
+    #         True,
+    #     ]
+    # cfg1.merge_from_list(cfg_test_mode)
+    pifu= PIFuDataset(cfg=cfg1, split='train', args=args_)
     test_data_loader = DataLoader(
             pifu,
             batch_size=1,
             shuffle=False,
-            num_workers=1,
+            num_workers=8,
             pin_memory=True
         )
-    print("train")
-    for i,j in enumerate(test_data_loader):
+    print("train", len(test_data_loader))
+    for i,j in tqdm(enumerate(test_data_loader)):
         print(i)
-        imgtensor=torch.cat([j['normal_F'],j['normal_B'],j['T_normal_F'],j['T_normal_B']],dim=0)
+        # imgtensor=torch.cat([j['normal_F'],j['normal_B'],j['T_normal_F'],j['T_normal_B']],dim=0)
         # save_image( imgtensor, "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/examples/normals.png",nrow=2, normalize=True)
-        break
+        # break
         for key in j.keys():
             try:
                 print(key,  j[key].size())
 
             except:
                 print(key)
+
+    # pifu= PIFuDataset(cfg=cfg1, split='test', args=args_)
+    # test_data_loader = DataLoader(
+    #         pifu,
+    #         batch_size=1,
+    #         shuffle=False,
+    #         num_workers=8,
+    #         pin_memory=True
+    #     )
+    # print("train", len(test_data_loader))
+    # for i,j in tqdm(enumerate(test_data_loader)):
+    #     print(i)
+    #     # imgtensor=torch.cat([j['normal_F'],j['normal_B'],j['T_normal_F'],j['T_normal_B']],dim=0)
+    #     # save_image( imgtensor, "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/examples/normals.png",nrow=2, normalize=True)
+    #     # break
+    #     for key in j.keys():
+    #         try:
+    #             print(key,  j[key].size())
+
+    #         except:
+    #             print(key)
+
+    # pifu= PIFuDataset(cfg=cfg1, split='val', args=args_)
+    # test_data_loader = DataLoader(
+    #         pifu,
+    #         batch_size=1,
+    #         shuffle=False,
+    #         num_workers=8,
+    #         pin_memory=True
+    #     )
+    # print("train", len(test_data_loader))
+    # for i,j in tqdm(enumerate(test_data_loader)):
+    #     print(i)
+    #     # imgtensor=torch.cat([j['normal_F'],j['normal_B'],j['T_normal_F'],j['T_normal_B']],dim=0)
+    #     # save_image( imgtensor, "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/examples/normals.png",nrow=2, normalize=True)
+    #     # break
+    #     for key in j.keys():
+    #         try:
+    #             print(key,  j[key].size())
+
+    #         except:
+    #             print(key)
+    ##regenerate mesh for cape or just check the size
     """
     calib torch.Size([1, 4, 4])
     normal_F torch.Size([1, 3, 512, 512])

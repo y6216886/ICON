@@ -675,7 +675,27 @@ class ICON(pl.LightningModule):
     def test_epoch_end(self, outputs):
 
         # make_test_gif("/".join(self.export_dir.split("/")[:-2]))
-        if not self.cfg.test_mode:
+        if self.args.val_mode:
+            if self.cfg.dataset.types[0]=="thuman2":
+                accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
+                    outputs,
+                    rot_num=3,
+                    split={
+                        "thuman2": (0, 21)
+                    },
+                )
+            if self.cfg.dataset.types[0]=="cape":
+                accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
+                    outputs,
+                    rot_num=3,
+                    split={
+                    "cape-easy": (10, 20),
+                    "cape-hard": (70, 80),
+                    "cape-all": (120, 130)
+                    },
+                )
+        
+        elif not self.cfg.test_mode:
 
             accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
                 outputs,

@@ -26,7 +26,7 @@ from pytorch_lightning.loggers import WandbLogger
 # import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -73,17 +73,18 @@ def checkname(args,cfg):
 if __name__ == "__main__":
     # torch.multiprocessing.set_start_method('spawn',force=True)
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_cape/icon/icon-filter.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
+    parser.add_argument("-val", "--val_mode", default=False, action="store_true")
     parser.add_argument("--test_code", default=False, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=True, action="store_true")
     parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
-    parser.add_argument("--mlp_first_dim", type=int, default=0) 
+    parser.add_argument("--mlp_first_dim", type=int, default=20) 
     parser.add_argument("--PE_sdf", type=int, default=0) 
 
     ####model
@@ -119,7 +120,7 @@ if __name__ == "__main__":
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
 
     ##global and local  
-    parser.add_argument("--pamir_icon", default=False, action="store_true")
+    parser.add_argument("--pamir_icon", default=True, action="store_true")
     parser.add_argument('--noise_scale', nargs='+', type=float, default=[0,0]) #2,3,4,5,6
     parser.add_argument('--smplx2smpl', default=False, action="store_true") #2,3,4,5,6
     ######
@@ -174,6 +175,16 @@ if __name__ == "__main__":
             [100.0],
             "dataset.rotation_num",
             3,
+            "mcube_res",
+            256,
+            "clean_mesh",
+            True,
+        ]
+        cfg.merge_from_list(cfg_test_mode)
+    elif args.val_mode:
+        cfg_test_mode = [
+            "test_mode",
+            True,
             "mcube_res",
             256,
             "clean_mesh",
@@ -235,8 +246,11 @@ if __name__ == "__main__":
             ]
 
         cfg.merge_from_list(cfg_show_list)
+    elif args.val_mode:
+        datamodule.setup(stage="val")
 
-    if not cfg.test_mode and not args.test_code:   
+
+    if not cfg.test_mode and not args.test_code and not args.val_mode:   
         save_code(cfg, args)
 
 
@@ -249,7 +263,7 @@ if __name__ == "__main__":
     if not cfg.test_mode and not args.resume: 
             print("loading filter from cfg")
             resume_path=cfg.resume_path
-    elif cfg.test_mode or args.resume:
+    elif cfg.test_mode or args.resume or args.val_mode:
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpse/last.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpChannelSELayerv1/last.ckpt"
