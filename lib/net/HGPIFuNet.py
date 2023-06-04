@@ -14,6 +14,7 @@
 #
 # Contact: ps-license@tuebingen.mpg.de
 import sys 
+from lib.net.discriminator import Unet_Discriminator, Discriminator
 # from torchvision.utils import save_image
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/")
 from lib.net.voxelize import Voxelization
@@ -197,7 +198,8 @@ class HGPIFuNet(BasePIFuNet):
             )
 
         self.sp_encoder = SpatialEncoder()
-
+        # self.discriminator=Unet_Discriminator(resolution=128)
+        self.discriminator=Discriminator((3,128,128))
         # network
         if self.use_filter:
             if self.opt.gtype == "HGPIFuNet":
@@ -409,12 +411,16 @@ class HGPIFuNet(BasePIFuNet):
 
             if self.prior_type == "icon":
                 if "vis" in self.smpl_feats:
-                    
+
                     point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :])
                     point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
+                    # print(point_local_feat.size())  ##1, 6, 8000
+                    # print(self.index(im_feat, xy).size())  ##1, 12, 8000
+
                 else:
                     point_local_feat = self.index(im_feat, xy)
                     point_feat_list = [point_local_feat, smpl_feat[:, :, :]]
+
 
             if self.prior_type == "keypoint":
 
@@ -439,6 +445,7 @@ class HGPIFuNet(BasePIFuNet):
             # out of image plane is always set to 0
             if self.args.use_clip:
                    preds = regressor(point_feat, clip_feature) 
+                   
             else: preds = regressor(point_feat) ###sdf feature in channle [:,6,:]
             preds = in_cube * preds
 

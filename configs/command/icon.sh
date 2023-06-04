@@ -34,4 +34,8 @@ cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/
 # CUDA_VISIBLE_DEVICES=6,7 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter.yaml --gpus 0 --num_gpus 2  --name icon_dropout01 --dropout 0.1
 # python /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/train_nerf.py -d 0 2 3 --occ 0.8
 # CUDA_VISIBLE_DEVICES=6,7 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter.yaml --gpus 0 --num_gpus 2  --name icon_wo_residual  --res_layers 8 --resume #--dropout 0.1
-CUDA_VISIBLE_DEVICES=3 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter.yaml --gpus 0 --num_gpus 2 --name baseline/icon_checkv1   #--test_code
+source /mnt/cephfs/home/qiuzhen/anaconda3/etc/profile.d/conda.sh; conda activate icon3090v1; cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/; CUDA_VISIBLE_DEVICES=0 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter.yaml --gpus 0 --num_gpus 1 --name baseline/icon_checkv2   #--test_code
+
+source /mnt/cephfs/home/qiuzhen/anaconda3/etc/profile.d/conda.sh; conda activate icon3090v1; cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/; CUDA_VISIBLE_DEVICES=1 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter.yaml --gpus 0 --num_gpus 1 --name baseline/icon_checkv3 
+
+source /mnt/cephfs/home/qiuzhen/anaconda3/etc/profile.d/conda.sh; conda activate icon3090v1; cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/; CUDA_VISIBLE_DEVICES=2 python -m apps.train_and_eval -cfg configs/train/icon/icon-filter.yaml --gpus 0 --num_gpus 1 --name baseline/icon_checkv4 

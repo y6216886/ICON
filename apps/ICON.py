@@ -28,9 +28,16 @@ import numpy as np
 from torch import nn
 from skimage.transform import resize
 import pytorch_lightning as pl
-
+import functools
 torch.backends.cudnn.benchmark = True
-
+def BCEloss(D_fake, D_real=None, d_real_target=None, d_fake_target=None):
+    if D_real==None:
+        fake =  F.binary_cross_entropy_with_logits(D_fake,d_fake_target.expand_as(D_fake))
+        return fake
+    else:
+        real =  F.binary_cross_entropy_with_logits(D_real,d_real_target.expand_as(D_real))
+        fake =  F.binary_cross_entropy_with_logits(D_fake,d_fake_target.expand_as(D_fake))
+        return real, fake
 
 class ICON(pl.LightningModule):
     def __init__(self, cfg,args=None):
@@ -39,7 +46,8 @@ class ICON(pl.LightningModule):
         self.cfg = cfg
         self.batch_size = self.cfg.batch_size
         self.lr_G = self.cfg.lr_G
-
+        self.lr_D=self.cfg.lr_G/10.
+        self.automatic_optimization = False
         self.use_sdf = cfg.sdf
         self.prior_type = cfg.net.prior_type
         self.mcube_res = cfg.mcube_res
@@ -121,7 +129,11 @@ class ICON(pl.LightningModule):
         self.in_geo_dim = [item[1] for item in cfg.net.in_geo]
         self.in_total = self.in_geo + self.in_nml
         self.smpl_dim = cfg.net.smpl_dim
-
+        ####discriminator
+        d_real_target = torch.tensor([1.0]).cuda()
+        d_fake_target = torch.tensor([0.0]).cuda()
+        self.discriminator_loss=functools.partial(BCEloss, d_real_target=d_real_target, d_fake_target=d_fake_target)
+        ####discriminator
         self.export_dir = None
         self.result_eval = {}
 
@@ -139,6 +151,7 @@ class ICON(pl.LightningModule):
         momentum = self.cfg.momentum
 
         optim_params_G = [{"params": self.netG.if_regressor.parameters(), "lr": self.lr_G}]
+
 
         if self.cfg.net.use_filter:
             optim_params_G.append({"params": self.netG.F_filter.parameters(), "lr": self.lr_G})
@@ -165,23 +178,40 @@ class ICON(pl.LightningModule):
                 momentum=momentum,
             )
 
+        
+
         else:
             raise NotImplementedError
 
+        # optimizer_D = torch.optim.Adam(optim_params_D, lr=self.lr_D)
         # set scheduler
         scheduler_G = torch.optim.lr_scheduler.MultiStepLR(
             optimizer_G, milestones=self.cfg.schedule, gamma=self.cfg.gamma
         )
 
+        if self.args.dis_on_side:
+            optim_params_D=[{"params": self.netG.discriminator.parameters(), "lr": self.lr_D}]
+            optimizer_D = torch.optim.RMSprop(
+                    optim_params_D,
+                    lr=self.lr_G,
+                    weight_decay=weight_decay,
+                    momentum=momentum,
+                )
+            scheduler_D = torch.optim.lr_scheduler.MultiStepLR(
+                optimizer_D, milestones=self.cfg.schedule, gamma=self.cfg.gamma
+            )
+
+            
+            return [optimizer_G, optimizer_D], [scheduler_G, scheduler_D]
         return [optimizer_G], [scheduler_G]
 
-    def training_step(self, batch, batch_idx):
-
+    def training_step(self, batch, batch_idx, optimizer_idx=None):
+        if self.args.dis_on_side:
+            optimizer_G, optimizer_D=self.optimizers()
+        else:
+            optimizer_G=self.optimizers()
         if not self.cfg.fast_dev:
             export_cfg(self.logger, self.cfg)
-
-        self.netG.train()
-
         in_tensor_dict = {
             "sample": batch["samples_geo"].permute(0, 2, 1),
             "calib": batch["calib"],
@@ -212,7 +242,38 @@ class ICON(pl.LightningModule):
                 "clip_feature":batch["clip_feature"]
             }
         )
+                    #######training  Discriminator########
+        if self.args.dis_on_side:
+                self.netG.if_regressor.eval()
+                if self.cfg.net.use_filter:
+                    self.netG.F_filter.eval()
+                if self.cfg.net.prior_type == "pamir" or self.args.pamir_icon:
+                    self.netG.ve.eval()
+                self.netG.discriminator.train()
+                loss_d=self.render_func_dis(in_tensor_dict, dataset="train")
+                optimizer_D.zero_grad()
+                self.manual_backward(loss_d, optimizer_D)
+                optimizer_D.step() 
+                self.netG.discriminator.eval()
+        if batch_idx % int(self.cfg.freq_show_train) == 0 or batch_idx==1:
+                with torch.no_grad():
+                    self.render_func(in_tensor_dict, dataset="train")
+        ################training generator########
+
+        self.netG.if_regressor.train()
+        if self.cfg.net.use_filter:
+            self.netG.F_filter.train()
+        if self.cfg.net.prior_type == "pamir" or self.args.pamir_icon:
+            self.netG.ve.train()
         preds_G, error_G = self.netG(in_tensor_dict)
+        if self.args.dis_on_side:
+            loss_d=self.render_func_dis_fake(in_tensor_dict, dataset="train")
+            error_G=error_G+0.001*loss_d
+        ##manual backprop
+        optimizer_G.zero_grad()
+        self.manual_backward(error_G, optimizer_G)
+        optimizer_G.step()
+        ##manual backprop
         if preds_G.size(1)!=1:
             preds_G=preds_G[:,:1,:]
 
@@ -226,7 +287,7 @@ class ICON(pl.LightningModule):
         if self.args.kl_div:
                 metrics_log = {
             "train_loss": error_G[0].item(),
-            "kl_loss":error_G[1].item(),
+            "train_losskl":error_G[1].item(),
             "train_acc": acc.item(),
             "train_iou": iou.item(),
             "train_prec": prec.item(),
@@ -240,22 +301,29 @@ class ICON(pl.LightningModule):
             "train_prec": prec.item(),
             "train_recall": recall.item(),
         }
+        if self.args.dis_on_side:
+            metrics_log.update({"train_lossdis":loss_d.item()})
         for key in metrics_log:
             self.log(key, metrics_log[key])
 
         tf_log = tf_log_convert(metrics_log)
         bar_log = bar_log_convert(metrics_log)
 
-        if batch_idx % int(self.cfg.freq_show_train) == 0:
+        # if batch_idx % int(self.cfg.freq_show_train) == 0: ##try to add a discriminator for side view to handle noisy smpl
 
-            with torch.no_grad():
-                self.render_func(in_tensor_dict, dataset="train")
+
+
 
         metrics_return = {k.replace("train_", ""): torch.tensor(v) for k, v in metrics_log.items()}
         if self.args.kl_div:
-            metrics_return.update({"loss": error_G[0], "kl_loss":error_G[1],  "log": tf_log, "progress_bar": bar_log})
-        else:metrics_return.update({"loss": error_G, "log": tf_log, "progress_bar": bar_log})
+            final_loss = error_G[0]+error_G[1]
+            # # metrics_return.update({"loss": error_G[0], "kl_loss":error_G[1],  "log": tf_log, "progress_bar": bar_log})
+            # metrics_return.update({"loss": error_G[0]+error_G[1], "kl_loss":error_G[1],  "log": tf_log, "progress_bar": bar_log})
+        else: final_loss = error_G
+        if self.args.dis_on_side:
+            final_loss+=loss_d
 
+        metrics_return.update({"loss": final_loss, "log": tf_log, "progress_bar": bar_log})
         return metrics_return
 
     def training_epoch_end(self, outputs):
@@ -797,6 +865,56 @@ class ICON(pl.LightningModule):
             inter = inter[dim:]
 
         return all
+
+    def render_func_dis(self, in_tensor_dict, dataset="title", idx=0):
+        for name in in_tensor_dict.keys():
+            if in_tensor_dict[name] is not None:
+                in_tensor_dict[name] = in_tensor_dict[name][0:1]
+
+        features, inter = self.netG.filter(in_tensor_dict, return_inter=True) #1 12 128 128,  1 6 512 512
+        if self.args.use_clip: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None, clip_feature=in_tensor_dict["clip_feature"])
+        else: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None)
+        if sdf is not None:
+            image_fake = self.reconEngine.display_train_dis(sdf)
+            D_fake, D_middle_fake = self.netG.discriminator(image_fake)
+            random=np.random.rand(1).item()
+            if random>=0.5:
+                image_real=(inter[:,:3,...].detach()+1)/2
+            if random<0.5:
+                image_real=(inter[:,3:,...].detach()+1)/2
+            image_real=F.interpolate(image_real,128,mode='bilinear')
+            D_real, D_middle_real = self.netG.discriminator(image_real)
+            # D_loss_real_middle, D_loss_fake_middle = self.discriminator_loss(D_middle_fake, D_middle_real)
+            D_loss_real_2d, D_loss_fake_2d = self.discriminator_loss(D_fake.view(-1), D_real.view(-1))
+            D_loss_real = D_loss_real_2d #+ D_loss_real_middle
+            D_loss_fake = D_loss_fake_2d #+ D_loss_fake_middle
+
+            D_loss = 0.5*D_loss_real + 0.5*D_loss_fake
+
+
+
+            return D_loss
+        
+    def render_func_dis_fake(self, in_tensor_dict, dataset="title", idx=0):
+        for name in in_tensor_dict.keys():
+            if in_tensor_dict[name] is not None:
+                in_tensor_dict[name] = in_tensor_dict[name][0:1]
+
+        features, inter = self.netG.filter(in_tensor_dict, return_inter=True) #1 12 128 128,  1 6 512 512
+        if self.args.use_clip: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None, clip_feature=in_tensor_dict["clip_feature"])
+        else: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None)
+        if sdf is not None:
+            image_fake = self.reconEngine.display_train_dis(sdf)
+            D_fake, D_middle_fake = self.netG.discriminator(image_fake)
+            # D_loss_fake_middle = self.discriminator_loss(D_middle_fake, None)
+            D_loss_fake_2d = self.discriminator_loss(D_fake.view(-1), None)
+            D_loss_fake = D_loss_fake_2d #+ D_loss_fake_middle
+
+            D_loss = D_loss_fake
+
+
+
+            return D_loss
 
     def render_func(self, in_tensor_dict, dataset="title", idx=0):
         for name in in_tensor_dict.keys():

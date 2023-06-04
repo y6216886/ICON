@@ -581,6 +581,27 @@ class Seg3dLossless(nn.Module):
         image = image.detach().cpu().numpy()[0].transpose(1, 2, 0) * 255.0
 
         return np.uint8(image)
+    def display_train(self, sdf):
+        random=np.random.rand(1).item()
+        if random>=0.5:
+            X, Y, Z, norm = self.find_vertices(sdf, direction="left")
+            image_left = self.render_normal(self.resolutions[-1, -1], X, Y, Z, norm)
+            return image_left
+        else:
+            X, Y, Z, norm = self.find_vertices(sdf, direction="right")
+            image_right = self.render_normal(self.resolutions[-1, -1], X, Y, Z, norm)
+            return image_right
+        
+    def display_train_dis(self, sdf):
+        random=np.random.rand(1).item()
+        if random>=0.5:
+            X, Y, Z, norm = self.find_vertices(sdf, direction="left")
+            image_left = self.render_normal(128, X, Y, Z, norm)
+            return image_left
+        else:
+            X, Y, Z, norm = self.find_vertices(sdf, direction="right")
+            image_right = self.render_normal(128, X, Y, Z, norm)
+            return image_right
 
     def export_mesh(self, occupancys):
 

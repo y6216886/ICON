@@ -62,7 +62,9 @@ class PIFuDataset():
         self.prior_type = cfg.net.prior_type
 
         self.noise_type = self.opt.noise_type
-        self.noise_scale = self.opt.noise_scale
+        # self.noise_scale = self.opt.noise_scale
+        self.noise_scale = self.args.noise_scale
+        print(self.noise_scale,"self.noise_scale noise")
 
         noise_joints = [4, 5, 7, 8, 13, 14, 16, 17, 18, 19, 20, 21]
 
@@ -387,6 +389,7 @@ class PIFuDataset():
         #                              0.5) * 2.0 * np.pi * noise_scale[noise_type.index("pose")]
         #     smpl_pose = smpl_pose.astype(np.float32)
         # print(self.args.noise_scale,self.args.noise_scale[0],self.args.noise_scale[1])
+
         if 'beta' in noise_type and self.args.noise_scale[1] > 0.0:
             smpl_betas += (np.random.rand(beta_num) -
                            0.5) * 2.0 * self.args.noise_scale[1]

@@ -25,7 +25,7 @@ from pytorch_lightning.loggers import WandbLogger
 import wandb
 from termcolor import colored
 # print(colored("For debug setting cuda visible diveices here!","red")
-# os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -116,8 +116,10 @@ if __name__ == "__main__":
     ######
     ##global and local
     parser.add_argument("--pamir_icon", default=False, action="store_true")
-    parser.add_argument('--noise_scale', nargs='+', type=float, default=[0.,0.]) ##max smpl pose 1.45  min -1.18  smpl betas max 1.04 min -0.35
+    parser.add_argument('--noise_scale', nargs='+', type=float, default=[0.0,0.0]) ##max smpl pose 1.45  min -1.18  smpl betas max 1.04 min -0.35
     parser.add_argument('--smplx2smpl', default=False, action="store_true") #2,3,4,5,6
+        ##dis##
+    parser.add_argument('--dis_on_side', default=False, action="store_true") #2,3,4,5,6
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
