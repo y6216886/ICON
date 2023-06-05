@@ -412,7 +412,7 @@ def calc_error_color(opt, netG, netC, cuda, dataset, num_tests):
 # pytorch lightning training related fucntions
 
 
-def query_func(opt, netG, features, points, proj_matrix=None, clip_feature=None):
+def query_func(opt, netG, features, points, proj_matrix=None, clip_feature=None, train=None):
     '''
         - points: size of (bz, N, 3)
         - proj_matrix: size of (bz, 4, 4)

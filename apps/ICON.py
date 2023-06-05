@@ -130,12 +130,18 @@ class ICON(pl.LightningModule):
         self.in_total = self.in_geo + self.in_nml
         self.smpl_dim = cfg.net.smpl_dim
         ####discriminator
-        d_real_target = torch.tensor([1.0]).cuda()
-        d_fake_target = torch.tensor([0.0]).cuda()
-        self.discriminator_loss=functools.partial(BCEloss, d_real_target=d_real_target, d_fake_target=d_fake_target)
+        # d_real_target = torch.tensor([1.0]).cuda()
+        # d_fake_target = torch.tensor([0.0]).cuda()
+        # self.discriminator_loss=functools.partial(BCEloss, d_real_target=d_real_target, d_fake_target=d_fake_target)
         ####discriminator
         self.export_dir = None
         self.result_eval = {}
+        if args.dis_on_side:
+            cuda = torch.cuda.is_available()
+            Tensor = torch.cuda.FloatTensor if cuda else torch.Tensor
+            self.valid = Tensor(np.ones((self.batch_size, *self.netG.discriminator.output_shape)))
+            self.fake = Tensor(np.zeros((self.batch_size, *self.netG.discriminator.output_shape)))
+            self.criterion_GAN = torch.nn.MSELoss()  
 
     def get_progress_bar_dict(self):
         tqdm_dict = super().get_progress_bar_dict()
@@ -873,26 +879,18 @@ class ICON(pl.LightningModule):
 
         features, inter = self.netG.filter(in_tensor_dict, return_inter=True) #1 12 128 128,  1 6 512 512
         if self.args.use_clip: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None, clip_feature=in_tensor_dict["clip_feature"])
-        else: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None)
+        else: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None,train=True)
         if sdf is not None:
             image_fake = self.reconEngine.display_train_dis(sdf)
-            D_fake, D_middle_fake = self.netG.discriminator(image_fake)
+            D_loss_fake = self.criterion_GAN(self.netG.discriminator(image_fake), self.fake)
             random=np.random.rand(1).item()
             if random>=0.5:
-                image_real=(inter[:,:3,...].detach()+1)/2
+                image_real=(inter[:,:3,...]+1)/2
             if random<0.5:
-                image_real=(inter[:,3:,...].detach()+1)/2
+                image_real=(inter[:,3:,...]+1)/2
             image_real=F.interpolate(image_real,128,mode='bilinear')
-            D_real, D_middle_real = self.netG.discriminator(image_real)
-            # D_loss_real_middle, D_loss_fake_middle = self.discriminator_loss(D_middle_fake, D_middle_real)
-            D_loss_real_2d, D_loss_fake_2d = self.discriminator_loss(D_fake.view(-1), D_real.view(-1))
-            D_loss_real = D_loss_real_2d #+ D_loss_real_middle
-            D_loss_fake = D_loss_fake_2d #+ D_loss_fake_middle
-
+            D_loss_real=self.criterion_GAN(self.netG.discriminator(image_real), self.valid)
             D_loss = 0.5*D_loss_real + 0.5*D_loss_fake
-
-
-
             return D_loss
         
     def render_func_dis_fake(self, in_tensor_dict, dataset="title", idx=0):
@@ -902,18 +900,11 @@ class ICON(pl.LightningModule):
 
         features, inter = self.netG.filter(in_tensor_dict, return_inter=True) #1 12 128 128,  1 6 512 512
         if self.args.use_clip: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None, clip_feature=in_tensor_dict["clip_feature"])
-        else: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None)
+        else: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None,train=True)
         if sdf is not None:
             image_fake = self.reconEngine.display_train_dis(sdf)
-            D_fake, D_middle_fake = self.netG.discriminator(image_fake)
-            # D_loss_fake_middle = self.discriminator_loss(D_middle_fake, None)
-            D_loss_fake_2d = self.discriminator_loss(D_fake.view(-1), None)
-            D_loss_fake = D_loss_fake_2d #+ D_loss_fake_middle
-
+            D_loss_fake = self.criterion_GAN(self.netG.discriminator(image_fake), self.valid)
             D_loss = D_loss_fake
-
-
-
             return D_loss
 
     def render_func(self, in_tensor_dict, dataset="title", idx=0):

@@ -601,12 +601,13 @@ if __name__ == "__main__":
     # D_loss = 0.5*D_loss_real + 0.5*D_loss_fake
 
     # print(D_loss)
-    cuda = torch.cuda.is_available()
-    Tensor = torch.cuda.FloatTensor if cuda else torch.Tensor
+    
     # D_loss.backward()
     criterion_GAN = torch.nn.MSELoss()  
     netd=Discriminator((3,128,128)).cuda()
     input=torch.randn(1,3,128,128).cuda()
+    cuda = torch.cuda.is_available()
+    Tensor = torch.cuda.FloatTensor if cuda else torch.Tensor
     valid = Tensor(np.ones((input.size(0), *netd.output_shape)))
     fake = Tensor(np.zeros((input.size(0), *netd.output_shape)))
     print(netd(input).size())

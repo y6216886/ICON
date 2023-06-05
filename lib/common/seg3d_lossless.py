@@ -112,7 +112,7 @@ class Seg3dLossless(nn.Module):
         coords: in the coordinates of last resolution
         **kwargs: for query_func
         """
-        coords = coords.detach()
+        # coords = coords.detach()
         # normalize coords to fit in [b_min, b_max]
         if self.align_corners:
             coords2D = coords.float() / (self.resolutions[-1] - 1)
@@ -241,7 +241,7 @@ class Seg3dLossless(nn.Module):
                         is_boundary = (self.smooth_conv3x3(is_boundary.float()) > 0)[0, 0]
 
                     coords_accum = coords_accum.long()
-                    is_boundary[coords_accum[0, :, 2], coords_accum[0, :, 1],
+                    is_boundary[coords_accum[0, :, 2], coords_accum[0, :, 1],+
                                 coords_accum[0, :, 0]] = False
                     point_coords = is_boundary.permute(2, 1, 0)
                     point_coords=point_coords.nonzero(as_tuple=False)
