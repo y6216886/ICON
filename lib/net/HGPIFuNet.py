@@ -24,7 +24,7 @@ from lib.net.MLP import MLP
 from lib.net.MLP3D import MLP3d
 from lib.net.MLP_N_shape import MLP_UNET
 from lib.net.spatial import SpatialEncoder
-from lib.dataset.PointFeat import PointFeat
+from lib.dataset.PointFeat import PointFeat, PointFeat_grad
 from lib.dataset.mesh_util import SMPLX
 from lib.net.VE import VolumeEncoder
 from lib.net.HGFilters import *
@@ -199,7 +199,7 @@ class HGPIFuNet(BasePIFuNet):
 
         self.sp_encoder = SpatialEncoder()
         # self.discriminator=Unet_Discriminator(resolution=128)
-        self.discriminator=Discriminator((3,128,128))
+        self.discriminator=Discriminator((3,129,129))
         # network
         if self.use_filter:
             if self.opt.gtype == "HGPIFuNet":
@@ -311,7 +311,7 @@ class HGPIFuNet(BasePIFuNet):
 
         return mask
 
-    def filter(self, in_tensor_dict, return_inter=False):
+    def filter(self, in_tensor_dict, return_inter=False, disc=False):
         """
         Filter the input images
         store all intermediate features.
@@ -347,7 +347,7 @@ class HGPIFuNet(BasePIFuNet):
         }
 
         # If it is not in training, only produce the last im_feat
-        if not self.training:
+        if not self.training or disc==True:
             features_out = [features_G[-1]]
         else:
             features_out = features_G
@@ -357,7 +357,7 @@ class HGPIFuNet(BasePIFuNet):
         else:
             return features_out
 
-    def query(self, features, points, calibs, transforms=None, regressor=None, clip_feature=None):
+    def query(self, features, points, calibs, bs_idx=None, transforms=None, regressor=None, clip_feature=None):
         xyz = self.projection(points, calibs, transforms)
         (xy, z) = xyz.split([2, 1], dim=1)
 
@@ -366,19 +366,22 @@ class HGPIFuNet(BasePIFuNet):
 
         preds_list = []
         vol_feats = features
-
         if self.prior_type in ["icon", "keypoint"]: ##icon is slow due to the Point feat following code
 
             # smpl_verts [B, N_vert, 3]
             # smpl_faces [B, N_face, 3]
             # xyz [B, 3, N]  --> points [B, N, 3]
-
-            point_feat_extractor = PointFeat(
+            if bs_idx!=None:
+                 point_feat_extractor = PointFeat(
+                self.smpl_feat_dict["smpl_verts"][bs_idx][None,...], self.smpl_feat_dict["smpl_faces"][bs_idx][None,...], args=self.args
+            )
+            else:
+                point_feat_extractor = PointFeat(
                 self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args
             )
 
             point_feat_out = point_feat_extractor.query(
-                xyz.permute(0, 2, 1).contiguous(), self.smpl_feat_dict
+                xyz.permute(0, 2, 1).contiguous(), self.smpl_feat_dict, bs_idx=bs_idx
             )
             
             feat_lst = [
@@ -452,6 +455,115 @@ class HGPIFuNet(BasePIFuNet):
             preds_list.append(preds)
 
         return preds_list
+    
+    def query_grad(self, features, points, calibs, bs_idx=None, transforms=None, regressor=None, clip_feature=None, disc=False):
+        xyz = self.projection(points, calibs, transforms)
+        (xy, z) = xyz.split([2, 1], dim=1)
+
+        in_cube = (xyz > -1.0) & (xyz < 1.0)
+        in_cube = in_cube.all(dim=1, keepdim=True).detach().float()
+
+        preds_list = []
+        vol_feats = features
+        if self.prior_type in ["icon", "keypoint"]: ##icon is slow due to the Point feat following code
+
+            ## smpl_verts [B, N_vert, 3]
+            ## smpl_faces [B, N_face, 3]
+            ## xyz [B, 3, N]  --> points [B, N, 3]
+            if bs_idx!=None:   
+                 point_feat_extractor = PointFeat_grad(
+                self.smpl_feat_dict["smpl_verts"][bs_idx][None,...],self.smpl_feat_dict["smpl_faces"][bs_idx][None,...], args=self.args
+            )
+            else:
+                point_feat_extractor = PointFeat_grad(
+                self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args
+            )
+            smpl_feat_dict=self.smpl_feat_dict
+            point_feat_out = point_feat_extractor.query(
+                xyz.permute(0, 2, 1).contiguous(), smpl_feat_dict, bs_idx=bs_idx
+            )
+            
+            feat_lst = [
+                point_feat_out[key] for key in self.smpl_feats if key in point_feat_out.keys()
+            ]
+            smpl_feat = torch.cat(feat_lst, dim=2).permute(0, 2, 1)
+            # if bs_idx!=None:
+            #     smpl_feat=torch.rand(1,8,points.size(2)).cuda()
+            # else:
+            #     smpl_feat=torch.rand(points.size(0),8,points.size(2)).cuda()
+
+
+
+            if self.prior_type == "keypoint":
+                kpt_feat = self.sp_encoder.forward(
+                    cxyz=xyz.permute(0, 2, 1).contiguous(),
+                    kptxyz=self.smpl_feat_dict["smpl_joint"],
+                )
+
+        elif self.prior_type == "pamir":
+
+            voxel_verts = self.smpl_feat_dict["voxel_verts"][:, :-self.
+                                                             smpl_feat_dict["pad_v_num"][0], :]
+            voxel_faces = self.smpl_feat_dict["voxel_faces"][:, :-self.
+                                                             smpl_feat_dict["pad_f_num"][0], :]
+
+            self.voxelization.update_param(
+                batch_size=voxel_faces.shape[0],
+                smpl_tetra=voxel_faces[0].detach().cpu().numpy(),
+            )
+            vol = self.voxelization(voxel_verts)    # vol ~ [0,1]
+            vol_feats = self.ve(vol, intermediate_output=self.training)
+
+        for im_feat, vol_feat in zip(features, vol_feats):
+            # normal feature choice by smpl_vis
+
+            if self.prior_type == "icon":
+                if "vis" in self.smpl_feats:
+
+                    point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :])
+                    point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
+                    # print(point_local_feat.size())  ##1, 6, 8000
+                    # print(self.index(im_feat, xy).size())  ##1, 12, 8000
+
+                else:
+                    point_local_feat = self.index(im_feat, xy)
+                    point_feat_list = [point_local_feat, smpl_feat[:, :, :]]
+
+
+            if self.prior_type == "keypoint":
+
+                if "vis" in self.smpl_feats:
+                    point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :])
+                    point_feat_list = [point_local_feat, kpt_feat, smpl_feat[:, :-1, :]]
+                else:
+                    point_local_feat = self.index(im_feat, xy)
+                    point_feat_list = [point_local_feat, kpt_feat, smpl_feat[:, :, :]]
+
+            elif self.prior_type == "pamir":
+
+                # im_feat [B, hg_dim, 128, 128]
+                # vol_feat [B, vol_dim, 32, 32, 32]
+
+                point_feat_list = [self.index(im_feat, xy), self.index(vol_feat, xyz)]
+
+            elif self.prior_type == "pifu":
+                point_feat_list = [self.index(im_feat, xy), z]
+
+            point_feat = torch.cat(point_feat_list, 1)
+            
+            if self.args.use_clip:
+                   preds = regressor(point_feat, clip_feature=clip_feature,disc=disc) 
+                   
+            else: preds = regressor(point_feat, disc=disc) ###sdf feature in channle [:,6,:]###问题在这
+            preds = in_cube * preds
+
+            preds_list.append(preds)
+        # if bs_idx!=None:
+        #         preds_list=[torch.zeros(1,1,8000).cuda()]
+        # else:
+        #         preds_list=[torch.zeros(2,1,8000).cuda()]
+        
+        return preds_list
 
     # def get_error(self, preds_if_list, labels):
     #     """calcaulate error
@@ -515,7 +627,7 @@ class HGPIFuNet(BasePIFuNet):
 
     def forward(self, in_tensor_dict):
         """
-        sample_tensor [B, 3, N]
+        sample_tensor [B, 3, N]  
         calib_tensor [B, 4, 4]
         label_tensor [B, 1, N]
         smpl_feat_tensor [B, 59, N]

@@ -111,6 +111,7 @@ class MLP(pl.LightningModule):
         if args.mlp_first_dim!=0:
             filter_channels[0]=args.mlp_first_dim
         print(colored("I have modified mlp filter channles{}".format(filter_channels),"red"))
+        print("norm type", norm)
         # if args.uncertainty:
         #     print("uncertainty")
         #     filter_channels[-1]+=1  #We follow the authors’ suggestion and train the network to predict the log of the observation noise scalar, s, for numerical stability.
@@ -191,8 +192,59 @@ class MLP(pl.LightningModule):
         if self.args.dropout!=0: self.dropout=nn.Dropout(self.args.dropout)
         if self.args.uncertainty:
             self.mlp_uncertainty=MLP_uncertainty()
+    def forward_grad(self, feature, clip_feature=None):
+        '''
+        feature may include multiple view inputs
+        args:
+            feature: [B, C_in, N]
+        return:
+            [B, C_out, N] prediction
+        '''
+        # self.norms.eval()
+        y = feature
+        if self.args.use_clip: clip_feature=clip_feature.unsqueeze(-1).repeat(1,1,8000)
+        tmpy = feature
+        len_=len(self.filters)
+        for i, f in enumerate(self.filters):
+            ####se net
+            if self.args.mlpSe or self.args.mlpSev1:
+                if i!=self.len_filter-1:
+                    y=self.se_conv[i](y) 
+            elif self.args.mlpSemax:
+                if i!=self.len_filter-1:
+                    y_spa=self.se_conv_spatial[i](y) ##
+                    y_cha=self.se_conv_channel[i](y) ##
+                    y=torch.max(y_spa, y_cha)
+            #####
+            if self.args.use_clip and i in self.clip_fuse_layer:
+                input=torch.cat([y, clip_feature], 1) if i not in self.res_layers else torch.cat([y, tmpy, clip_feature], 1)
+                if self.args.dropout!=0 and self.training and i>0: y= self.dropout(y)
+                y = f(input)
+            else: 
+                input=y if i not in self.res_layers else torch.cat([y, tmpy], 1)
+                if self.args.dropout!=0 and self.training and i>0: y= self.dropout(y)
+                y = f(input)
 
-    def forward(self, feature, clip_feature=None): ##todo fuse clip feature into
+            ###activation  问题在这？？
+            if i != len(self.filters) - 1:
+                if self.norm not in ['batch', 'group', 'instance']:
+                    y = self.activate(y)
+                else:
+                    # y = self.activate(self.norms[i](y))  ##问题出在self.norms[i](y)为什么？
+                    y = self.activate(y)
+#             ##
+# #bug do not activate the last channel
+
+        if self.last_op is not None:
+            y = self.last_op(y)
+        if self.args.uncertainty:
+            y_uncertainty=self.mlp_uncertainty(y)
+            return torch.cat([y,y_uncertainty],dim=1)
+        # print("randn y")
+        # y=torch.randn(feature.size(0), 1, feature.size(2)).cuda()
+        return y
+    
+    def forward_generator(self, feature, clip_feature=None): ##todo fuse clip feature into
         '''
         feature may include multiple view inputs
         args:
@@ -230,6 +282,7 @@ class MLP(pl.LightningModule):
                     y = self.activate(y)
                 else:
                     y = self.activate(self.norms[i](y))
+                    # y = self.activate(y) ##无batch norm的时候基本都是扁平的
             ###
 ##bug do not activate the last channel
 
@@ -238,8 +291,13 @@ class MLP(pl.LightningModule):
         if self.args.uncertainty:
             y_uncertainty=self.mlp_uncertainty(y)
             return torch.cat([y,y_uncertainty],dim=1)
+
         return y
     
+    def forward(self, feature, clip_feature=None, disc=False):
+        if disc==False:
+            return self.forward_generator(feature, clip_feature)
+        return self.forward_grad(feature, clip_feature)
 
 
 # class MLP_v1(pl.LightningModule):

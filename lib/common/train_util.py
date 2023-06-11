@@ -412,30 +412,69 @@ def calc_error_color(opt, netG, netC, cuda, dataset, num_tests):
 # pytorch lightning training related fucntions
 
 
-def query_func(opt, netG, features, points, proj_matrix=None, clip_feature=None, train=None):
+def query_func(opt, netG, features, points, bs_idx=None, proj_matrix=None, clip_feature=None, train=None):
     '''
         - points: size of (bz, N, 3)
         - proj_matrix: size of (bz, 4, 4)
     return: size of (bz, 1, N)
     '''
-    assert len(points) == 1
+    # assert len(points) == 1
     samples = points.repeat(opt.num_views, 1, 1)
     samples = samples.permute(0, 2, 1)    # [bz, 3, N]
 
-    # view specific query
+    #view specific query
     if proj_matrix is not None:
         samples = orthogonal(samples, proj_matrix)
 
     calib_tensor = torch.stack([torch.eye(4).float()], dim=0).type_as(samples)
+    calib_tensor=calib_tensor.repeat(points.size(0),1,1)
+    if bs_idx!=None:
+        featuresv1=[features[0][bs_idx,...][None,...]]
+        preds = netG.query(
+            features=featuresv1, points=samples, bs_idx=bs_idx, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature
+        )
+    else:
+        preds = netG.query(
+            features=features, points=samples, bs_idx=bs_idx, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature
+        )
 
-    preds = netG.query(
-        features=features, points=samples, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature
-    )
 
     if type(preds) is list:
         preds = preds[0]
-
     return preds
+
+def query_func_grad(opt, netG, features, points, bs_idx=None, proj_matrix=None, clip_feature=None, train=None, disc=False):
+    '''
+        - points: size of (bz, N, 3)
+        - proj_matrix: size of (bz, 4, 4)
+    return: size of (bz, 1, N)
+    '''
+    # assert len(points) == 1
+    samples = points.repeat(opt.num_views, 1, 1)
+    samples = samples.permute(0, 2, 1)    # [bz, 3, N]
+
+    #view specific query
+    if proj_matrix is not None:
+        samples = orthogonal(samples, proj_matrix)
+
+    calib_tensor = torch.stack([torch.eye(4).float()], dim=0).type_as(samples)
+    calib_tensor=calib_tensor.repeat(points.size(0),1,1)
+    if bs_idx!=None:
+        featuresv1=[features[0][bs_idx,...][None,...]]
+        preds = netG.query_grad(
+            features=featuresv1, points=samples, bs_idx=bs_idx, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature,disc=disc    ###问题在这，改成随机数（preds=torch.rand(samples.size(0),1,samples.size(2)).cuda()）结果就没问题了 
+        )
+    else:
+        preds = netG.query_grad(
+            features=features, points=samples, bs_idx=bs_idx, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature, disc=disc
+        )
+
+
+    if type(preds) is list:
+        preds = preds[0]
+    # preds=torch.rand(samples.size(0),1,samples.size(2)).cuda()
+    return preds
+
 
 
 def isin(ar1, ar2):

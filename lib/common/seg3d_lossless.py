@@ -46,6 +46,9 @@ class Seg3dLossless(nn.Module):
         use_cuda_impl=False,
         faster=False,
         use_shadow=False,
+        train_resolution=[[33,33,33],[65,65,65]],
+        cfg=None,
+        query_func_grad=None,
         **kwargs
     ):
         """
@@ -53,6 +56,9 @@ class Seg3dLossless(nn.Module):
         """
         super().__init__()
         self.query_func = query_func
+        if query_func_grad!=None:
+            self.query_func_grad = query_func_grad
+
         self.register_buffer('b_min', torch.tensor(b_min).float().unsqueeze(1))    # [bz, 1, 3]
         self.register_buffer('b_max', torch.tensor(b_max).float().unsqueeze(1))    # [bz, 1, 3]
 
@@ -64,8 +70,13 @@ class Seg3dLossless(nn.Module):
         else:
             resolutions = torch.tensor(resolutions)
         self.register_buffer('resolutions', resolutions)
-        self.batchsize = self.b_min.size(0)
-        assert self.batchsize == 1
+        train_resolution = torch.tensor(train_resolution)
+        self.register_buffer('train_resolution', train_resolution)
+
+
+        # self.batchsize = self.b_min.size(0)
+        # assert self.batchsize == 1
+        self.batchsize = cfg.batch_size
         self.balance_value = balance_value
         self.channels = channels
         assert self.channels == 1
@@ -107,7 +118,7 @@ class Seg3dLossless(nn.Module):
         self.smooth_conv7x7 = SmoothConv3D(in_channels=1, out_channels=1, kernel_size=7)
         self.smooth_conv9x9 = SmoothConv3D(in_channels=1, out_channels=1, kernel_size=9)
 
-    def batch_eval(self, coords, **kwargs):
+    def batch_eval(self, coords, bs_idx=None, **kwargs):
         """
         coords: in the coordinates of last resolution
         **kwargs: for query_func
@@ -130,7 +141,7 @@ class Seg3dLossless(nn.Module):
             if chunk_pointnum!=chunk_temp:
                 coords2D_chunk=torch.cat([coords2D_chunk, torch.zeros(bs,chunk_temp-chunk_pointnum,c, device=coords2D.device)],dim=1)
         #####chunk inference
-            occupancys = self.query_func(**kwargs, points=coords2D_chunk)
+            occupancys = self.query_func(**kwargs, points=coords2D_chunk, bs_idx=bs_idx)
             if occupancys.size(1)!=1:
                 occ_list.append(occupancys[:,:1,:])  ##We construct an uncertainty field
             else: occ_list.append(occupancys)
@@ -142,13 +153,51 @@ class Seg3dLossless(nn.Module):
             "query_func should return a occupancy with shape of [bz, C, N]"
         return occupancys
 
-    def forward(self, **kwargs):
-        if self.faster:
-            return self._forward_faster(**kwargs)
+    def batch_eval_grad(self, coords, bs_idx=None,disc=False, **kwargs):###问题在这
+        """
+        coords: in the coordinates of last resolution
+        **kwargs: for query_func
+        """
+        ## coords = coords.detach()
+        # #normalize coords to fit in [b_min, b_max]
+        if self.align_corners:
+            coords2D = coords.float() / (self.resolutions[-1] - 1)
+        else:
+            step = 1.0 / self.resolutions[-1].float()
+            coords2D = coords.float() / self.resolutions[-1] + step / 2
+        coords2D = coords2D * (self.b_max - self.b_min) + self.b_min
+        # query function
+        bs, B, c=coords2D.size()
+        chunk_temp=8000
+        occ_list=[]
+        for index in range(0, B, chunk_temp):
+            coords2D_chunk=coords2D[:,index:index+chunk_temp,:]
+            chunk_pointnum=coords2D_chunk.size(1)
+            if chunk_pointnum!=chunk_temp:
+                coords2D_chunk=torch.cat([coords2D_chunk, torch.zeros(bs,chunk_temp-chunk_pointnum,c, device=coords2D.device)],dim=1)
+        #####chunk inference
+            occupancys = self.query_func_grad(**kwargs, points=coords2D_chunk, bs_idx=bs_idx, disc=disc)
+            if occupancys.size(1)!=1:
+                occ_list.append(occupancys[:,:1,:])  ##We construct an uncertainty field
+            else: occ_list.append(occupancys)
+        if B!=chunk_temp:
+            occupancys=torch.cat(occ_list,2)[:,:,:B]
+        if type(occupancys) is list:
+            occupancys = torch.stack(occupancys)    # [bz, C, N]
+        assert len(occupancys.size()) == 3, \
+            "query_func should return a occupancy with shape of [bz, C, N]"
+        # occupancys=torch.rand(coords.size(0),1,coords.size(1)).cuda()
+        return occupancys
+
+    def forward(self, disc,**kwargs):
+        if disc:
+            return self._forward_faster_grad(disc,**kwargs)
+        elif self.faster:
+            return self._forward_faster(disc,**kwargs)
         else:
             return self._forward(**kwargs)
-
-    def _forward_faster(self, **kwargs):
+        
+    def _forward_faster_grad(self, disc=False, **kwargs):
         """
         torch.Size([1, 2, 8000]) torch.Size([1, 8, 8000]) 342
         torch.Size([1, 2, 35937]) torch.Size([1, 8, 35937]) 342
@@ -167,6 +216,162 @@ class Seg3dLossless(nn.Module):
         2. smooth_conv9x9 ~ smooth_conv3x3 for different resolution
         3. last step no examine
         """
+        if not disc:
+            init_coordsv1=self.init_coords[0,...][None,...]
+            batchsize_temp=1
+        else: 
+            init_coordsv1=self.init_coords 
+            batchsize_temp=self.batchsize
+        final_W = self.resolutions[-1][0]
+        final_H = self.resolutions[-1][1]
+        final_D = self.resolutions[-1][2]
+
+        for resolution in self.resolutions: ###out of memory in validation mode
+            W, H, D = resolution
+            stride = (self.resolutions[-1] - 1) / (resolution - 1)
+            
+
+            # first step
+            if torch.equal(resolution, self.resolutions[0]):
+                coords = init_coordsv1.clone()    # torch.long
+                occupancys = self.batch_eval_grad(coords, disc=disc,**kwargs)
+                # occupancys=torch.zeros(2,1, 33,33,33).cuda()
+                occupancys = occupancys.view(batchsize_temp, self.channels, D, H, W)
+                if (occupancys > 0.5).sum() == 0:
+                    # return F.interpolate(
+                    #     occupancys, size=(final_D, final_H, final_W),
+                    #     mode="linear", align_corners=True)
+                    return None ##whole value is too small
+
+                if self.visualize:
+                    self.plot(occupancys, coords, final_D, final_H, final_W)
+
+                # with torch.no_grad():
+                coords_accum = coords / stride
+
+            # last step
+            elif torch.equal(resolution, self.resolutions[-1]):
+
+                # with torch.no_grad():
+                    # here true is correct!
+                valid = F.interpolate(
+                    (occupancys > self.balance_value).float(),
+                    size=(D, H, W),
+                    mode="trilinear",
+                    align_corners=True
+                )
+
+                # here true is correct!
+                occupancys = F.interpolate(
+                    occupancys.float(), size=(D, H, W), mode="trilinear", align_corners=True
+                )
+
+                # is_boundary = (valid > 0.0) & (valid < 1.0)
+                is_boundary = valid == 0.5
+
+            # next steps
+            else:
+                coords_accum *= 2
+
+                # with torch.no_grad():
+                    # here true is correct!
+                valid = F.interpolate(
+                    (occupancys > self.balance_value).float(),
+                    size=(D, H, W),
+                    mode="trilinear",
+                    align_corners=True
+                )
+
+                # here true is correct!
+                occupancys = F.interpolate(
+                    occupancys.float(), size=(D, H, W), mode="trilinear", align_corners=True
+                )
+
+                is_boundary = (valid > 0.0) & (valid < 1.0)
+                coord_accum_list=[]
+                occupancy_list=[]
+                for bs_idx in range(occupancys.size(0)):
+                    # with torch.no_grad():
+                    if torch.equal(resolution, self.resolutions[1]):
+                        is_boundary_temp = (self.smooth_conv9x9(is_boundary.float()) > 0)[bs_idx, 0]
+                    elif torch.equal(resolution, self.resolutions[2]):
+                        is_boundary_temp = (self.smooth_conv7x7(is_boundary.float()) > 0)[bs_idx, 0]
+                    else:
+                        is_boundary_temp = (self.smooth_conv3x3(is_boundary.float()) > 0)[bs_idx, 0]
+
+                    coords_accum = coords_accum.long()
+                    is_boundary_temp[coords_accum[bs_idx, :, 2], coords_accum[bs_idx, :, 1],+
+                                coords_accum[bs_idx, :, 0]] = False
+                    point_coords = is_boundary_temp.permute(2,1,0)
+                    point_coords=point_coords.nonzero(as_tuple=False)
+                    point_coords=point_coords.unsqueeze(0) ##the nonzero operation yields outputs with variant size.
+                    point_indices = (
+                        point_coords[:, :, 2] * H * W + point_coords[:, :, 1] * W +
+                        point_coords[:, :, 0]
+                    )
+
+                    R, C, D, H, W = occupancys.shape
+
+                    # inferred value
+                    coords = point_coords * stride
+
+                    if coords.size(1) == 0:
+                        continue
+                    
+                    occupancys_topk = self.batch_eval_grad(coords, bs_idx=bs_idx,disc=disc, **kwargs)
+
+                    # put mask point predictions to the right places on the upsampled grid.
+                    occupancys_temp=occupancys[bs_idx][None,...]
+                    R, C, D, H, W = occupancys_temp.shape
+                    point_indices = point_indices.unsqueeze(1).expand(-1, C, -1)
+                    occupancys_temp = (
+                        occupancys_temp.reshape(R, C,
+                                        D * H * W).scatter_(2, point_indices,
+                                                            occupancys_topk).view(R, C, D, H, W)
+                    )
+                    occupancy_list.append(occupancys_temp)
+                    # with torch.no_grad():
+                    voxels = coords / stride
+                    # coords_accum = torch.cat([voxels, coords_accum[bs_idx][None,...]], dim=1).unique(dim=1)
+                    coord_accum_list.append(torch.cat([voxels, coords_accum[bs_idx][None,...]], dim=1).unique(dim=1))
+                # coords_accum=torch.cat(coord_accum_list, dim=0)
+                occupancys=torch.cat(occupancy_list, dim=0)
+        # 
+        if disc:
+            return occupancys[:,0]
+            
+
+
+        return occupancys[0, 0]
+        # return torch.zeros(2, 129,129,129).cuda()
+    
+
+    def _forward_faster(self, disc=False, **kwargs):
+        """
+        torch.Size([1, 2, 8000]) torch.Size([1, 8, 8000]) 342
+        torch.Size([1, 2, 35937]) torch.Size([1, 8, 35937]) 342
+        torch.Size([1, 2, 218875]) torch.Size([1, 8, 218875]) 342
+        torch.Size([1, 2, 1333697]) torch.Size([1, 8, 1333697]) 342
+        torch.Size([1, 2, 4188602]) torch.Size([1, 8, 4188602]) 342
+
+        torch.Size([1, 3, 8000]) 438
+        torch.Size([1, 2, 8000]) torch.Size([1, 8, 8000]) 342
+        torch.Size([1, 2, 35937]) torch.Size([1, 8, 35937]) 342
+        torch.Size([1, 2, 213920]) torch.Size([1, 8, 213920]) 342
+        torch.Size([1, 2, 1201690]) torch.Size([1, 8, 1201690]) 342
+        torch.Size([1, 2, 3601008]) torch.Size([1, 8, 3601008]) 342
+        In faster mode, we make following changes to exchange accuracy for speed:
+        1. no conflict checking: 4.88 fps -> 6.56 fps
+        2. smooth_conv9x9 ~ smooth_conv3x3 for different resolution
+        3. last step no examine
+        """
+        if not disc:
+            init_coordsv1=self.init_coords[0:1,...]
+            batchsize_temp=1
+        else: 
+            init_coordsv1=self.init_coords 
+            batchsize_temp=self.batchsize
+
         final_W = self.resolutions[-1][0]
         final_H = self.resolutions[-1][1]
         final_D = self.resolutions[-1][2]
@@ -177,14 +382,14 @@ class Seg3dLossless(nn.Module):
 
             # first step
             if torch.equal(resolution, self.resolutions[0]):
-                coords = self.init_coords.clone()    # torch.long
+                coords = init_coordsv1.clone()    # torch.long
                 occupancys = self.batch_eval(coords, **kwargs)
-                occupancys = occupancys.view(self.batchsize, self.channels, D, H, W)
+                occupancys = occupancys.view(batchsize_temp, self.channels, D, H, W)
                 if (occupancys > 0.5).sum() == 0:
                     # return F.interpolate(
                     #     occupancys, size=(final_D, final_H, final_W),
                     #     mode="linear", align_corners=True)
-                    return None ##whole value is too small
+                    return None ##whole value is too small only occur in render_func
 
                 if self.visualize:
                     self.plot(occupancys, coords, final_D, final_H, final_W)
@@ -204,13 +409,13 @@ class Seg3dLossless(nn.Module):
                         align_corners=True
                     )
 
-                # here true is correct!
-                occupancys = F.interpolate(
-                    occupancys.float(), size=(D, H, W), mode="trilinear", align_corners=True
-                )
+                    # here true is correct!
+                    occupancys = F.interpolate(
+                        occupancys.float(), size=(D, H, W), mode="trilinear", align_corners=True
+                    )
 
-                # is_boundary = (valid > 0.0) & (valid < 1.0)
-                is_boundary = valid == 0.5
+                    # is_boundary = (valid > 0.0) & (valid < 1.0)
+                    is_boundary = valid == 0.5
 
             # next steps
             else:
@@ -272,6 +477,9 @@ class Seg3dLossless(nn.Module):
                 with torch.no_grad():
                     voxels = coords / stride
                     coords_accum = torch.cat([voxels, coords_accum], dim=1).unique(dim=1)
+        if disc:
+            return occupancys[:,0]
+
 
         return occupancys[0, 0]
 
@@ -559,9 +767,16 @@ class Seg3dLossless(nn.Module):
         return X, Y, Z, norm
 
     def render_normal(self, resolution, X, Y, Z, norm):
-        image = torch.ones((1, 3, resolution, resolution), dtype=torch.float32).to(norm.device)
+        image = torch.ones((1, 3, resolution, resolution), dtype=torch.float32,device=norm.device) #.to(norm.device)
         color = (norm + 1) / 2.0
         color = color.clamp(0, 1)
+        image[0, :, Y, X] = color.t()
+        return image
+    
+    def render_normal_grad(self, resolution, X, Y, Z, norm):
+        image = torch.ones((1, 3, resolution, resolution), dtype=torch.float32,device=norm.device) #.to(norm.device)
+        color = (norm + 1) / 2.0
+        # color = color.clamp(0, 1)
         image[0, :, Y, X] = color.t()
         return image
 
@@ -581,27 +796,31 @@ class Seg3dLossless(nn.Module):
         image = image.detach().cpu().numpy()[0].transpose(1, 2, 0) * 255.0
 
         return np.uint8(image)
-    def display_train(self, sdf):
-        random=np.random.rand(1).item()
-        if random>=0.5:
-            X, Y, Z, norm = self.find_vertices(sdf, direction="left")
-            image_left = self.render_normal(self.resolutions[-1, -1], X, Y, Z, norm)
-            return image_left
-        else:
-            X, Y, Z, norm = self.find_vertices(sdf, direction="right")
-            image_right = self.render_normal(self.resolutions[-1, -1], X, Y, Z, norm)
-            return image_right
+    # def display_train(self, sdf):
+    #     random=np.random.rand(1).item()
+    #     if random>=0.5:
+    #         X, Y, Z, norm = self.find_vertices(sdf, direction="left")
+    #         image_left = self.render_normal_grad(self.resolutions[-1, -1], X, Y, Z, norm)
+    #         return image_left
+    #     else:
+    #         X, Y, Z, norm = self.find_vertices(sdf, direction="right")
+    #         image_right = self.render_normal_grad(self.resolutions[-1, -1], X, Y, Z, norm)
+    #         return image_right
         
     def display_train_dis(self, sdf):
-        random=np.random.rand(1).item()
-        if random>=0.5:
-            X, Y, Z, norm = self.find_vertices(sdf, direction="left")
-            image_left = self.render_normal(128, X, Y, Z, norm)
-            return image_left
-        else:
-            X, Y, Z, norm = self.find_vertices(sdf, direction="right")
-            image_right = self.render_normal(128, X, Y, Z, norm)
-            return image_right
+        imagelist=[]
+        for bs_idx in range(sdf.size(0)):
+            random=np.random.rand(1).item()
+            if random>=0.5:
+                X, Y, Z, norm = self.find_vertices(sdf[bs_idx], direction="left")
+                image = self.render_normal_grad(self.resolutions[-1, -1], X, Y, Z, norm)
+                imagelist.append(image)
+            else:
+                X, Y, Z, norm = self.find_vertices(sdf[bs_idx], direction="right")
+                image = self.render_normal_grad(self.resolutions[-1, -1], X, Y, Z, norm)
+                imagelist.append(image)
+
+        return torch.cat(imagelist, dim=0)
 
     def export_mesh(self, occupancys):
 
