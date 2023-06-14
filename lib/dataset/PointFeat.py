@@ -75,7 +75,6 @@ class PointFeat:
         # points [B, N, 3]
         # feats {'feat_name': [B, N, C]}
         del_keys = ["smpl_verts", "smpl_faces", "smpl_joint", "voxel_verts", "voxel_faces","pad_v_num", "pad_f_num"]
-
         residues, pts_ind, _ = point_to_mesh_distance(points, self.triangles)
         closest_triangles = torch.gather(
             self.triangles, 1, pts_ind[:, :, None, None].expand(-1, -1, 3, 3)

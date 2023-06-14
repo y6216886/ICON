@@ -34,10 +34,13 @@ net:
   num_stack: 2
   prior_type: "pifu"
   use_filter: True
-  # in_geo: (('image',3), ('normal_F',3), ('normal_B',3))
+  # use_filter: False
+  # in_geo: ()
   # in_nml: (('image',3), ('T_normal_F',3), ('T_normal_B',3))
-  in_geo: [['image',3]] #, ('normal_F',3), ('normal_B',3))
-  in_nml: [['image',3]] #, ('T_normal_F',3), ('T_normal_B',3))
+  # in_geo: [['image',3]] #, ('normal_F',3), ('normal_B',3))
+  # in_nml: [['image',3]] #, ('T_normal_F',3), ('T_normal_B',3))
+  in_geo: (('image',3), ('normal_F',3), ('normal_B',3))
+  in_nml: (('image',3), ('T_normal_F',3), ('T_normal_B',3))
   
   gtype: 'HGPIFuNet'
   ctype: 'resnet34'
@@ -54,7 +57,7 @@ lr_G: 1e-4
 weight_decay: 0.0 
 momentum: 0.0
 batch_size: 2
-num_threads: 16
+num_threads: 8
 gpus: [0]
 test_gpus: [0]
 
@@ -64,7 +67,7 @@ sdf_clip: 15.0
 fast_dev: 0
 resume: False
 test_mode: False
-mcube_res: 512
+mcube_res: 128
 clean_mesh: True
 num_sanity_val_steps: 1
 

@@ -77,7 +77,9 @@ class HGPIFuNet(BasePIFuNet):
 
         channels_IF = self.opt.mlp_dim
 
-        self.use_filter = self.opt.use_filter
+        # self.use_filter = self.opt.use_filter
+        self.use_filter = self.args.filter
+        print("self.use_filter", self.use_filter)
         self.prior_type = self.opt.prior_type
         self.smpl_feats = self.opt.smpl_feats
 
@@ -117,6 +119,7 @@ class HGPIFuNet(BasePIFuNet):
             #     self.channels_filter = [normal_F_lst + normal_B_lst]
             # elif "image" in self.in_geo and cfg.exclude_normal:
             #     self.channels_filter = [image_lst]
+            self.channels_filter = []
             if "image" in self.in_geo:
                 self.channels_filter = [image_lst] 
             if "normal_F" in self.in_geo:
@@ -199,7 +202,7 @@ class HGPIFuNet(BasePIFuNet):
 
         self.sp_encoder = SpatialEncoder()
         # self.discriminator=Unet_Discriminator(resolution=128)
-        self.discriminator=Discriminator((3,129,129))
+        self.discriminator=Discriminator((3,args.trainres+1,args.trainres+1))
         # network
         if self.use_filter:
             if self.opt.gtype == "HGPIFuNet":
@@ -270,7 +273,7 @@ class HGPIFuNet(BasePIFuNet):
                 #             feat_lst.append(nmlF)
                 #             nmlB = in_tensor_dict["normal_B"]
                 #             feat_lst.append(nmlB) 
-                if self.prior_type in ["icon", "keypoint"]:
+                if self.prior_type in ["icon", "keypoint", 'pifu', 'pamir']:
                     if (
                             "normal_F"  in in_tensor_dict.keys() and
                             "normal_B"  in in_tensor_dict.keys()
@@ -359,6 +362,8 @@ class HGPIFuNet(BasePIFuNet):
 
     def query(self, features, points, calibs, bs_idx=None, transforms=None, regressor=None, clip_feature=None):
         xyz = self.projection(points, calibs, transforms)
+        bs=features[0].size(0)
+        xyz=xyz[:bs,...]
         (xy, z) = xyz.split([2, 1], dim=1)
 
         in_cube = (xyz > -1.0) & (xyz < 1.0)
@@ -470,12 +475,20 @@ class HGPIFuNet(BasePIFuNet):
             ## smpl_verts [B, N_vert, 3]
             ## smpl_faces [B, N_face, 3]
             ## xyz [B, 3, N]  --> points [B, N, 3]
-            if bs_idx!=None:   
-                 point_feat_extractor = PointFeat_grad(
-                self.smpl_feat_dict["smpl_verts"][bs_idx][None,...],self.smpl_feat_dict["smpl_faces"][bs_idx][None,...], args=self.args
+            # if bs_idx!=None:   
+            #      point_feat_extractor = PointFeat_grad(
+            #     self.smpl_feat_dict["smpl_verts"][bs_idx][None,...],self.smpl_feat_dict["smpl_faces"][bs_idx][None,...], args=self.args
+            # )
+            # else:
+            #     point_feat_extractor = PointFeat_grad(
+            #     self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args
+            # )
+            if bs_idx!=None:
+                 point_feat_extractor = PointFeat(
+                self.smpl_feat_dict["smpl_verts"][bs_idx][None,...], self.smpl_feat_dict["smpl_faces"][bs_idx][None,...], args=self.args
             )
             else:
-                point_feat_extractor = PointFeat_grad(
+                point_feat_extractor = PointFeat(
                 self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args
             )
             smpl_feat_dict=self.smpl_feat_dict

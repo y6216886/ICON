@@ -51,7 +51,7 @@ lr_G: 1e-4
 weight_decay: 0.0 
 momentum: 0.0
 batch_size: 2
-num_threads: 16
+num_threads: 4
 gpus: [0]
 test_gpus: [0]
 

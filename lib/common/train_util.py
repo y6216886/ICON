@@ -459,14 +459,23 @@ def query_func_grad(opt, netG, features, points, bs_idx=None, proj_matrix=None, 
 
     calib_tensor = torch.stack([torch.eye(4).float()], dim=0).type_as(samples)
     calib_tensor=calib_tensor.repeat(points.size(0),1,1)
+    # if bs_idx!=None:
+    #     featuresv1=[features[0][bs_idx,...][None,...]]
+    #     preds = netG.query_grad(
+    #         features=featuresv1, points=samples, bs_idx=bs_idx, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature,disc=disc    ###问题在这，改成随机数（preds=torch.rand(samples.size(0),1,samples.size(2)).cuda()）结果就没问题了 
+    #     )
+    # else:
+    #     preds = netG.query_grad(
+    #         features=features, points=samples, bs_idx=bs_idx, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature, disc=disc
+    #     )
     if bs_idx!=None:
         featuresv1=[features[0][bs_idx,...][None,...]]
-        preds = netG.query_grad(
-            features=featuresv1, points=samples, bs_idx=bs_idx, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature,disc=disc    ###问题在这，改成随机数（preds=torch.rand(samples.size(0),1,samples.size(2)).cuda()）结果就没问题了 
+        preds = netG.query(
+            features=featuresv1, points=samples, bs_idx=bs_idx, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature
         )
     else:
-        preds = netG.query_grad(
-            features=features, points=samples, bs_idx=bs_idx, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature, disc=disc
+        preds = netG.query(
+            features=features, points=samples, bs_idx=bs_idx, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature
         )
 
 

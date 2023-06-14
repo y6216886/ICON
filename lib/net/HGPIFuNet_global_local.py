@@ -76,7 +76,8 @@ class HGPIFuNet_global_local(BasePIFuNet):
 
         channels_IF = self.opt.mlp_dim
 
-        self.use_filter = self.opt.use_filter
+        # self.use_filter = self.opt.use_filter
+        self.use_filter = self.args.filter
         self.prior_type = self.opt.prior_type
         self.smpl_feats = self.opt.smpl_feats
 

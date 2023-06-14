@@ -119,7 +119,12 @@ if __name__ == "__main__":
     parser.add_argument('--noise_scale', nargs='+', type=float, default=[0.0,0.0]) ##max smpl pose 1.45  min -1.18  smpl betas max 1.04 min -0.35
     parser.add_argument('--smplx2smpl', default=False, action="store_true") #2,3,4,5,6
         ##dis##
-    parser.add_argument('--dis_on_side', default=False, action="store_true") #2,3,4,5,6
+    parser.add_argument('--dis_on_side', default=False, action="store_true") #2,3,4,5,6 
+    parser.add_argument('--loss_d_ratio', type=float, default=1e-3)
+    parser.add_argument("--trainres", type=int, default=128, choices=[32,64,128,256,512])
+    parser.add_argument('--filter', action='store_true')
+    parser.add_argument('--no-filter', dest='filter', action='store_false')
+    parser.set_defaults(filter=True)
     args = parser.parse_args()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
@@ -136,23 +141,13 @@ if __name__ == "__main__":
     cfg.freeze()
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
-    try:
-        os.makedirs("/home/yangyifan/wandb", exist_ok=True)
-        if not args.offline: 
-            wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir="/home/yangyifan/wandb")
-        if args.offline or args.test_code:
-            wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir="/home/yangyifan/wandb",offline=True)
-    except:
-        os.makedirs(args.savepath+"wandb", exist_ok=True)
-        if not args.offline: 
-            wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath+"wandb")
-        if args.offline or args.test_code:
-            wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath+"wandb",offline=True)
-    # if not args.offline: 
-    #     wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath)
-    # if args.offline or args.test_code:
-    #     wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath, offline=True)
 
+    os.makedirs(args.savepath+"wandb", exist_ok=True)
+    if not args.offline: 
+        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath+"wandb")
+    if args.offline or args.test_code:
+        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath+"wandb",offline=True)
+        
     if cfg.overfit:
         cfg_overfit_list = ["batch_size", 1]
         cfg.merge_from_list(cfg_overfit_list)

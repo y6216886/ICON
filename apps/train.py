@@ -26,7 +26,7 @@ from pytorch_lightning.loggers import WandbLogger
 # import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -74,16 +74,16 @@ if __name__ == "__main__":
     # torch.multiprocessing.set_start_method('spawn',force=True)
     parser = argparse.ArgumentParser()
     # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_cape/icon/icon-filter.yaml',help="path of the yaml config file")
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter.yaml',help="path of the yaml config file")
+    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter.yaml',help="path of the yaml config file")
     
-    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon_study_feature/icon-filter_wovis.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/pifu/pifu_img.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
     parser.add_argument("-val", "--val_mode", default=False, action="store_true")
     parser.add_argument("--test_code", default=False, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
-    parser.add_argument("--offline",default=False, action="store_true")
+    parser.add_argument("--offline",default=True, action="store_true")
     parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
@@ -129,6 +129,10 @@ if __name__ == "__main__":
     ##dis##
     parser.add_argument('--dis_on_side', default=True, action="store_true") #2,3,4,5,6 
     parser.add_argument('--loss_d_ratio', type=float, default=1e-3)
+    parser.add_argument("--trainres", type=int, default=64, choices=[32,64,128,256,512])
+    parser.add_argument('--filter', action='store_true')
+    parser.add_argument('--no-filter', dest='filter', action='store_false')
+    parser.set_defaults(filter=False)
     ######
     args = parser.parse_args()
     cfg = get_cfg_defaults()
@@ -261,7 +265,7 @@ if __name__ == "__main__":
 
 
     model = ICON(cfg, args)
-
+    # wandb_logger.watch(model, log_freq=10)##0.15.0
 
     trainer = SubTrainer(accelerator='ddp' if args.num_gpus>1 else None, **trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
     # trainer = Trainer(**trainer_kwargs)
