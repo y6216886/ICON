@@ -253,8 +253,10 @@ class ICON(pl.LightningModule):
 
         metrics_return = {k.replace("train_", ""): torch.tensor(v) for k, v in metrics_log.items()}
         if self.args.kl_div:
-            metrics_return.update({"loss": error_G[0], "kl_loss":error_G[1],  "log": tf_log, "progress_bar": bar_log})
-        else:metrics_return.update({"loss": error_G, "log": tf_log, "progress_bar": bar_log})
+            metrics_return.update({"loss": error_G[0], "log": tf_log, "progress_bar": bar_log})
+        else:
+            metrics_return.update({"loss": error_G, "log": tf_log, "progress_bar": bar_log})
+
 
         return metrics_return
 

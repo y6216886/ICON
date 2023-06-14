@@ -26,7 +26,7 @@ from pytorch_lightning.loggers import WandbLogger
 # import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-# os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -73,7 +73,8 @@ def checkname(args,cfg):
 if __name__ == "__main__":
     # torch.multiprocessing.set_start_method('spawn',force=True)
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_cape/icon/icon-filter.yaml',help="path of the yaml config file")
+    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_cape/icon/icon-filter.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
@@ -84,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
-    parser.add_argument("--mlp_first_dim", type=int, default=20) 
+    parser.add_argument("--mlp_first_dim", type=int, default=0) 
     parser.add_argument("--PE_sdf", type=int, default=0) 
 
     ####model
@@ -98,10 +99,10 @@ if __name__ == "__main__":
 
 
     ####uncertainty
-    parser.add_argument("--uncertainty", default=False, action="store_true")
+    parser.add_argument("--uncertainty", default=True, action="store_true")
     parser.add_argument("--beta_min", type=float, default=0.03)
     parser.add_argument("--beta_plus", type=float, default=3.)
-    parser.add_argument("--kl_div", default=False, action="store_true")
+    parser.add_argument("--kl_div", default=True, action="store_true")
     ######
 
     #####useclip
@@ -120,7 +121,7 @@ if __name__ == "__main__":
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
 
     ##global and local  
-    parser.add_argument("--pamir_icon", default=True, action="store_true")
+    parser.add_argument("--pamir_icon", default=False, action="store_true")
     parser.add_argument('--noise_scale', nargs='+', type=float, default=[0,0]) #2,3,4,5,6
     parser.add_argument('--smplx2smpl', default=False, action="store_true") #2,3,4,5,6
     ######
