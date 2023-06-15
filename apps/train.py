@@ -8,7 +8,7 @@ logging.getLogger("lightning").setLevel(logging.ERROR)
 logging.getLogger("trimesh").setLevel(logging.ERROR)
 import sys
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON")
-sys.path.append("/home/young/code/human_reconstruction/")
+sys.path.append("/media/young/writable/code/human_reconstruction/")
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning import loggers as pl_loggers
@@ -26,7 +26,7 @@ from pytorch_lightning.loggers import WandbLogger
 # import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -74,7 +74,8 @@ if __name__ == "__main__":
     # torch.multiprocessing.set_start_method('spawn',force=True)
     parser = argparse.ArgumentParser()
     # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_cape/icon/icon-filter.yaml',help="path of the yaml config file")
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml',help="path of the yaml config file")
+    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
