@@ -45,7 +45,7 @@ class ICON(pl.LightningModule):
         super(ICON, self).__init__()
         self.args=args
         self.cfg = cfg
-        self.batch_size = self.cfg.batch_size
+        self.batch_size = self.args.batch_size
         self.lr_G = self.cfg.lr_G
         self.lr_D=self.cfg.lr_G *0.05
         self.train_resolutions=[[33,33,33],[65,65,65]]
@@ -126,7 +126,9 @@ class ICON(pl.LightningModule):
             faster=True,
             train_resolution=self.train_resolutions,
             cfg=cfg,
-            query_func_grad=query_func_grad
+            query_func_grad=query_func_grad,
+            args=args
+
         )
 
         self.render = Render(size=512, device=torch.device(f"cuda:{self.cfg.gpus[0]}"))

@@ -49,6 +49,7 @@ class Seg3dLossless(nn.Module):
         train_resolution=[[33,33,33],[65,65,65]],
         cfg=None,
         query_func_grad=None,
+        args=None,
         **kwargs
     ):
         """
@@ -80,7 +81,7 @@ class Seg3dLossless(nn.Module):
 
         # self.batchsize = self.b_min.size(0)
         # assert self.batchsize == 1
-        self.batchsize = cfg.batch_size
+        self.batchsize = args.batch_size
         self.balance_value = balance_value
         self.channels = channels
         assert self.channels == 1
@@ -99,6 +100,10 @@ class Seg3dLossless(nn.Module):
         init_coords = create_grid3D(0, resolutions[-1] - 1, steps=resolutions[0])    # [N, 3]
         init_coords = init_coords.unsqueeze(0).repeat(self.batchsize, 1, 1)    # [bz, N, 3]
         self.register_buffer('init_coords', init_coords)
+
+        train_init_coords = create_grid3D(0, train_resolution[-1] - 1, steps=train_resolution[0])    # [N, 3]
+        train_init_coords = train_init_coords.unsqueeze(0).repeat(self.batchsize, 1, 1)    # [bz, N, 3]
+        self.register_buffer('train_init_coords', train_init_coords)
 
         # some useful tensors
         calculated = torch.zeros(
@@ -225,7 +230,7 @@ class Seg3dLossless(nn.Module):
             init_coordsv1=self.init_coords[0,...][None,...]
             batchsize_temp=1
         else: 
-            init_coordsv1=self.init_coords 
+            init_coordsv1=self.train_init_coords 
             batchsize_temp=kwargs["features"][0].size(0)
             resolutions=self.train_resolution
         # final_W = self.resolutions[-1][0]

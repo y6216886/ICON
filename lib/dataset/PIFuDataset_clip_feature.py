@@ -48,7 +48,7 @@ class PIFuDataset():
         self.test=cfg.test_mode
         self.split = split
         self.root = cfg.root
-        self.bsize = cfg.batch_size
+        self.bsize = args.batch_size
         self.overfit = cfg.overfit
         self.args=args
 

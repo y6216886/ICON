@@ -151,7 +151,7 @@ class HGPIFuNet_global_local(BasePIFuNet):
                 volume_res=128,
                 sigma=0.05,
                 smooth_kernel_size=7,
-                batch_size=self.cfg.batch_size,
+                batch_size=self.args.batch_size,
                 device=torch.device(f"cuda:{self.cfg.gpus[0]}"),
             )
             self.ve = VolumeEncoder(3, self.voxel_dim, self.opt.num_stack)
@@ -173,7 +173,7 @@ class HGPIFuNet_global_local(BasePIFuNet):
                 volume_res=128,
                 sigma=0.05,
                 smooth_kernel_size=7,
-                batch_size=self.cfg.batch_size,
+                batch_size=self.args.batch_size,
                 device=torch.device(f"cuda:{self.cfg.gpus[0]}"),
             )
             self.ve = VolumeEncoder(3, self.voxel_dim, self.opt.num_stack)

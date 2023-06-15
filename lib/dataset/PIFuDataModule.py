@@ -15,7 +15,7 @@ class PIFuDataModule(pl.LightningDataModule):
         if self.overfit:
             self.batch_size = 1
         else:
-            self.batch_size = self.cfg.batch_size
+            self.batch_size = self.args.batch_size
 
         self.data_size = {}
 

@@ -26,7 +26,7 @@ from pytorch_lightning.loggers import WandbLogger
 # import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -74,16 +74,16 @@ if __name__ == "__main__":
     # torch.multiprocessing.set_start_method('spawn',force=True)
     parser = argparse.ArgumentParser()
     # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_cape/icon/icon-filter.yaml',help="path of the yaml config file")
-    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter.yaml',help="path of the yaml config file")
     
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/pifu/pifu_img.yaml',help="path of the yaml config file")
+    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/pifu/pifu_img.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
     parser.add_argument("-val", "--val_mode", default=False, action="store_true")
     parser.add_argument("--test_code", default=False, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
-    parser.add_argument("--offline",default=True, action="store_true")
+    parser.add_argument("--offline",default=False, action="store_true")
     parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
@@ -129,9 +129,11 @@ if __name__ == "__main__":
     ##dis##
     parser.add_argument('--dis_on_side', default=True, action="store_true") #2,3,4,5,6 
     parser.add_argument('--loss_d_ratio', type=float, default=1e-3)
-    parser.add_argument("--trainres", type=int, default=64, choices=[32,64,128,256,512])
+    parser.add_argument("--trainres", type=int, default=32, choices=[32,64,128,256,512])
     parser.add_argument('--filter', action='store_true')
     parser.add_argument('--no-filter', dest='filter', action='store_false')
+    parser.add_argument("--batch_size", type=int, default=20)
+
     parser.set_defaults(filter=False)
     ######
     args = parser.parse_args()
@@ -150,7 +152,7 @@ if __name__ == "__main__":
     # cfg.gpus=[int(i) for i in args.gpus]
     # print("experimentname",cfg.name)
     cfg.freeze()
-    print("note cfg is freeze",cfg.batch_size)
+    print("note cfg is freeze",args.batch_size)
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
     if not args.offline: 
@@ -237,9 +239,9 @@ if __name__ == "__main__":
         trainer_kwargs.update(
             {
                 "log_every_n_steps":
-                    int(cfg.freq_plot * train_len // cfg.batch_size),
+                    int(cfg.freq_plot * train_len // args.batch_size),
                 "val_check_interval":
-                    int(freq_eval * train_len // cfg.batch_size) if freq_eval > 10 else freq_eval,
+                    int(freq_eval * train_len // args.batch_size) if freq_eval > 10 else freq_eval,
             }
         )
 
@@ -250,7 +252,7 @@ if __name__ == "__main__":
         else:
             cfg_show_list = [
                 "freq_show_train",
-                max(cfg.freq_show_train * train_len // cfg.batch_size,1.0),
+                max(cfg.freq_show_train * train_len // args.batch_size,1.0),
                 "freq_show_val",
                 max(cfg.freq_show_val * val_len, 1.0),
             ]

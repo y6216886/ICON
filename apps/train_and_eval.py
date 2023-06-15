@@ -121,9 +121,10 @@ if __name__ == "__main__":
         ##dis##
     parser.add_argument('--dis_on_side', default=False, action="store_true") #2,3,4,5,6 
     parser.add_argument('--loss_d_ratio', type=float, default=1e-3)
-    parser.add_argument("--trainres", type=int, default=128, choices=[32,64,128,256,512])
+    parser.add_argument("--trainres", type=int, default=32, choices=[32,64,128,256,512])
     parser.add_argument('--filter', action='store_true')
     parser.add_argument('--no-filter', dest='filter', action='store_false')
+    parser.add_argument("--batch_size", type=int, default=20)
     parser.set_defaults(filter=True)
     args = parser.parse_args()
     cfg = get_cfg_defaults()
@@ -200,9 +201,9 @@ if __name__ == "__main__":
     trainer_kwargs.update(
         {
             "log_every_n_steps":
-                int(cfg.freq_plot * train_len // cfg.batch_size),
+                int(cfg.freq_plot * train_len // args.batch_size),
             "val_check_interval":
-                int(freq_eval * train_len // cfg.batch_size) if freq_eval > 10 else freq_eval,
+                int(freq_eval * train_len // args.batch_size) if freq_eval > 10 else freq_eval,
         }
     )
 
@@ -213,7 +214,7 @@ if __name__ == "__main__":
     else:
         cfg_show_list = [
             "freq_show_train",
-            max(cfg.freq_show_train * train_len // cfg.batch_size,1.0),
+            max(cfg.freq_show_train * train_len // args.batch_size,1.0),
             "freq_show_val",
             max(cfg.freq_show_val * val_len, 1.0),
         ]
