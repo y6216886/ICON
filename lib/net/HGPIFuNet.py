@@ -28,6 +28,7 @@ from lib.dataset.PointFeat import PointFeat, PointFeat_grad
 from lib.dataset.mesh_util import SMPLX
 from lib.net.VE import VolumeEncoder
 from lib.net.HGFilters import *
+from lib.net.lightweight_hg import hg1
 from termcolor import colored
 from lib.net.BasePIFuNet import BasePIFuNet
 import torch.nn as nn
@@ -205,8 +206,10 @@ class HGPIFuNet(BasePIFuNet):
         self.discriminator=Discriminator((3,args.trainres+1,args.trainres+1))
         # network
         if self.use_filter:
-            if self.opt.gtype == "HGPIFuNet":
+            if self.args.gtype == "HGPIFuNet":
                 self.F_filter = HGFilter(self.opt, self.opt.num_stack, len(self.channels_filter[0]))
+            elif self.args.gtype == "lightweighG":
+                self.F_filter = hg1(pretrained=False, first_conv_channel=3)
             else:
                 print(colored(f"Backbone {self.opt.gtype} is unimplemented", "green"))
 

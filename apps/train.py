@@ -8,7 +8,7 @@ logging.getLogger("lightning").setLevel(logging.ERROR)
 logging.getLogger("trimesh").setLevel(logging.ERROR)
 import sys
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON")
-sys.path.append("/home/young/code/human_reconstruction/")
+sys.path.append("/media/young/writable/code/human_reconstruction/")
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning import loggers as pl_loggers
@@ -26,7 +26,7 @@ from pytorch_lightning.loggers import WandbLogger
 # import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter.yaml',help="path of the yaml config file")
     
     # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/pifu/pifu_img.yaml',help="path of the yaml config file")
-    parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
+    parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction_test')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
     parser.add_argument("-val", "--val_mode", default=False, action="store_true")
@@ -128,11 +128,14 @@ if __name__ == "__main__":
     parser.add_argument('--smplx2smpl', default=False, action="store_true") #2,3,4,5,6
     ##dis##
     parser.add_argument('--dis_on_side', default=True, action="store_true") #2,3,4,5,6 
-    parser.add_argument('--loss_d_ratio', type=float, default=1e-3)
-    parser.add_argument("--trainres", type=int, default=32, choices=[32,64,128,256,512])
+    parser.add_argument('--loss_d_ratio', type=float, default=0.01)
+    parser.add_argument("--trainres", type=int, default=16, choices=[16, 32, 48, 64,128,256,512])
     parser.add_argument('--filter', action='store_true')
     parser.add_argument('--no-filter', dest='filter', action='store_false')
-    parser.add_argument("--batch_size", type=int, default=20)
+    parser.add_argument("--batch_size", type=int, default=1)
+    # parser.add_argument("--gtype", type=str, default='lightweighG')
+    parser.add_argument("--gtype", type=str, default='HGPIFuNet')
+    
 
     parser.set_defaults(filter=False)
     ######

@@ -47,21 +47,22 @@ class ICON(pl.LightningModule):
         self.cfg = cfg
         self.batch_size = self.args.batch_size
         self.lr_G = self.cfg.lr_G
-        self.lr_D=self.cfg.lr_G *0.05
+        self.lr_D=self.cfg.lr_G *0.1
         self.train_resolutions=[[33,33,33],[65,65,65]]
         if args.dis_on_side:
             self.loss_d_ratio=args.loss_d_ratio
-            self.train_resolutions = (
-                np.logspace(
-                    start=5,
-                    stop=np.log2(args.trainres),
-                    base=2,
-                    num=int(np.log2(args.trainres) - 4),
-                    endpoint=True,
-                ) + 1.0
-            )
-                    
-            self.train_resolutions = self.train_resolutions.astype(np.int16).tolist()
+            # self.train_resolutions = (
+            #     np.logspace(
+            #         start=5,
+            #         stop=np.log2(args.trainres),
+            #         base=2,
+            #         num=int(np.log2(args.trainres) - 4),
+            #         endpoint=True,
+            #     ) + 1.0
+            # )
+            # self.train_resolutions=np.array([args.trainres+1])
+            # self.train_resolutions = self.train_resolutions.astype(np.int16).tolist()
+            self.train_resolutions=[args.trainres+1]
         self.automatic_optimization = False
         
         self.use_sdf = cfg.sdf
@@ -928,7 +929,8 @@ class ICON(pl.LightningModule):
         if sdf is not None:
             with torch.no_grad():
                 image_fake = self.reconEngine.display_train_dis(sdf)
-            D_loss_fake = self.criterion_GAN(self.netG.discriminator(image_fake), self.fake) ##batch size is not right
+            fake_digits=self.netG.discriminator(image_fake)
+            D_loss_fake = self.criterion_GAN(fake_digits, self.fake) ##batch size is not right
             # random=np.random.rand(1).item()
             # if random>=0.5:
             #     image_real=(inter[:,:3,...]+1)/2
@@ -939,11 +941,18 @@ class ICON(pl.LightningModule):
             image_real=torch.flip(image_real, dims=[2])
             image_real=F.interpolate(image_real,self.args.trainres+1,mode='bilinear').detach()
 
-            # print(image_real.mean(),image_real.std(),image_fake.mean(),image_fake.std())
-            D_loss_real=self.criterion_GAN(self.netG.discriminator(image_real), self.valid)
+            # print(image_real.max(),image_real.min(),image_fake.max(),image_fake.min()) #have checked it is ok
+            # print("image_fake.mean: {}, image_fake.std: {} image_real.mean: {}, image_real.std: {}".format(image_fake.mean(), image_fake.std(), image_real.mean(), image_real.std())) #have checked it is ok
+            real_digits=self.netG.discriminator(image_real)
+            D_loss_real=self.criterion_GAN(real_digits, self.valid)
+
+            print("real_digits: {} fake_digits: {}:".format(real_digits.mean(), fake_digits.mean()))
+
             D_loss = 0.5*D_loss_real + 0.5*D_loss_fake
             return D_loss, image_fake, image_real
-        else: return None, torch.zeros((2,3, self.args.trainres+1,self.args.trainres+1)).cuda(), torch.zeros((2,3, self.args.trainres+1,self.args.trainres+1)).cuda()
+        else: 
+            print("sdf is None")
+            return None, torch.zeros((2,3, self.args.trainres+1,self.args.trainres+1)).cuda(), torch.zeros((2,3, self.args.trainres+1,self.args.trainres+1)).cuda()
     
     def render_func_dis_fake(self, in_tensor_dict, dataset="title", idx=0):
         # for name in in_tensor_dict.keys():

@@ -224,6 +224,8 @@ class HGPIFuNet_global_local(BasePIFuNet):
         if self.use_filter:
             if self.opt.gtype == "HGPIFuNet":
                 self.F_filter = HGFilter(self.opt, self.opt.num_stack, len(self.channels_filter[0]))
+            elif self.args.gtype == "lightweighG":
+                self.F_filter = hg1(pretrained=False, first_conv_channel=6)
             else:
                 print(colored(f"Backbone {self.opt.gtype} is unimplemented", "green"))
 
