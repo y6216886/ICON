@@ -121,7 +121,7 @@ if __name__ == "__main__":
         ##dis##
     parser.add_argument('--dis_on_side', default=False, action="store_true") #2,3,4,5,6 
     parser.add_argument('--loss_d_ratio', type=float, default=1e-3)
-    parser.add_argument("--trainres", type=int, default=32, choices=[32,64,128,256,512])
+    parser.add_argument("--trainres", type=int, default=16)
     parser.add_argument('--filter', action='store_true')
     parser.add_argument('--no-filter', dest='filter', action='store_false')
     parser.add_argument("--batch_size", type=int, default=20)

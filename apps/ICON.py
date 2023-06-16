@@ -946,12 +946,12 @@ class ICON(pl.LightningModule):
             real_digits=self.netG.discriminator(image_real)
             D_loss_real=self.criterion_GAN(real_digits, self.valid)
 
-            print("real_digits: {} fake_digits: {}:".format(real_digits.mean(), fake_digits.mean()))
+            # print("real_digits: {} fake_digits: {}:".format(real_digits.mean(), fake_digits.mean()))
 
             D_loss = 0.5*D_loss_real + 0.5*D_loss_fake
             return D_loss, image_fake, image_real
         else: 
-            print("sdf is None")
+            # print("sdf is None")
             return None, torch.zeros((2,3, self.args.trainres+1,self.args.trainres+1)).cuda(), torch.zeros((2,3, self.args.trainres+1,self.args.trainres+1)).cuda()
     
     def render_func_dis_fake(self, in_tensor_dict, dataset="title", idx=0):
