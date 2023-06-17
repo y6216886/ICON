@@ -114,7 +114,7 @@ if __name__ == "__main__":
     cfg.merge_from_list(cfg_show_list)
     cfg.freeze()
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
     device = torch.device(f"cuda:{args.gpu_device}")
 
     # load model and dataloader

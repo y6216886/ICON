@@ -210,7 +210,7 @@ if __name__ == "__main__":
     else:
         os.environ["PYOPENGL_PLATFORM"] = ""
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
     # shoud be put after PYOPENGL_PLATFORM
     import lib.renderer.opengl_util as opengl_util

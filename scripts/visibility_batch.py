@@ -75,7 +75,7 @@ if __name__ == "__main__":
     os.makedirs(current_out_dir, exist_ok=True)
     print(f"Output dir: {current_out_dir}")
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "6"#4 3 1 0
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "6"#4 3 1 0
     
     NUM_GPUS = 1
     cpu_num=1

@@ -739,7 +739,7 @@ if __name__ == '__main__':
     cfg.merge_from_list(cfg_show_list)
     cfg.freeze()
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+    # os.environ['CUDA_VISIBLE_DEVICES'] = "0"
     device = torch.device('cuda:0')
 
     dataset = TestDataset(

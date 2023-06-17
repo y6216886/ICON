@@ -26,8 +26,8 @@ from pytorch_lightning.loggers import WandbLogger
 # import wandb
 from termcolor import colored
 # print("For debug setting cuda visible diveices here!")
-# os.environ["CUDA_VISIBLE_DEVICES"] = "5"
-os.environ["WANDB__SERVICE_WAIT"]="300"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+# os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
 @rank_zero_only
@@ -73,22 +73,23 @@ def checkname(args,cfg):
 if __name__ == "__main__":
     # torch.multiprocessing.set_start_method('spawn',force=True)
     parser = argparse.ArgumentParser()
-    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_cape/icon/icon-filter.yaml',help="path of the yaml config file")
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_cape/icon/icon-filter.yaml',help="path of the yaml config file")
+    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter.yaml',help="path of the yaml config file")
     
     # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/pifu/pifu_img.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction_test')
-    parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
+    parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/baseline')
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
     parser.add_argument("-val", "--val_mode", default=False, action="store_true")
     parser.add_argument("--test_code", default=False, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=False, action="store_true")
-    parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
+    parser.add_argument("--name",type=str, default='icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
     parser.add_argument("--PE_sdf", type=int, default=0) 
+    parser.add_argument("--wandblog", default=False, action="store_true")
 
     ####model
     parser.add_argument("--mlpSe", default=False, action="store_true")
@@ -158,11 +159,15 @@ if __name__ == "__main__":
     print("note cfg is freeze",args.batch_size)
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
-    if not args.offline: 
-        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath)
-    if args.offline or args.test_code:
-        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath,offline=True)
-
+    if args.wandblog:
+        if not args.offline: 
+            logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath)
+        if args.offline or args.test_code:
+            logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath, offline=True)
+    else:
+        logger = pl_loggers.TensorBoardLogger(
+            save_dir=args.savepath, name=cfg.name, default_hp_metric=False
+        )
     if cfg.overfit:
         cfg_overfit_list = ["batch_size", 1]
         cfg.merge_from_list(cfg_overfit_list)
@@ -217,7 +222,7 @@ if __name__ == "__main__":
         "reload_dataloaders_every_epoch": True,
         "sync_batchnorm": True,
         "benchmark": True,
-        "logger": wandb_logger,
+        "logger": logger,
         "track_grad_norm": -1,
         "num_sanity_val_steps": cfg.num_sanity_val_steps,
         "checkpoint_callback": checkpoint,
@@ -270,7 +275,7 @@ if __name__ == "__main__":
 
 
     model = ICON(cfg, args)
-    # wandb_logger.watch(model, log_freq=10)##0.15.0
+    # logger.watch(model, log_freq=10)##0.15.0
 
     trainer = SubTrainer(accelerator='ddp' if args.num_gpus>1 else None, **trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
     # trainer = Trainer(**trainer_kwargs)
@@ -293,7 +298,7 @@ if __name__ == "__main__":
         trainer.log_every_n_steps=1
         trainer.val_check_interval=1
     # if trainer.global_rank == 0:
-    #     wandb_logger.experiment.config.update(cfg)
+    #     logger.experiment.config.update(cfg)
     if not cfg.test_mode:
         trainer.fit(model=model, datamodule=datamodule)
         trainer_kwargs.update({"gpus": 1})

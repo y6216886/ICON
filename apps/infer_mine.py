@@ -48,7 +48,7 @@ import trimesh
 import pickle
 import numpy as np
 import torch
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+# os.environ["CUDA_VISIBLE_DEVICES"]="1"
 torch.backends.cudnn.benchmark = True
 SEED = 1993
 np.random.seed(SEED)

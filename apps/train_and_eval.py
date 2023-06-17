@@ -73,7 +73,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon/icon-filter_test.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
-    parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
+    parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/baseline')
     parser.add_argument("-test", "--test_mode", default=False, action="store_true")
     parser.add_argument("-val", "--val_mode", default=False, action="store_true")
     parser.add_argument("--test_code", default=False, action="store_true")
@@ -92,6 +92,7 @@ if __name__ == "__main__":
     parser.add_argument("--conv3d_start", type=int, default=2)
     parser.add_argument("--conv3d_kernelsize", type=int, default=1) ###3 5 7 is not applicable, using them results in collapsed solution
     parser.add_argument("--pad_mode", type=str, default='zeros')
+    parser.add_argument("--wandblog", default=False, action="store_true")
     ####uncertainty
     parser.add_argument("--uncertainty", default=False, action="store_true")
     parser.add_argument("--beta_min", type=float, default=0)
@@ -144,11 +145,15 @@ if __name__ == "__main__":
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
 
     os.makedirs(args.savepath+"wandb", exist_ok=True)
-    if not args.offline: 
-        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath+"wandb")
-    if args.offline or args.test_code:
-        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath+"wandb",offline=True)
-        
+    if args.wandblog:
+        if not args.offline: 
+            logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath)
+        if args.offline or args.test_code:
+            logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath, offline=True)
+    else:
+        logger = pl_loggers.TensorBoardLogger(
+            save_dir=args.savepath, name=cfg.name, default_hp_metric=False
+        )
     if cfg.overfit:
         cfg_overfit_list = ["batch_size", 1]
         cfg.merge_from_list(cfg_overfit_list)
@@ -177,7 +182,7 @@ if __name__ == "__main__":
         "reload_dataloaders_every_epoch": True,
         "sync_batchnorm": True,
         "benchmark": True,
-        "logger": wandb_logger,
+        "logger": logger,
         "track_grad_norm": -1,
         "num_sanity_val_steps": cfg.num_sanity_val_steps,
         "checkpoint_callback": checkpoint,
@@ -316,7 +321,7 @@ if __name__ == "__main__":
         "reload_dataloaders_every_epoch": True,
         "sync_batchnorm": True,
         "benchmark": True,
-        "logger": wandb_logger,
+        "logger": logger,
         "track_grad_norm": -1,
         "num_sanity_val_steps": cfg.num_sanity_val_steps,
         "checkpoint_callback": checkpoint,

@@ -580,7 +580,7 @@ class Discriminator(nn.Module):
 
 if __name__ == "__main__":
     import os 
-    os.environ['CUDA_VISIBLE_DEVICES']="4"
+    # os.environ['CUDA_VISIBLE_DEVICES']="4"
     # d_real_target = torch.tensor([1.0]).cuda()
     # d_fake_target = torch.tensor([0.0]).cuda()
 
