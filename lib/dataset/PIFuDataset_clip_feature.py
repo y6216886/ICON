@@ -17,7 +17,7 @@
 import sys
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/")
 import sys
-sys.path.append("/home/young/code/human_reconstruction/")
+sys.path.append("/media/young/writable/code/human_reconstruction/")
 from lib.renderer.mesh import load_fit_body, compute_normal_batch
 from lib.dataset.body_model import TetraSMPLModel
 from lib.common.render import Render

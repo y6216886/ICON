@@ -13,7 +13,7 @@ def save_gltf(from_path: Path, target_path: Path):
 
 # def main():  ##for thuman2
 #     all_objs = list(sorted(Path('data/thuman2/scans').glob('*/*.obj')))
-#     target_path = Path('/home/young/code/human_reconstruction/data/thuman2/scans')
+#     target_path = Path('/media/young/writable/code/human_reconstruction/data/thuman2/scans')
 #     for obj in tqdm(all_objs):
 #         # print((target_path / obj.name.strip('.obj')/obj.name).with_suffix('.glb'))
 #         save_gltf(obj, (target_path / obj.name.strip('.obj')/ obj.name).with_suffix('.glb'))

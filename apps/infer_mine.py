@@ -15,7 +15,7 @@
 # Contact: ps-license@tuebingen.mpg.de
 import sys
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON")
-sys.path.append("/home/young/code/human_reconstruction/")
+sys.path.append("/media/young/writable/code/human_reconstruction")
 import warnings
 import logging
 
