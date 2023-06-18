@@ -48,7 +48,9 @@ class PIFuDataModule(pl.LightningDataModule):
                 self.data_size = {'train': len(self.train_dataset), 'val': len(self.val_dataset)}
 
             if stage == 'test':
-                self.test_dataset = PIFuDataset(cfg=self.cfg, split="test",args=self.args)
+                if self.args.train_on_cape:
+                    self.test_dataset = PIFuDataset(cfg=self.cfg, split="test_train",args=self.args)
+                else:self.test_dataset = PIFuDataset(cfg=self.cfg, split="test",args=self.args)
 
             if stage == 'val':
                 self.test_dataset = PIFuDataset(cfg=self.cfg, split="val",args=self.args)

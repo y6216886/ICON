@@ -128,11 +128,16 @@ class PIFuDataset():
                 self.datasets_dict[dataset].update(
                     {"subjects": np.loadtxt(osp.join(dataset_dir, "val.txt"), dtype=str)}
                 )
+            elif split == 'test_train':
+                self.datasets_dict[dataset].update(
+                    {"subjects": np.loadtxt(osp.join(dataset_dir, "test_train.txt"), dtype=str)}
+                )
+
 
             else:
-                self.datasets_dict[dataset].update(
-                    {"subjects": np.loadtxt(osp.join(dataset_dir, "test.txt"), dtype=str)}
-                )
+                    self.datasets_dict[dataset].update(
+                        {"subjects": np.loadtxt(osp.join(dataset_dir, "test.txt"), dtype=str)}
+                    )
 
         self.subject_list = list(self.get_subject_list(split))
         self.smplx = SMPLX()
@@ -169,7 +174,7 @@ class PIFuDataset():
         subject_list = []
 
         for dataset in self.datasets:
-
+            
             split_txt = osp.join(self.root, dataset, f'{split}.txt')
 
             if osp.exists(split_txt):
@@ -181,19 +186,24 @@ class PIFuDataset():
 
                 full_lst = np.loadtxt(full_txt, dtype=str)
                 full_lst = [dataset + "/" + item for item in full_lst]
-                [train_lst, test_lst, val_lst] = np.split(full_lst, [
-                    500,
-                    500 + 5,
-                ])
+                if dataset=="thuman2":
+                    [train_lst, test_lst, val_lst] = np.split(full_lst, [
+                        500,
+                        500 + 5,
+                    ])
 
-                np.savetxt(full_txt.replace("all", "train"), train_lst, fmt="%s")
-                np.savetxt(full_txt.replace("all", "test"), test_lst, fmt="%s")
-                np.savetxt(full_txt.replace("all", "val"), val_lst, fmt="%s")
+                    np.savetxt(full_txt.replace("all", "train"), train_lst, fmt="%s")
+                    np.savetxt(full_txt.replace("all", "test"), test_lst, fmt="%s")
+                    np.savetxt(full_txt.replace("all", "val"), val_lst, fmt="%s")
 
-                print(f"load from {split_txt}")
-                subject_list += np.loadtxt(split_txt, dtype=str).tolist()
+                    print(f"load from {split_txt}")
+                    subject_list += np.loadtxt(split_txt, dtype=str).tolist()
+                elif dataset=="cape":
+                    print("mannually set split file")
+                    assert 1==0
 
-        if self.split not in ['test', 'val'] :
+
+        if self.split not in ['test', 'val', 'test_train'] :
             subject_list += subject_list[:self.bsize - len(subject_list) % self.bsize]
             print(colored(f"total: {len(subject_list)}", "yellow"))
             random.shuffle(subject_list)
@@ -308,7 +318,7 @@ class PIFuDataset():
         if self.prior_type == 'pamir' or self.args.pamir_icon:
              data_dict.update(self.load_smpl_voxel(data_dict))
 
-        if (self.split not in ['val', 'test']) and (not self.vis):
+        if (self.split not in ['val', 'test', 'test_train']) and (not self.vis):
 
             del data_dict['verts']
             del data_dict['faces']
