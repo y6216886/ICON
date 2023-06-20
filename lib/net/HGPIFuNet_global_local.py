@@ -101,10 +101,16 @@ class HGPIFuNet_global_local(BasePIFuNet):
         # only ICON or ICON-Keypoint use visibility
 
         if self.prior_type in ["icon", "keypoint"]:
+            # if "image" in self.in_geo:
+            #     self.channels_filter = [
+            #         image_lst + normal_F_lst,
+            #         image_lst + normal_B_lst,
+            #     ]
             if "image" in self.in_geo:
                 self.channels_filter = [
-                    image_lst + normal_F_lst,
-                    image_lst + normal_B_lst,
+                    normal_F_lst,
+                    normal_B_lst,
+                    image_lst
                 ]
             else:
                 self.channels_filter = [normal_F_lst, normal_B_lst]
@@ -349,11 +355,23 @@ class HGPIFuNet_global_local(BasePIFuNet):
                 features_B = self.F_filter(
                     in_filter[:, self.channels_filter[1]]
                 )    # [(B,hg_dim,128,128) * 4]
+                if 'image' in self.in_geo:
+                    features_I = self.F_filter(
+                    in_filter[:, self.channels_filter[2]]
+                )    # [(B,hg_dim,128,128) * 4]
+
+
             else:
-                features_F = [in_filter[:, self.channels_filter[0]]]
+                features_F = [in_filter[:, self.channels_filter[0]]] #[[0, 1, 2, 3, 4, 5], [0, 1, 2, 6, 7, 8]]
                 features_B = [in_filter[:, self.channels_filter[1]]]
+                if 'image' in self.in_geo:
+                    features_I = [in_filter[:, self.channels_filter[2]]]
+                    
+                    # [(B,hg_dim,128,128) * 4]
             for idx in range(len(features_F)):
-                features_G.append(torch.cat([features_F[idx], features_B[idx]], dim=1))
+                if 'image' in self.in_geo:
+                    features_G.append(torch.cat([features_F[idx], features_B[idx], features_I[idx]], dim=1))
+                else: features_G.append(torch.cat([features_F[idx], features_B[idx]], dim=1))
         else:
             if self.use_filter:
                     features_G = self.F_filter(in_filter[:, self.channels_filter[0]])

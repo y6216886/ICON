@@ -32,7 +32,7 @@ from termcolor import colored
 
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -78,8 +78,9 @@ def checkname(args,cfg):
 
 if __name__ == "__main__":
     # torch.multiprocessing.set_start_method('spawn',force=True)
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_cape.yaml',help="path of the yaml config file")
+    parser = argparse.ArgumentParser()  #configs/train/train_on_capev1/icon_filter_cape.yaml
+    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_cape.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_thuman2.yaml',help="path of the yaml config file")
     # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
@@ -91,7 +92,7 @@ if __name__ == "__main__":
     parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
-    parser.add_argument("--mlp_first_dim", type=int, default=0) 
+    parser.add_argument("--mlp_first_dim", type=int, default=18) 
     parser.add_argument("--PE_sdf", type=int, default=0) 
 
     ####model
@@ -127,24 +128,24 @@ if __name__ == "__main__":
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
 
     ##global and local  
-    parser.add_argument("--pamir_icon", default=False, action="store_true")
+    parser.add_argument("--pamir_icon", default=True, action="store_true")
     parser.add_argument('--noise_scale', nargs='+', type=float, default=[1,1]) #2,3,4,5,6
     parser.add_argument('--smplx2smpl', default=False, action="store_true") #2,3,4,5,6
-    parser.add_argument('--train_on_cape', default=True, action="store_true") 
-    parser.add_argument("--pamir_vol_dim", type=int, default=0)
+    parser.add_argument('--train_on_cape', default=False, action="store_true") 
+    parser.add_argument("--pamir_vol_dim", type=int, default=2)
     parser.add_argument('--filter', action='store_true')
     parser.add_argument('--no-filter', dest='filter', action='store_false')
     parser.set_defaults(filter=True)
     ######
 
     args = parser.parse_args()
-    if args.PE_sdf!=0:
-        args.mlp_first_dim=13+args.PE_sdf * 2 
-    if args.pamir_icon:
-        if args.mlp_first_dim!=0:
-            args.mlp_first_dim += args.pamir_vol_dim #-3
-        else:
-            args.mlp_first_dim= 13 + args.pamir_vol_dim
+    # if args.PE_sdf!=0:
+    #     args.mlp_first_dim=13+args.PE_sdf * 2 
+    # if args.pamir_icon:
+    #     if args.mlp_first_dim!=0:
+    #         args.mlp_first_dim += args.pamir_vol_dim #-3
+    #     else:
+    #         args.mlp_first_dim= 13 + args.pamir_vol_dim
 
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)

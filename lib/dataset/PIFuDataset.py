@@ -237,7 +237,12 @@ class PIFuDataset():
         #     dataset = self.subject_list[mid].split("/")[-2]
         dataset = self.cfg.dataset.types[0]
         # print(self.subject_list,mid,self.subject_list[mid])
-        render_folder = "/".join([dataset + f"_{self.opt.rotation_num}views", subject])
+        if dataset=='thuman2':
+            render_folder = "/".join([dataset + f"_{36}views", subject])
+        elif dataset == "cape":
+            render_folder = "/".join([dataset + f"_{3}views", subject])
+        else:
+            render_folder = "/".join([dataset + f"_{self.opt.rotation_num}views", subject])
         # setup paths
         data_dict = {
             'dataset': dataset,
