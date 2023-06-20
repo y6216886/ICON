@@ -62,7 +62,7 @@ class PIFuDataset():
         self.prior_type = cfg.net.prior_type
 
         self.noise_type = self.opt.noise_type
-        self.noise_scale = self.opt.noise_scale
+        self.noise_scale = self.args.noise_scale
 
         noise_joints = [4, 5, 7, 8, 13, 14, 16, 17, 18, 19, 20, 21]
 

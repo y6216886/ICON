@@ -100,4 +100,4 @@ if __name__ == '__main__':
         time.sleep(1)
     print('Done')
 
-    ##python /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/train_nerf.py --device_ids 0 1 2 3
+    ##python /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/utils/train_nerf.py --device_ids 3 4 5
