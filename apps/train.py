@@ -32,7 +32,7 @@ from termcolor import colored
 
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -103,6 +103,13 @@ if __name__ == "__main__":
     parser.add_argument("--conv3d_start", type=int, default=2)
     parser.add_argument("--conv3d_kernelsize", type=int, default=1)
     parser.add_argument("--pad_mode", type=str, default='zeros')
+    parser.add_argument("--se_start_channel", type=int, default=2)
+    parser.add_argument("--se_end_channel", type=int, default=4)
+    parser.add_argument("--se_reduction", type=int, default=16)
+    parser.add_argument("--cse", default=False, action="store_true")
+    parser.add_argument("--sse", default=False, action="store_true")
+    
+    
 
 
     ####uncertainty
@@ -129,7 +136,7 @@ if __name__ == "__main__":
 
     ##global and local  
     parser.add_argument("--pamir_icon", default=False, action="store_true")
-    parser.add_argument('--noise_scale', nargs='+', type=float, default=[1,1]) #2,3,4,5,6
+    parser.add_argument('--noise_scale', nargs='+', type=float, default=[0,0]) #2,3,4,5,6
     parser.add_argument('--smplx2smpl', default=False, action="store_true") #2,3,4,5,6
     parser.add_argument('--train_on_cape', default=False, action="store_true") 
     parser.add_argument("--pamir_vol_dim", type=int, default=2)

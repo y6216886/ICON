@@ -108,6 +108,7 @@ class MLP(pl.LightningModule):
 
         super(MLP, self).__init__()
         self.args=args
+        self.len_channels=len(filter_channels)
         if args.mlp_first_dim!=0:
             filter_channels[0]=args.mlp_first_dim
         print(colored("I have modified mlp filter channles{}".format(filter_channels),"red"))
@@ -127,20 +128,25 @@ class MLP(pl.LightningModule):
 
         self.activate = nn.LeakyReLU(inplace=True)
         assert [self.args.mlpSe, self.args.mlpSev1, self.args.mlpSemax].count(True) in [0,1], "mlp se strategy cannot be embodied simultaneously"
+        self.se_start_channel=self.args.se_start_channel
+        self.se_end_channel=self.args.se_end_channel
+        assert self.se_end_channel <self.len_channels
+        assert self.se_start_channel >=0
         if self.args.mlpSe: ##this strategy yields best results, while not surpasses baseline yet. 
             self.se_conv = nn.ModuleList()
-            for filters_nums_ in filter_channels[:-1]:
-                self.se_conv.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
+            for filters_nums_ in filter_channels[self.se_start_channel:self.se_end_channel]:
+                # self.se_conv.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
                 # self.se_conv.append(ChannelSELayer(filters_nums_))  #1457 gpu memory for bs 2
+                self.se_conv.append(SCSEModule(filters_nums_, self.args.se_reduction, self.args))
         elif self.args.mlpSev1:
             self.se_conv = nn.ModuleList()
-            for filters_nums_ in filter_channels[:-1]:
+            for filters_nums_ in filter_channels[self.se_start_channel:self.se_end_channel]:
                 # self.se_conv.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
-                self.se_conv.append(ChannelSELayer(filters_nums_))  #1457 gpu memory for bs 2
+                self.se_conv.append(ChannelSELayer(filters_nums_, self.args.se_reduction))  #1457 gpu memory for bs 2
         elif self.args.mlpSemax:
             self.se_conv_spatial = nn.ModuleList()
             self.se_conv_channel = nn.ModuleList()
-            for filters_nums_ in filter_channels[:-1]:
+            for filters_nums_ in filter_channels[self.se_start_channel:self.se_end_channel]:
                 self.se_conv_spatial.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
                 self.se_conv_channel.append(ChannelSELayer(filters_nums_)) 
         if self.args.use_clip:
@@ -203,17 +209,20 @@ class MLP(pl.LightningModule):
         y = feature
         if self.args.use_clip: clip_feature=clip_feature.unsqueeze(-1).repeat(1,1,8000)
         tmpy = feature
-        len_=len(self.filters)
+        # len_=len(self.filters)
+        j=0
         for i, f in enumerate(self.filters):
             ####se net
             if self.args.mlpSe or self.args.mlpSev1:
-                if i!=self.len_filter-1:
-                    y=self.se_conv[i](y) 
+                if i in range(self.se_start_channel,self.se_end_channel):
+                    y=self.se_conv[j](y) 
+                    j+=1
             elif self.args.mlpSemax:
-                if i!=self.len_filter-1:
-                    y_spa=self.se_conv_spatial[i](y) ##
-                    y_cha=self.se_conv_channel[i](y) ##
+                if i in range(self.se_start_channel,self.se_end_channel):
+                    y_spa=self.se_conv_spatial[j](y) ##
+                    y_cha=self.se_conv_channel[j](y) ##
                     y=torch.max(y_spa, y_cha)
+                    j+=1
             #####
             if self.args.use_clip and i in self.clip_fuse_layer:
                 input=torch.cat([y, clip_feature], 1) if i not in self.res_layers else torch.cat([y, tmpy, clip_feature], 1)
@@ -404,17 +413,48 @@ class ChannelSELayer(nn.Module):
         output_tensor = torch.mul(input_tensor, fc_out_2.view(a, b, 1))
         return output_tensor
 
+class SCSEModule(nn.Module):
+    def __init__(self, in_channels, reduction=16, args=None):
+        super().__init__()
+
+        self.args=args
+        if self.args.cse:
+                self.cSE = nn.Sequential(
+            nn.AdaptiveAvgPool1d(1),
+            nn.Conv1d(in_channels, in_channels // reduction, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(in_channels // reduction, in_channels, 1),
+            nn.Sigmoid(),
+        )
+        if self.args.sse:
+            self.sSE = nn.Sequential(nn.Conv1d(in_channels, 1, 1), nn.Sigmoid())
+    def forward(self, x):
+        y=0
+        if self.args.cse:
+            cse=self.cSE(x)
+            y+=x * cse
+        if self.args.sse:
+            sse=self.sSE(x)
+            y+= x * sse
+        return y
+
+
 if __name__=="__main__":
+    import os
+    os.environ["CUDA_VISIBLE_DEVICES"]="2"
     class args_():
         def __init__(self) -> None:
             self.test_code=True
             self.mlp_first_dim=12
             self.mlpSev1=False
-            self.mlpSe=False
+            self.mlpSe=True
             self.mlpSemax=False
             self.uncertainty=False
             self.use_clip=False
             self.dropout=0.2
+            self.se_start_channel=1
+            self.se_end_channel=4
+            self.se_reduction=16
     args_=args_()
     net=MLP(filter_channels=[12,128,256,128,1], res_layers=[2,4] ,args=args_).cuda()
     # net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()
