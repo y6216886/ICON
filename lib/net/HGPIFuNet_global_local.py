@@ -482,9 +482,14 @@ class HGPIFuNet_global_local(BasePIFuNet):
             # normal feature choice by smpl_vis
             if self.args.pamir_icon:
                 if "vis" in self.smpl_feats:
-                    
-                    point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :])
-                    point_feat_list = [point_local_feat, smpl_feat[:, :-1, :],self.index(vol_feat, xyz)] ##, 
+                    if self.args.triplane:
+                        point_local_feat = feat_select(self.index_triplane(im_feat, xyz), smpl_feat[:, [-1], :]) ##replace self.index with self.index_triplane, xy to xyz consider add the channel dimension of im_feat
+                        point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
+                    else:
+                        point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :]) ##replace self.index with self.index_triplane, xy to xyz consider add the channel dimension of im_feat
+                        point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
+                    # point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :])
+                    # point_feat_list = [point_local_feat, smpl_feat[:, :-1, :],self.index(vol_feat, xyz)] ##, 
                 else:
                     point_local_feat = self.index(im_feat, xy)
                     point_feat_list = [point_local_feat, smpl_feat[:, :, :],self.index(vol_feat, xyz)]       ##, self.index(vol_feat, xyz)

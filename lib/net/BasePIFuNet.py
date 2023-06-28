@@ -17,7 +17,7 @@
 import torch.nn as nn
 import pytorch_lightning as pl
 
-from .geometry import index, orthogonal, perspective
+from .geometry import index, orthogonal, perspective,index_triplane
 
 
 class BasePIFuNet(pl.LightningModule):
@@ -39,6 +39,7 @@ class BasePIFuNet(pl.LightningModule):
         self.error_term = error_term
 
         self.index = index
+        self.index_triplane=index_triplane
         self.projection = orthogonal if projection_mode == 'orthogonal' else perspective
 
     def forward(self, points, images, calibs, transforms=None):

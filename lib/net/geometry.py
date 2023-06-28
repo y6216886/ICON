@@ -38,7 +38,79 @@ def index(feat, uv):
     # NOTE: for newer PyTorch, it seems that training results are degraded due to implementation diff in F.grid_sample
     # for old versions, simply remove the aligned_corners argument.
     samples = torch.nn.functional.grid_sample(feat, uv, align_corners=True)    # [B, C, N, 1]
-    return samples.view(B, C, N)    # [B, C, N]
+    return samples.view(B, C, N)    # [B, C, N] 1,12,8000
+
+
+
+def sample_from_planes(plane_axes, plane_features, coordinates, mode='bilinear', padding_mode='zeros', box_warp=None):
+        assert padding_mode == 'zeros'
+        N, n_planes, C, H, W = plane_features.shape
+        _, M, _ = coordinates.shape #bs, num_points, xyz_cord
+        plane_features = plane_features.view(N*n_planes, C, H, W) #bs*n_planes, channel, height, width
+
+        # coordinates = (2/box_warp) * coordinates # TODO: add specific box bounds
+
+        projected_coordinates = project_onto_planes(plane_axes, coordinates).unsqueeze(1) #bs*n_plane, none, num_points, uv cordinate on each plane
+        output_features = torch.nn.functional.grid_sample(plane_features, projected_coordinates.float(), mode=mode, padding_mode=padding_mode, align_corners=False)#.permute(0, 3, 2, 1).reshape(N, n_planes, M, C)#bs, num_planes, num_points, channels
+        output_features=output_features.view(n_planes*C, N, M).transpose(0, 1)
+        return output_features
+
+def project_onto_planes(planes, coordinates):
+    """
+    Does a projection of a 3D point onto a batch of 2D planes,
+    returning 2D plane coordinates.
+
+    Takes plane axes of shape n_planes, 3, 3
+    # Takes coordinates of shape N, M, 3
+    # returns projections of shape N*n_planes, M, 2
+    """
+    N, M, C = coordinates.shape
+    n_planes, _, _ = planes.shape
+    coordinates = coordinates.unsqueeze(1).expand(-1, n_planes, -1, -1).reshape(N*n_planes, M, 3)
+    inv_planes = torch.linalg.inv(planes).unsqueeze(0).expand(N, -1, -1, -1).reshape(N*n_planes, 3, 3)
+    projections = torch.bmm(coordinates, inv_planes)
+    return projections[..., :2]
+
+def index_triplane(feat, xyz): 
+    '''
+    :param feat: [B, C, H, W] image features
+    :param xyz: [B, 3, N] xyz coordinates in the image plane, range [0, 1]
+    :return: [B, C, N] image features at the uv coordinates
+    '''
+    (B, N, _) = xyz.shape
+    B, C, H, W = feat.shape
+    xyz = xyz.transpose(1, 2) 
+    plane_axes=torch.tensor([[[1, 0, 0],
+                            [0, 1, 0],
+                            [0, 0, 1]],
+                            [[1, 0, 0],
+                            [0, 0, 1],
+                            [0, 1, 0]],
+                            [[0, 0, 1],
+                            [1, 0, 0],
+                            [0, 1, 0]]], dtype=torch.float32, device=feat.device)
+    feat=feat.view(B, 3, C//3, H, W)
+    samples=sample_from_planes(plane_axes, feat, xyz, box_warp=1)#1,3,8000,4
+    return samples
+
+
+    # uv = uv.transpose(1, 2)    # [B, N, 2]
+
+    # (B, N, _) = uv.shape
+    # C = feat.shape[1]
+
+    # if uv.shape[-1] == 3:
+    #     # uv = uv[:,:,[2,1,0]]
+    #     # uv = uv * torch.tensor([1.0,-1.0,1.0]).type_as(uv)[None,None,...]
+    #     uv = uv.unsqueeze(2).unsqueeze(3)    # [B, N, 1, 1, 3]
+    # else:
+    #     uv = uv.unsqueeze(2)    # [B, N, 1, 2]
+
+    # # NOTE: for newer PyTorch, it seems that training results are degraded due to implementation diff in F.grid_sample
+    # # for old versions, simply remove the aligned_corners argument.
+    # samples = torch.nn.functional.grid_sample(feat, uv, align_corners=True)    # [B, C, N, 1]
+    # return samples.view(B, C, N)    # [B, C, N] 
+
 
 
 def orthogonal(points, calibrations, transforms=None):

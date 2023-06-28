@@ -409,12 +409,9 @@ class HGPIFuNet(BasePIFuNet):
 
             if self.prior_type == "icon":
                 if "vis" in self.smpl_feats:
-                    if self.args.triplane:
-                        point_local_feat = feat_select(self.index_triplane(im_feat, xyz), smpl_feat[:, [-1], :]) ##replace self.index with self.index_triplane, xy to xyz consider add the channel dimension of im_feat
-                        point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
-                    else:
-                        point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :]) ##replace self.index with self.index_triplane, xy to xyz consider add the channel dimension of im_feat
-                        point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
+                    
+                    point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :])
+                    point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
                 else:
                     point_local_feat = self.index(im_feat, xy)
                     point_feat_list = [point_local_feat, smpl_feat[:, :, :]]
@@ -534,3 +531,47 @@ class HGPIFuNet(BasePIFuNet):
         )
         error = self.get_error(preds_if_list, label_tensor)
         return preds_if_list[-1], error
+
+def sample_from_planes(plane_axes, plane_features, coordinates, mode='bilinear', padding_mode='zeros', box_warp=None):
+        assert padding_mode == 'zeros'
+        N, n_planes, C, H, W = plane_features.shape
+        _, M, _ = coordinates.shape #bs, num_points, xyz_cord
+        plane_features = plane_features.view(N*n_planes, C, H, W) #bs*n_planes, channel, height, width
+
+        # coordinates = (2/box_warp) * coordinates # TODO: add specific box bounds
+
+        projected_coordinates = project_onto_planes(plane_axes, coordinates).unsqueeze(1) #bs*n_plane, none, num_points, uv cordinate on each plane
+        output_features = torch.nn.functional.grid_sample(plane_features, projected_coordinates.float(), mode=mode, padding_mode=padding_mode, align_corners=False).permute(0, 3, 2, 1).reshape(N, n_planes, M, C)#bs, num_planes, num_points, channels
+        return output_features
+def project_onto_planes(planes, coordinates):
+    """
+    Does a projection of a 3D point onto a batch of 2D planes,
+    returning 2D plane coordinates.
+
+    Takes plane axes of shape n_planes, 3, 3
+    # Takes coordinates of shape N, M, 3
+    # returns projections of shape N*n_planes, M, 2
+    """
+    N, M, C = coordinates.shape
+    n_planes, _, _ = planes.shape
+    coordinates = coordinates.unsqueeze(1).expand(-1, n_planes, -1, -1).reshape(N*n_planes, M, 3)
+    inv_planes = torch.linalg.inv(planes).unsqueeze(0).expand(N, -1, -1, -1).reshape(N*n_planes, 3, 3)
+    projections = torch.bmm(coordinates, inv_planes)
+    return projections[..., :2]
+if __name__ == "__main__":
+    import os
+    os.environ["CUDA_VISIBLE_DEVICES"]="1"
+    plane_features=torch.randn(8,3,4,128,128).cuda()
+    coordinates=torch.rand(8,8000,3).cuda()
+    plane_axes=torch.tensor([[[1, 0, 0],
+                            [0, 1, 0],
+                            [0, 0, 1]],
+                            [[1, 0, 0],
+                            [0, 0, 1],
+                            [0, 1, 0]],
+                            [[0, 0, 1],
+                            [1, 0, 0],
+                            [0, 1, 0]]], dtype=torch.float32).cuda()
+    a=sample_from_planes(plane_axes,plane_features,coordinates,box_warp=1)#1,3,8000,4
+    print(1)
+

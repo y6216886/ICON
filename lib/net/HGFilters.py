@@ -13,7 +13,8 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
-
+import sys
+sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON")
 from lib.net.net_util import *
 import torch.nn as nn
 import torch.nn.functional as F
@@ -168,3 +169,15 @@ class HGFilter(nn.Module):
                 previous = previous + ll + tmp_out_
 
         return outputs
+    
+
+if __name__ =="__main__":
+    import os
+    os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+    from lib.common.config import get_cfg_defaults
+    cfg = get_cfg_defaults()
+    cfg.merge_from_file('/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/configs/train/train_on_capev1/icon-filter_thuman2.yaml')
+    net=HGFilter(cfg.net, 2, 6).cuda()
+    input=torch.rand(2,6,512,512).cuda()
+    output=net(input)
+    print(1)
