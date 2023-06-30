@@ -94,7 +94,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
-    parser.add_argument("--PE_sdf", type=int, default=16) 
+    parser.add_argument("--PE_sdf", type=int, default=17) 
     parser.add_argument("--batch_size", type=int, default=2) 
     
 

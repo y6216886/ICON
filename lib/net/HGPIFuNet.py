@@ -406,18 +406,25 @@ class HGPIFuNet(BasePIFuNet):
 
         for im_feat, vol_feat in zip(features, vol_feats):
             # normal feature choice by smpl_vis
-
+            """
+            36*2/3=24
+            1, 24(12,12), 8000   = self.index_triplane(im_feat, xyz)
+            """
             if self.prior_type == "icon":
                 if "vis" in self.smpl_feats:
                     if self.args.triplane:
-                        point_local_feat = feat_select(self.index_triplane(im_feat, xyz), smpl_feat[:, [-1], :]) ##replace self.index with self.index_triplane, xy to xyz consider add the channel dimension of im_feat
+                        point_local_feat = feat_select(self.index_triplane(im_feat, xyz, vis=True), smpl_feat[:, [-1], :]) ##replace self.index with self.index_triplane, xy to xyz consider add the channel dimension of im_feat
                         point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
                     else:
                         point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :]) ##replace self.index with self.index_triplane, xy to xyz consider add the channel dimension of im_feat
                         point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
                 else:
-                    point_local_feat = self.index(im_feat, xy)
-                    point_feat_list = [point_local_feat, smpl_feat[:, :, :]]
+                    if self.args.triplane:
+                        point_local_feat = self.index_triplane(im_feat, xyz, vis=False)
+                        point_feat_list = [point_local_feat, smpl_feat[:, :, :]]
+                    else:
+                        point_local_feat = self.index(im_feat, xy)
+                        point_feat_list = [point_local_feat, smpl_feat[:, :, :]]
 
             if self.prior_type == "keypoint":
 
