@@ -15,6 +15,7 @@
 # Contact: ps-license@tuebingen.mpg.de
 import sys
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON")
+sys.path.append("/media/young/writable/code/human_reconstruction")
 from lib.net.net_util import *
 import torch.nn as nn
 import torch.nn.functional as F
@@ -176,7 +177,7 @@ if __name__ =="__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = "6"
     from lib.common.config import get_cfg_defaults
     cfg = get_cfg_defaults()
-    cfg.merge_from_file('/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/configs/train/train_on_capev1/icon-filter_thuman2.yaml')
+    cfg.merge_from_file('configs/train/train_on_capev1/cape_triplane.yaml')
     net=HGFilter(cfg.net, 2, 6).cuda()
     input=torch.rand(2,6,512,512).cuda()
     output=net(input)

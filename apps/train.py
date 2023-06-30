@@ -78,8 +78,9 @@ def checkname(args,cfg):
 # os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 if __name__ == "__main__":
     # torch.multiprocessing.set_start_method('spawn',force=True)
-    parser = argparse.ArgumentParser()  #configs/train/train_on_capev1/icon_filter_cape.yaml
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_cape.yaml',help="path of the yaml config file")
+    parser = argparse.ArgumentParser()  #configs/train/train_on_capev1/icon_filter_cape.yaml 
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/cape_triplane.yaml',help="path of the yaml config file")
+    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_cape.yaml',help="path of the yaml config file")
     # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_thuman2.yaml',help="path of the yaml config file")
     # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
@@ -133,7 +134,7 @@ if __name__ == "__main__":
     ###
     ###triplane
     parser.add_argument("--norm_mlp", type=str, default='batch')  # 'batch' instance group
-    parser.add_argument('--triplane', action='store_true',default=False)
+    parser.add_argument('--triplane', action='store_true',default=True)
     ###
     ###dropout
     parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
