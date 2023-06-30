@@ -38,21 +38,24 @@ def index(feat, uv):
     # NOTE: for newer PyTorch, it seems that training results are degraded due to implementation diff in F.grid_sample
     # for old versions, simply remove the aligned_corners argument.
     samples = torch.nn.functional.grid_sample(feat, uv, align_corners=True)    # [B, C, N, 1]
-    return samples.view(B, C, N)    # [B, C, N] 1,12,8000
+    return samples.view(B, C, N)    # [B, C, N] 1,12,8000   max 0.0693  min -0.0544
 
 
 
-def sample_from_planes(plane_axes, plane_features, coordinates, mode='bilinear', padding_mode='zeros', box_warp=None):
+def sample_from_planes(plane_axes, plane_features, coordinates, mode='bilinear', padding_mode='zeros', box_warp=0.5):
         assert padding_mode == 'zeros'
-        N, n_planes, C, H, W = plane_features.shape
+        N, n_planes, C, H = plane_features.shape[0],plane_features.shape[1],plane_features.shape[2],plane_features.shape[3:]
         _, M, _ = coordinates.shape #bs, num_points, xyz_cord
-        plane_features = plane_features.view(N*n_planes, C, H, W) #bs*n_planes, channel, height, width
+        if len(H)==3:
+            plane_features = plane_features.view(N*n_planes, C, H[0], H[1], H[2]) #bs*n_planes, channel, height, width
+        else:
+            plane_features = plane_features.view(N*n_planes, C,  H[0], H[1]) #bs*n_planes, channel, height, width
 
-        # coordinates = (2/box_warp) * coordinates # TODO: add specific box bounds
+        coordinates = (2/box_warp) * coordinates # TODO: add specific box bounds
 
         projected_coordinates = project_onto_planes(plane_axes, coordinates).unsqueeze(1) #bs*n_plane, none, num_points, uv cordinate on each plane
         output_features = torch.nn.functional.grid_sample(plane_features, projected_coordinates.float(), mode=mode, padding_mode=padding_mode, align_corners=False)#.permute(0, 3, 2, 1).reshape(N, n_planes, M, C)#bs, num_planes, num_points, channels
-        output_features=output_features.view(n_planes*C, N, M).transpose(0, 1)
+        output_features=output_features.view(n_planes*C, N, M).transpose(0, 1) #3.8557  max()   -1.1015 min()
         return output_features
 
 def project_onto_planes(planes, coordinates):
@@ -78,7 +81,7 @@ def index_triplane(feat, xyz):
     :return: [B, C, N] image features at the uv coordinates
     '''
     (B, N, _) = xyz.shape
-    B, C, H, W = feat.shape
+    B, C, H = feat.shape[0], feat.shape[1], list(feat.shape[2:])
     xyz = xyz.transpose(1, 2) 
     plane_axes=torch.tensor([[[1, 0, 0],
                             [0, 1, 0],
@@ -89,9 +92,12 @@ def index_triplane(feat, xyz):
                             [[0, 0, 1],
                             [1, 0, 0],
                             [0, 1, 0]]], dtype=torch.float32, device=feat.device)
-    feat=feat.view(B, 3, C//3, H, W)
+    if len(H)==2:
+        feat=feat.view(B, 3, C//3, H[0],H[1])
+    else:
+        feat=feat.view(B, 3, C//3, H[0], H[1], H[2])
     samples=sample_from_planes(plane_axes, feat, xyz, box_warp=1)#1,3,8000,4
-    return samples
+    return samples   #3.8557  max()   -1.1015 min()
 
 
     # uv = uv.transpose(1, 2)    # [B, N, 2]

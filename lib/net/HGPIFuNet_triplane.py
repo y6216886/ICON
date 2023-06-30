@@ -561,7 +561,20 @@ def project_onto_planes(planes, coordinates):
 if __name__ == "__main__":
     import os
     os.environ["CUDA_VISIBLE_DEVICES"]="1"
-    plane_features=torch.randn(8,3,4,128,128).cuda()
+    # plane_features=torch.randn(8,3,4,128,128).cuda()
+    # coordinates=torch.rand(8,8000,3).cuda()
+    # plane_axes=torch.tensor([[[1, 0, 0],
+    #                         [0, 1, 0],
+    #                         [0, 0, 1]],
+    #                         [[1, 0, 0],
+    #                         [0, 0, 1],
+    #                         [0, 1, 0]],
+    #                         [[0, 0, 1],
+    #                         [1, 0, 0],
+    #                         [0, 1, 0]]], dtype=torch.float32).cuda()
+    # a=sample_from_planes(plane_axes,plane_features,coordinates,box_warp=1)#1,3,8000,4
+    # print(1)
+    plane_features=torch.randn(8,3,32,32,32).cuda()
     coordinates=torch.rand(8,8000,3).cuda()
     plane_axes=torch.tensor([[[1, 0, 0],
                             [0, 1, 0],

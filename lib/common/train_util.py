@@ -427,7 +427,7 @@ def query_func(opt, netG, features, points, proj_matrix=None, clip_feature=None)
         samples = orthogonal(samples, proj_matrix)
 
     calib_tensor = torch.stack([torch.eye(4).float()], dim=0).type_as(samples)
-
+    # breakpoint()
     preds = netG.query(
         features=features, points=samples, calibs=calib_tensor, regressor=netG.if_regressor, clip_feature=clip_feature
     )

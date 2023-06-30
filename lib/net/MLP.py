@@ -230,7 +230,8 @@ class MLP(pl.LightningModule):
                 y = f(input)
             else: 
                 input=y if i not in self.res_layers else torch.cat([y, tmpy], 1)
-                if self.args.dropout!=0 and self.training and i>0: y= self.dropout(y)
+                if self.args.dropout!=0 and self.training and i>0: 
+                    y= self.dropout(y)
                 y = f(input)
 
             ###activation

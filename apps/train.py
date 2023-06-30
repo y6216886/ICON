@@ -32,7 +32,7 @@ from termcolor import colored
 
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+
 os.environ["WANDB__SERVICE_WAIT"]="300"
 # print(colored(f"!!!!Note set cuda visible devices here","red"))
 from pytorch_lightning.utilities.distributed import rank_zero_only
@@ -75,12 +75,12 @@ def checkname(args,cfg):
         cfg.merge_from_list(name_dict)
     return cfg
 
-
+# os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 if __name__ == "__main__":
     # torch.multiprocessing.set_start_method('spawn',force=True)
     parser = argparse.ArgumentParser()  #configs/train/train_on_capev1/icon_filter_cape.yaml
-    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_cape.yaml',help="path of the yaml config file")
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_thuman2.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_cape.yaml',help="path of the yaml config file")
+    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_thuman2.yaml',help="path of the yaml config file")
     # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
@@ -93,7 +93,9 @@ if __name__ == "__main__":
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
-    parser.add_argument("--PE_sdf", type=int, default=0) 
+    parser.add_argument("--PE_sdf", type=int, default=16) 
+    parser.add_argument("--batch_size", type=int, default=2) 
+    
 
     ####model
     parser.add_argument("--mlpSe", default=False, action="store_true")
@@ -130,19 +132,19 @@ if __name__ == "__main__":
     parser.add_argument('--res_layers', nargs='+', type=int, default=[2,3,4]) #2,3,4,5,6
     ###
     ###triplane
-    
-    parser.add_argument('--triplane', action='store_true',default=True)
+    parser.add_argument("--norm_mlp", type=str, default='batch')  # 'batch' instance group
+    parser.add_argument('--triplane', action='store_true',default=False)
     ###
     ###dropout
     parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
 
     ##global and local  
-    parser.add_argument("--pamir_icon", default=True, action="store_true")
+    parser.add_argument("--pamir_icon", default=False, action="store_true")
     parser.add_argument('--noise_scale', nargs='+', type=float, default=[0,0]) #2,3,4,5,6
     parser.add_argument('--smplx2smpl', default=False, action="store_true") #2,3,4,5,6
     parser.add_argument('--train_on_cape', default=False, action="store_true") 
-    parser.add_argument("--pamir_vol_dim", type=int, default=2)
+    parser.add_argument("--pamir_vol_dim", type=int, default=3)
     parser.add_argument('--filter', action='store_true')
     parser.add_argument('--no-filter', dest='filter', action='store_false')
     parser.set_defaults(filter=True)
@@ -159,7 +161,7 @@ if __name__ == "__main__":
 
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
-    cfg.merge_from_list(["net.mlp_dim",args.mlp_dim, "net.res_layers",args.res_layers, "net.voxel_dim", args.pamir_vol_dim, "net.use_filter", args.filter, "dataset.noise_scale", args.noise_scale])
+    cfg.merge_from_list(["net.mlp_dim",args.mlp_dim, "net.res_layers",args.res_layers, "net.voxel_dim", args.pamir_vol_dim, "net.use_filter", args.filter, "dataset.noise_scale", args.noise_scale, "net.norm_mlp", args.norm_mlp, "batch_size",args.batch_size])
     # cfg=checkname(args,cfg)
     exp_name=args.name
     if args.name!="baseline/icon-filter_batch2_newresumev1"  and not args.test_mode and not args.resume: ###conflict with ddp
@@ -174,7 +176,7 @@ if __name__ == "__main__":
     # cfg.gpus=[int(i) for i in args.gpus]
     # print("experimentname",cfg.name)
     cfg.freeze()
-    print("note cfg is freeze batchsize is",cfg.batch_size, "pamir voxel dim", cfg.net.voxel_dim, "use filter", cfg.net.use_filter, "noise scale", cfg.dataset.noise_scale)
+    print("note cfg is freeze pamir voxel dim", cfg.net.voxel_dim, "use filter", cfg.net.use_filter, "noise scale", cfg.dataset.noise_scale, "norm_mlp",cfg.net.norm_mlp,"batch_size",args.batch_size)
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
     if not args.offline: 

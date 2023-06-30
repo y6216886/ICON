@@ -119,7 +119,7 @@ class Seg3dLossless(nn.Module):
         else:
             step = 1.0 / self.resolutions[-1].float()
             coords2D = coords.float() / self.resolutions[-1] + step / 2
-        coords2D = coords2D * (self.b_max - self.b_min) + self.b_min
+        coords2D = coords2D * (self.b_max - self.b_min) + self.b_min ##will this range affect performance? max 1 min -1
         # query function
         bs, B, c=coords2D.size()
         chunk_temp=8000
@@ -178,6 +178,7 @@ class Seg3dLossless(nn.Module):
             # first step
             if torch.equal(resolution, self.resolutions[0]):
                 coords = self.init_coords.clone()    # torch.long
+                # breakpoint()
                 occupancys = self.batch_eval(coords, **kwargs)
                 occupancys = occupancys.view(self.batchsize, self.channels, D, H, W)
                 if (occupancys > 0.5).sum() == 0:
@@ -258,6 +259,7 @@ class Seg3dLossless(nn.Module):
 
                 if coords.size(1) == 0:
                     continue
+                # breakpoint()
                 occupancys_topk = self.batch_eval(coords, **kwargs)
 
                 # put mask point predictions to the right places on the upsampled grid.

@@ -181,6 +181,8 @@ class ICON(pl.LightningModule):
             export_cfg(self.logger, self.cfg)
 
         self.netG.train()
+        self.netG.training = True
+
 
         in_tensor_dict = {
             "sample": batch["samples_geo"].permute(0, 2, 1),
