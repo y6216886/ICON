@@ -133,15 +133,26 @@ class HGPIFuNet_global_local(BasePIFuNet):
         use_vis = (self.prior_type in ["icon", "keypoint"]) and ("vis" in self.smpl_feats)
         if self.prior_type in ["pamir", "pifu"] or self.args.pamir_icon:
             use_vis = 1
-
-        if self.use_filter:
-            channels_IF[0] = (self.hourglass_dim) * (2 - use_vis)
+        if self.args.triplane:
+            if self.use_filter:
+                channels_IF[0] = (self.hourglass_dim)*2//3 //(1 + use_vis)
+            else:
+                channels_IF[0] = len(self.channels_filter[0]) * (2 - use_vis)
         else:
-            channels_IF[0] = len(self.channels_filter[0]) * (2 - use_vis)
-
-
+            if self.use_filter:
+                channels_IF[0] = (self.hourglass_dim) * (2 - use_vis)
+            else:
+                channels_IF[0] = len(self.channels_filter[0]) * (2 - use_vis)
+        if self.args.PE_sdf!=0:
+            channels_IF[0]+=2*self.args.PE_sdf
         if self.args.pamir_icon:
-            channels_IF[0] += self.voxel_dim
+            channels_IF[0]+=self.args.pamir_vol_dim
+
+
+        if self.prior_type in ["icon", "keypoint",]:
+            channels_IF[0] += self.smpl_dim
+        # if self.args.pamir_icon:
+        #     channels_IF[0] += self.voxel_dim
             (
                 smpl_vertex_code,
                 smpl_face_code,

@@ -23,7 +23,7 @@ _C = CN(new_allowed=True)
 _C.name = 'baseline/icon'
 _C.gpus = [0]
 _C.test_gpus = [1]
-_C.root = "./data/"
+_C.root = "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/data/"
 _C.ckpt_dir = '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/'+_C.name+'/ckpt/'
 _C.resume_path = ''
 _C.normal_path = ''

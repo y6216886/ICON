@@ -94,8 +94,11 @@ if __name__ == "__main__":
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
-    parser.add_argument("--PE_sdf", type=int, default=17) 
+    parser.add_argument("--PE_sdf", type=int, default=0) 
     parser.add_argument("--batch_size", type=int, default=2) 
+    parser.add_argument("--num_worker", type=int, default=8)
+    parser.add_argument("--datasettype", nargs='+',  type=str, default=["cape"]) ##1 2 3  
+
     
 
     ####model
@@ -134,7 +137,9 @@ if __name__ == "__main__":
     ###
     ###triplane
     parser.add_argument("--norm_mlp", type=str, default='batch')  # 'batch' instance group
-    parser.add_argument('--triplane', action='store_true',default=True)
+    parser.add_argument('--triplane', action='store_true',default=False)
+    parser.add_argument("--hourglass_dim", type=int, default=12) ##note should be divided by 3
+    
     ###
     ###dropout
     parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
@@ -152,17 +157,14 @@ if __name__ == "__main__":
     ######
 
     args = parser.parse_args()
-    if args.PE_sdf!=0:
-        args.mlp_first_dim=13+args.PE_sdf * 2 
-    if args.pamir_icon:
-        if args.mlp_first_dim!=0:
-            args.mlp_first_dim += args.pamir_vol_dim #-3
-        else:
-            args.mlp_first_dim= 13 + args.pamir_vol_dim
+    if args.datasettype==['cape']:
+        rotation_num=3
+    elif args.datasettype==["thuman2"]:
+        rotation_num=36
 
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
-    cfg.merge_from_list(["net.mlp_dim",args.mlp_dim, "net.res_layers",args.res_layers, "net.voxel_dim", args.pamir_vol_dim, "net.use_filter", args.filter, "dataset.noise_scale", args.noise_scale, "net.norm_mlp", args.norm_mlp, "batch_size",args.batch_size])
+    cfg.merge_from_list(["net.mlp_dim",args.mlp_dim, "net.res_layers",args.res_layers, "net.voxel_dim", args.pamir_vol_dim, "net.use_filter", args.filter, "dataset.noise_scale", args.noise_scale, "net.norm_mlp", args.norm_mlp, "batch_size",args.batch_size, "net.hourglass_dim", args.hourglass_dim, "dataset.types", args.datasettype,"num_threads",  args.num_worker, "dataset.rotation_num", rotation_num])
     # cfg=checkname(args,cfg)
     exp_name=args.name
     if args.name!="baseline/icon-filter_batch2_newresumev1"  and not args.test_mode and not args.resume: ###conflict with ddp
