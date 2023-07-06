@@ -1,6 +1,6 @@
 name: baseline/pifu_v2_0220_testwandb
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
-resume_path: "./data/ckpt/pifu.ckpt"
+# resume_path: "./data/ckpt/pifu.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
 results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
@@ -51,7 +51,7 @@ lr_G: 1e-4
 weight_decay: 0.0 
 momentum: 0.0
 batch_size: 2
-num_threads: 16
+num_threads: 4
 gpus: [0]
 test_gpus: [0]
 
@@ -61,7 +61,7 @@ sdf_clip: 15.0
 fast_dev: 0
 resume: False
 test_mode: False
-mcube_res: 512
+mcube_res: 128
 clean_mesh: True
 num_sanity_val_steps: 1
 

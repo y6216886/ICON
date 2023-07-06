@@ -824,17 +824,17 @@ class ICON(pl.LightningModule):
             )
             image_inter = self.tensor2image(height, inter[0])
             image = np.concatenate([image_pred, image_gt] + image_inter, axis=1)
+            if self.args.logger=="tb":
+                step_id = self.global_step if dataset == "train" else self.global_step + idx
+                self.logger.experiment.add_image(
+                    tag=f"Occupancy-{dataset}/{step_id}",
+                    img_tensor=image.transpose(2, 0, 1),
+                    global_step=step_id,
+                )
+            elif self.args.logger=="wandb":
+                if self.trainer.global_rank == 0:
+                    self.logger.experiment.log({"Occupancy": [wandb.Image(image)]})
 
-            step_id = self.global_step if dataset == "train" else self.global_step + idx
-            # self.logger.experiment.add_image(
-            #     tag=f"Occupancy-{dataset}/{step_id}",
-            #     img_tensor=image.transpose(2, 0, 1),
-            #     global_step=step_id,
-            # )
-            # image=image.transpose(2, 0, 1)
-            if self.trainer.global_rank == 0:
-                self.logger.experiment.log({"Occupancy": [wandb.Image(image)]})
-            # self.logger.log_image(key=f"Occupancy-{dataset}/{step_id}", images=[image.transpose(2, 0, 1)],step=step_id)
     def test_single(self, batch):
 
         self.netG.eval()

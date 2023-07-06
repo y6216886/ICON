@@ -1,6 +1,6 @@
 name: baseline/pamir_using_img_only_epoch10_test_with_pretrained_Normal
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
-resume_path: "/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/pamir_using_img_only_epoch10/last.ckpt"
+# resume_path: "/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/pamir_using_img_only_epoch10/last.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
 results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
@@ -54,8 +54,8 @@ weight_decay: 0.0
 momentum: 0.0
 batch_size: 2
 num_threads: 2
-gpus: [5]
-test_gpus: [5]
+gpus: [0]
+test_gpus: [0]
 
 sdf: False
 sdf_clip: 15.0
@@ -63,7 +63,7 @@ sdf_clip: 15.0
 fast_dev: 0
 resume: False
 test_mode: False
-mcube_res: 512
+mcube_res: 128
 clean_mesh: True
 num_sanity_val_steps: 1
 

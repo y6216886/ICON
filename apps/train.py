@@ -90,6 +90,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_code", default=False, action="store_true")
     parser.add_argument("--resume", default=False, action="store_true")
     parser.add_argument("--offline",default=False, action="store_true")
+    parser.add_argument("--logger",type=str, default="tb")
     parser.add_argument("--name",type=str, default='baseline/icon-filter_batch2_newresumev1')
     parser.add_argument("--gpus", type=str, default='0') 
     parser.add_argument("--num_gpus", type=int, default=1) 
@@ -182,11 +183,18 @@ if __name__ == "__main__":
     print("note cfg is freeze pamir voxel dim", cfg.net.voxel_dim, "use filter", cfg.net.use_filter, "noise scale", cfg.dataset.noise_scale, "norm_mlp",cfg.net.norm_mlp,"batch_size",args.batch_size)
     os.makedirs(osp.join(cfg.results_path, cfg.name), exist_ok=True)
     os.makedirs(osp.join(cfg.ckpt_dir, cfg.name), exist_ok=True)
-    if not args.offline: 
-        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath)
-    if args.offline or args.test_code:
-        wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath,offline=True)
-
+    if args.logger=="wandb":
+            if not args.offline: 
+                wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath)
+            if args.offline or args.test_code:
+                wandb_logger = WandbLogger(name=cfg.name, project=args.proj_name, save_dir=args.savepath,offline=True)
+    elif args.logger=="tb":
+        wandb_logger = pl_loggers.TensorBoardLogger(
+            save_dir=args.savepath, name=cfg.name, default_hp_metric=False
+        )
+    else:
+        print("logger not implemented")
+        assert 1==0
     if cfg.overfit:
         cfg_overfit_list = ["batch_size", 1]
         cfg.merge_from_list(cfg_overfit_list)
