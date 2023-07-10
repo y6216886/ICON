@@ -1,7 +1,7 @@
 name: baseline/pifu_v2_0220_testwandb
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 # resume_path: "./data/ckpt/pifu.ckpt"
-normal_path: "./data/ckpt/normal.ckpt"
+normal_path: "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/data/ckpt/normal.ckpt"
 results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
 dataset:

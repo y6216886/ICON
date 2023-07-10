@@ -63,7 +63,9 @@ class Seg3dLossless(nn.Module):
             resolutions = torch.tensor([(res, res, res) for res in resolutions])
         else:
             resolutions = torch.tensor(resolutions)
+        
         self.register_buffer('resolutions', resolutions)
+        print("the resolution of seg3dloss is",self.resolutions)
         self.batchsize = self.b_min.size(0)
         assert self.batchsize == 1
         self.balance_value = balance_value
@@ -287,7 +289,7 @@ class Seg3dLossless(nn.Module):
         final_D = self.resolutions[-1][2]
 
         calculated = self.calculated.clone()
-
+        print(self.resolutions)
         for resolution in self.resolutions:
             W, H, D = resolution
             stride = (self.resolutions[-1] - 1) / (resolution - 1)

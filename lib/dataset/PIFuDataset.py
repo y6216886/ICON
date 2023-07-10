@@ -213,7 +213,7 @@ class PIFuDataset():
 
     def __len__(self):
         if self.args.test_code:
-            return min(15, len(self.subject_list) * len(self.rotations))
+            return min(63, len(self.subject_list) * len(self.rotations))
         else:
             return len(self.subject_list) * len(self.rotations)
 

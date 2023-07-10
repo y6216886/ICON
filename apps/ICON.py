@@ -124,6 +124,32 @@ class ICON(pl.LightningModule):
 
         self.export_dir = None
         self.result_eval = {}
+    def set_meshres(self, meshres):
+        print("setting meshres to:", meshres)
+        self.mcube_res=meshres
+        self.resolutions = (
+            np.logspace(
+                start=5,
+                stop=np.log2(self.mcube_res),
+                base=2,
+                num=int(np.log2(self.mcube_res) - 4),
+                endpoint=True,
+            ) + 1.0
+        )
+        self.resolutions = self.resolutions.astype(np.int16).tolist()
+        self.reconEngine = Seg3dLossless(
+            query_func=query_func,
+            b_min=[[-1.0, 1.0, -1.0]],
+            b_max=[[1.0, -1.0, 1.0]],
+            resolutions=self.resolutions,
+            align_corners=True,
+            balance_value=0.50,
+            device=torch.device(f"cuda:{self.cfg.gpus[0]}"),
+            visualize=False,
+            debug=False,
+            use_cuda_impl=False,
+            faster=True,
+        )
 
     def get_progress_bar_dict(self):
         tqdm_dict = super().get_progress_bar_dict()
@@ -580,7 +606,7 @@ class ICON(pl.LightningModule):
         mesh_rot = batch["rotation"][0].item()
 
         self.export_dir = osp.join(
-            self.cfg.results_path, self.cfg.name, "-".join(self.cfg.dataset.types), mesh_name
+            self.cfg.results_path, self.args.name, "-".join(self.cfg.dataset.types), mesh_name
         )
         print(self.export_dir)
         os.makedirs(self.export_dir, exist_ok=True)
@@ -625,6 +651,7 @@ class ICON(pl.LightningModule):
             })
         with torch.no_grad():
             features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
+            # breakpoint()
             sdf = self.reconEngine(
                 opt=self.cfg, netG=self.netG, features=features, proj_matrix=None, clip_feature=in_tensor_dict["clip_feature"]
             )
@@ -677,7 +704,7 @@ class ICON(pl.LightningModule):
         return test_log, name_log
 
     def test_epoch_end(self, outputs):
-
+        # breakpoint()
         # make_test_gif("/".join(self.export_dir.split("/")[:-2]))
         if self.args.val_mode:
             if self.cfg.dataset.types[0]=="thuman2":
@@ -693,37 +720,74 @@ class ICON(pl.LightningModule):
                     outputs,
                     rot_num=3,
                     split={
-                    "cape-easy": (10, 20),
-                    "cape-hard": (70, 80),
-                    "cape-all": (120, 130)
+                    "cape-easy": (0, 8),
+                    "cape-hard": (8, 16),
+                    "cape-all": (16, 25)
                     },
                 )
         
         elif not self.cfg.test_mode:
 
-            accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
-                outputs,
-                rot_num=3,
-                # split={
-                #     "cape-easy": (0, 50),
-                #     "cape-hard": (50, 100)
-                # },
-                split={
-                    "thuman2": (0, 5)
-                },
-            )
+            # accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
+            #     outputs,
+            #     rot_num=3,
+            #     # split={
+            #     #     "cape-easy": (0, 50),
+            #     #     "cape-hard": (50, 100)
+            #     # },
+            #     split={
+            #         "thuman2": (0, 5)
+            #     },
+            # )
+            if self.cfg.dataset.types[0]=="cape":
+                accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
+                    outputs,
+                    rot_num=3,
+                    split={
+                    "cape-easy": (0, 8),
+                    "cape-hard": (8, 16),
+                    "cape-all": (16, 25)
+                    },
+                )
+            elif self.cfg.dataset.types[0]=="thuman2":
+                accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
+                    outputs,
+                    rot_num=3,
+                    split={
+                        "thuman2": (0, 21)
+                    },
+                )
 
         elif self.cfg.test_mode:
+            if self.args.train_on_cape:
+                accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
+                    outputs,
+                    rot_num=3,
+                    split={
+                    "cape-easy": (0, 8),
+                    "cape-hard": (8, 16),
+                    "cape-all": (16, 25)
+                    },
+                )
+            elif self.cfg.dataset.types[0]=="cape":
+                accu_outputs, specific_output = accumulate(
+                    outputs,
+                    rot_num=3,
+                    split={
+                        "cape-easy": (0, 50),
+                        "cape-hard": (50, 100),
+                        "cape-all": (0, 150)
+                    },
+                )
 
-            accu_outputs, specific_output = accumulate(
-                outputs,
-                rot_num=3,
-                split={
-                    "cape-easy": (0, 50),
-                    "cape-hard": (50, 100),
-                    "cape-all": (0, 150)
-                },
-            )
+            elif self.cfg.dataset.types[0]=="thuman2":
+                accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
+                    outputs,
+                    rot_num=3,
+                    split={
+                        "thuman2": (0, 21)
+                    },
+                )
         print(colored(self.cfg.name, "green"))
         print(colored(self.cfg.dataset.noise_scale, "green"))
 

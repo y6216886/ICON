@@ -73,15 +73,16 @@ def checkname(args,cfg):
             exp_name=exp_name+gettime()
         name_dict=["name",exp_name]
         cfg.merge_from_list(name_dict)
+        print("experimentname",cfg.name)
     return cfg
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 if __name__ == "__main__":
     # torch.multiprocessing.set_start_method('spawn',force=True)
     parser = argparse.ArgumentParser()  #configs/train/train_on_capev1/icon_filter_cape.yaml 
-    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/cape_triplane.yaml',help="path of the yaml config file")
+    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/cape_triplane.yaml',help="path of the yaml config file")
     # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_cape.yaml',help="path of the yaml config file")
-    # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_thuman2.yaml',help="path of the yaml config file")
+    parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/train_on_capev1/icon-filter_thuman2.yaml',help="path of the yaml config file")
     # parser.add_argument("-cfg", "--config_file", type=str, default='configs/train/icon_uncertainty/icon-filter_uncertaintyv1.yaml',help="path of the yaml config file")
     parser.add_argument("--proj_name", type=str, default='Human_3d_Reconstruction')
     parser.add_argument("--savepath", type=str, default='/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/')
@@ -103,7 +104,7 @@ if __name__ == "__main__":
     
 
     ####model
-    parser.add_argument("--mlpSe", default=False, action="store_true")
+    parser.add_argument("--mlpSe", default=False, action="store_true")  ###not compatible with this task: the generated mesh contains much holes on it which may cause Trypophobia.
     parser.add_argument("--mlpSev1", default=False, action="store_true")
     parser.add_argument("--mlpSemax", default=False, action="store_true")
     parser.add_argument("--mlp3d", default=False, action="store_true")
@@ -139,7 +140,7 @@ if __name__ == "__main__":
     ###triplane
     parser.add_argument("--norm_mlp", type=str, default='batch')  # 'batch' instance group
     parser.add_argument('--triplane', action='store_true',default=False)
-    parser.add_argument("--hourglass_dim", type=int, default=12) ##note should be divided by 3
+    parser.add_argument("--hourglass_dim", type=int, default=6) ##note should be divided by 3
     
     ###
     ###dropout
@@ -147,6 +148,8 @@ if __name__ == "__main__":
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
 
     ##global and local  
+    
+    parser.add_argument('--train_on_thuman', default=False, action="store_true") 
     parser.add_argument("--pamir_icon", default=False, action="store_true")
     parser.add_argument('--noise_scale', nargs='+', type=float, default=[0,0]) #2,3,4,5,6
     parser.add_argument('--smplx2smpl', default=False, action="store_true") #2,3,4,5,6
@@ -168,7 +171,7 @@ if __name__ == "__main__":
     cfg.merge_from_list(["net.mlp_dim",args.mlp_dim, "net.res_layers",args.res_layers, "net.voxel_dim", args.pamir_vol_dim, "net.use_filter", args.filter, "dataset.noise_scale", args.noise_scale, "net.norm_mlp", args.norm_mlp, "batch_size",args.batch_size, "net.hourglass_dim", args.hourglass_dim, "dataset.types", args.datasettype,"num_threads",  args.num_worker, "dataset.rotation_num", rotation_num])
     # cfg=checkname(args,cfg)
     exp_name=args.name
-    if args.name!="baseline/icon-filter_batch2_newresumev1"  and not args.test_mode and not args.resume: ###conflict with ddp
+    if args.name!="baseline/icon-filter_batch2_newresumev1"  and not args.test_mode and not args.val_mode and not args.resume: ###conflict with ddp
         if os.path.exists(os.path.join(cfg.results_path,args.name,"codes")):
             print("Experiment name exists, modify the experiment name!")
             assert 1==0
@@ -213,8 +216,17 @@ if __name__ == "__main__":
     )
 
     if cfg.test_mode or args.test_mode:
-
-        cfg_test_mode = [
+        if args.train_on_thuman:
+                    cfg_test_mode = [
+            "test_mode",
+            True,
+            "mcube_res",
+            256,
+            "clean_mesh",
+            True,
+        ]
+        
+        else:cfg_test_mode = [
             "test_mode",
             True,
             "dataset.types",
@@ -267,7 +279,6 @@ if __name__ == "__main__":
     }
 
     datamodule = PIFuDataModule(cfg,args)
-    print("note !!!!in test mode")
     if not cfg.test_mode:
         datamodule.setup(stage="fit")
         train_len = datamodule.data_size["train"]
@@ -315,24 +326,95 @@ if __name__ == "__main__":
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpse/last.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpChannelSELayerv1/last.ckpt"
-        resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
+        # resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
+        resume_path=os.path.join(cfg.ckpt_dir,args.name,'last.ckpt')
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon_checkv3/last.ckpt"
         if not os.path.exists(resume_path):
             NotADirectoryError("checkpoint {} not exists".format(resume_path))
+
     currentepoch=load_networks(cfg, model, mlp_path=resume_path, normal_path=cfg.normal_path)
     if args.resume: trainer.current_epoch=currentepoch
     if args.test_code: 
-        trainer.max_epochs=2
-        trainer.log_every_n_steps=1
-        trainer.val_check_interval=1
+        trainer.max_epochs=1
+        trainer.log_every_n_steps=32
+        trainer.val_check_interval=32
     # if trainer.global_rank == 0:
     #     wandb_logger.experiment.config.update(cfg)
     if not cfg.test_mode:
         trainer.fit(model=model, datamodule=datamodule)
         trainer_kwargs.update({"gpus": 1})
-        trainer_val = SubTrainer(**trainer_kwargs)
-        trainer_val.test(model=model, datamodule=datamodule)
+        # model.set_meshres(256)##set mesh res to 256 for testing model
+        # trainer_val = SubTrainer(**trainer_kwargs)
+        # trainer_val.test(model=model, datamodule=datamodule)
+        args.num_gpus=1
+
+        cfg_test_mode = [
+            "test_mode",
+            True,
+            "dataset.types",
+            args.datasettype,
+            "dataset.scales",
+            [100.0],
+            "dataset.rotation_num",
+            rotation_num,
+            "mcube_res",
+            256,
+            "clean_mesh",
+            True,
+        ]
+        cfg.merge_from_list(cfg_test_mode)
+        checkpoint = ModelCheckpoint(
+            dirpath=osp.join(cfg.ckpt_dir, cfg.name),
+            save_top_k=1,
+            verbose=False,
+            save_last=True,
+            save_weights_only=True, ##here for resuming model we save optimizer lr scheduler,etc.
+            monitor="val/avgloss",
+            mode="min",
+            filename="{epoch:02d}",
+        )
+        datamodule_val = PIFuDataModule(cfg,args)
+        model_val = ICON(cfg, args)
+        
+        trainer_kwargs_val = {
+            # "gpus": cfg.gpus,
+            # "auto_select_gpus": True,
+            "reload_dataloaders_every_epoch": True,
+            "sync_batchnorm": True,
+            "benchmark": True,
+            "logger": wandb_logger,
+            "track_grad_norm": -1,
+            "num_sanity_val_steps": cfg.num_sanity_val_steps,
+            "checkpoint_callback": checkpoint,
+            "limit_train_batches": cfg.dataset.train_bsize,
+            "limit_val_batches": cfg.dataset.val_bsize if not cfg.overfit else 0.001,
+            "limit_test_batches": cfg.dataset.test_bsize if not cfg.overfit else 0.0,
+            "profiler": None,
+            "fast_dev_run": cfg.fast_dev,
+            "max_epochs": cfg.num_epoch,
+            "callbacks": [LearningRateMonitor(logging_interval="step")],
+            # "profiler":True,
+            "gpus": 1,
+            
+        }
+        trainer_val = SubTrainer(**trainer_kwargs_val) ##delete normal filter, voxilization, and reconengine while saving checkpoint
+        # trainer = Trainer(**trainer_kwargs)
+        # load checkpoints
+
+        # resume_path="data/ckpt/icon-filter.ckpt"
+        resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')   
+
+        if not os.path.exists(resume_path):
+            NotADirectoryError("checkpoint {} not exists".format(resume_path))
+        load_networks(cfg, model_val, mlp_path=resume_path, normal_path=cfg.normal_path)
+        if args.test_code: 
+            trainer_val.log_every_n_steps=1
+            trainer_val.val_check_interval=1
+
+        np.random.seed(1993)
+        trainer_val.test(model=model_val, datamodule=datamodule_val)
     else:
+        # breakpoint()
         np.random.seed(1993)
         trainer.test(model=model, datamodule=datamodule)
 

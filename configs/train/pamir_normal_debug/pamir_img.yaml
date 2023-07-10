@@ -1,7 +1,7 @@
 name: baseline/pamir_using_img_only_epoch10_test_with_pretrained_Normal
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 # resume_path: "/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/pamir_using_img_only_epoch10/last.ckpt"
-normal_path: "./data/ckpt/normal.ckpt"
+normal_path: "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/data/ckpt/normal.ckpt"
 results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
 dataset:

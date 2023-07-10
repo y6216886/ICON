@@ -50,6 +50,7 @@ class PIFuDataModule(pl.LightningDataModule):
             if stage == 'test':
                 if self.args.train_on_cape:
                     self.test_dataset = PIFuDataset(cfg=self.cfg, split="test_train",args=self.args)
+                if self.args.train_on_thuman:self.test_dataset = PIFuDataset(cfg=self.cfg, split="val",args=self.args)
                 else:self.test_dataset = PIFuDataset(cfg=self.cfg, split="test",args=self.args)
 
             if stage == 'val':

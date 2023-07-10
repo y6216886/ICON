@@ -556,6 +556,7 @@ def accumulate(outputs, rot_num, split):
                 hparam_log_dict[keyword] = 0
 
             try:
+                
                 for idx in range(split[dataset][0] * rot_num, split[dataset][1] * rot_num):
                     hparam_log_dict[keyword] += outputs[idx][0][metric]
                     name_log_dict[outputs[idx][1]['mesh_name']+"-"+str(outputs[idx][1]['rotation'])+"_"+f"{dataset}#{metric}"]=outputs[idx][0][metric]
