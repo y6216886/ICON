@@ -410,8 +410,8 @@ def barycentric_coordinates_of_projection(points, vertices):
     b1 = torch.sum(torch.cross(w, v) * n, dim=1) * oneOver4ASquared
     weights = torch.stack((1 - b1 - b2, b1, b2), dim=-1)
     # check barycenric weights
-    # p_n = v0*weights[:,0:1] + v1*weights[:,1:2] + v2*weights[:,2:3]
-    return weights
+    p_n = v0*weights[:,0:1] + v1*weights[:,1:2] + v2*weights[:,2:3]
+    return weights,p_n
 
 
 def cal_sdf_batch(verts, faces, cmaps, vis, points):
@@ -451,7 +451,7 @@ def cal_sdf_batch(verts, faces, cmaps, vis, points):
                                                                             3)).view(-1, 3, 3)
     closest_vis = torch.gather(vis, 1, pts_ind[:, :, None, None].expand(-1, -1, 3,
                                                                         1)).view(-1, 3, 1)
-    bary_weights = barycentric_coordinates_of_projection(points.view(-1, 3), closest_triangles)
+    bary_weights,_ = barycentric_coordinates_of_projection(points.view(-1, 3), closest_triangles)
 
     pts_cmap = (closest_cmaps * bary_weights[:, :, None]).sum(1).unsqueeze(0)
     pts_vis = (closest_vis * bary_weights[:, :, None]).sum(1).unsqueeze(0).ge(1e-1)

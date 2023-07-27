@@ -79,7 +79,7 @@ class PointFeat:
         closest_triangles = torch.gather(
             self.triangles, 1, pts_ind[:, :, None, None].expand(-1, -1, 3, 3)
         ).view(-1, 3, 3)
-        bary_weights = barycentric_coordinates_of_projection(points.view(-1, 3), closest_triangles)
+        bary_weights, barypoints = barycentric_coordinates_of_projection(points.view(-1, 3), closest_triangles)
 
         out_dict = {}
 
@@ -110,6 +110,12 @@ class PointFeat:
                 pts_sdf+=perturb
             if self.args.PE_sdf!=0:
                 pts_sdf= self.embedding_sdf(pts_sdf)
+            # breakpoint()
+            if self.args.sdfdir:
+                assert points.size(0)*points.size(1)==barypoints.size(0)
+                sdf_direction = points - barypoints.view(points.size(0), points.size(1), 3)
+                # out_dict["sdfdir"] = sdf_direction
+                pts_sdf=torch.cat([pts_sdf, sdf_direction], dim=-1)
             
             out_dict["sdf"] = pts_sdf
 

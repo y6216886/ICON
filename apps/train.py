@@ -148,7 +148,7 @@ if __name__ == "__main__":
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
 
     ##global and local  
-    
+    parser.add_argument('--sdfdir', default=False, action="store_true") 
     parser.add_argument('--train_on_thuman', default=False, action="store_true") 
     parser.add_argument("--pamir_icon", default=False, action="store_true")
     parser.add_argument('--noise_scale', nargs='+', type=float, default=[0,0]) #2,3,4,5,6
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     exp_name=args.name
     if args.name!="baseline/icon-filter_batch2_newresumev1"  and not args.test_mode and not args.val_mode and not args.resume: ###conflict with ddp
         if os.path.exists(os.path.join(cfg.results_path,args.name,"codes")):
-            print("Experiment name exists, modify the experiment name!")
+            print("Experiment name {} exists, modify the experiment name!".format(os.path.join(cfg.results_path,args.name,"codes")))
             assert 1==0
         else:
             name_dict=["name",exp_name]
@@ -373,6 +373,10 @@ if __name__ == "__main__":
             mode="min",
             filename="{epoch:02d}",
         )
+        args.noise_scale=[0.0, 0.0]
+        cfg_test_mode=["dataset.noise_scale", args.noise_scale]
+        cfg.merge_from_list(cfg_test_mode)
+        print("test mode noise_scale", args.noise_scale, cfg.dataset.noise_scale)
         datamodule_val = PIFuDataModule(cfg,args)
         model_val = ICON(cfg, args)
         

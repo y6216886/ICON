@@ -28,6 +28,7 @@ class PIFuDataModule(pl.LightningDataModule):
         np.random.seed(np.random.get_state()[1][0] + worker_id)
 
     def setup(self, stage):
+        print("setup stage:", stage)
         if self.args.val_mode==True: stage='val'
         if self.args.use_clip:
             if stage == 'fit':
@@ -50,7 +51,7 @@ class PIFuDataModule(pl.LightningDataModule):
             if stage == 'test':
                 if self.args.train_on_cape:
                     self.test_dataset = PIFuDataset(cfg=self.cfg, split="test_train",args=self.args)
-                if self.args.train_on_thuman:self.test_dataset = PIFuDataset(cfg=self.cfg, split="val",args=self.args)
+                elif self.args.train_on_thuman:self.test_dataset = PIFuDataset(cfg=self.cfg, split="val",args=self.args)
                 else:self.test_dataset = PIFuDataset(cfg=self.cfg, split="test",args=self.args)
 
             if stage == 'val':

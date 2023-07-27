@@ -147,6 +147,8 @@ class HGPIFuNet_global_local(BasePIFuNet):
             channels_IF[0]+=2*self.args.PE_sdf
         if self.args.pamir_icon:
             channels_IF[0]+=self.args.pamir_vol_dim
+        if self.args.sdfdir:
+            channels_IF[0]+=3
 
 
         if self.prior_type in ["icon", "keypoint",]:

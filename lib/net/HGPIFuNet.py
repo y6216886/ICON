@@ -137,6 +137,8 @@ class HGPIFuNet(BasePIFuNet):
                 channels_IF[0] = (self.hourglass_dim) * (2 - use_vis)
             else:
                 channels_IF[0] = len(self.channels_filter[0]) * (2 - use_vis)
+        if self.args.sdfdir:
+            channels_IF[0]+=3
         if self.args.PE_sdf!=0:
             channels_IF[0]+=2*self.args.PE_sdf
         if self.args.pamir_icon:
