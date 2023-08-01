@@ -143,7 +143,7 @@ class HGPIFuNet(BasePIFuNet):
             channels_IF[0]+=2*self.args.PE_sdf
         if self.args.pamir_icon:
             channels_IF[0]+=self.args.pamir_vol_dim
-        if self.prior_type in ["icon", "keypoint",]:
+        if self.prior_type in ["icon", "keypoint","pifu"]:
             channels_IF[0] += self.smpl_dim
         elif self.prior_type == "pamir":
             channels_IF[0] += self.voxel_dim
@@ -166,7 +166,7 @@ class HGPIFuNet(BasePIFuNet):
             )
             self.ve = VolumeEncoder(3, self.voxel_dim, self.opt.num_stack)
 
-        elif self.prior_type == "pifu":
+        elif self.prior_type in ["pifu"]:
             channels_IF[0] += 1
         else:
             print(f"don't support {self.prior_type}!")
@@ -375,7 +375,7 @@ class HGPIFuNet(BasePIFuNet):
         preds_list = []
         vol_feats = features
 
-        if self.prior_type in ["icon", "keypoint"]: ##icon is slow due to the Point feat following code
+        if self.prior_type in ["icon", "keypoint","pifu"]: ##icon is slow due to the Point feat following code
 
             # smpl_verts [B, N_vert, 3]
             # smpl_faces [B, N_face, 3]
@@ -453,7 +453,7 @@ class HGPIFuNet(BasePIFuNet):
                 point_feat_list = [self.index(im_feat, xy), self.index(vol_feat, xyz)]
 
             elif self.prior_type == "pifu":
-                point_feat_list = [self.index(im_feat, xy), z]
+                point_feat_list = [self.index(im_feat, xy), z, smpl_feat[:, :-1, :]]
 
             point_feat = torch.cat(point_feat_list, 1)
             # out of image plane is always set to 0
