@@ -111,9 +111,9 @@ if __name__ == "__main__":
     parser.add_argument("--conv3d_start", type=int, default=2)
     parser.add_argument("--conv3d_kernelsize", type=int, default=1)
     parser.add_argument("--pad_mode", type=str, default='zeros')
-    parser.add_argument("--se_start_channel", type=int, default=2)
-    parser.add_argument("--se_end_channel", type=int, default=4)
-    parser.add_argument("--se_reduction", type=int, default=16)
+    parser.add_argument("--se_start_channel", type=int, default=1)  
+    parser.add_argument("--se_end_channel", type=int, default=3)
+    parser.add_argument("--se_reduction", type=int, default=4)
     parser.add_argument("--cse", default=False, action="store_true")
     parser.add_argument("--sse", default=False, action="store_true")
     

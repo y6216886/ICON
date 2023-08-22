@@ -15,7 +15,6 @@
 # Contact: ps-license@tuebingen.mpg.de
 import sys
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON")
-sys.path.append("/media/young/writable/code/human_reconstruction")
 import warnings
 import logging
 
@@ -48,7 +47,7 @@ import trimesh
 import pickle
 import numpy as np
 import torch
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+# os.environ["CUDA_VISIBLE_DEVICES"]="1"
 torch.backends.cudnn.benchmark = True
 SEED = 1993
 np.random.seed(SEED)
@@ -75,7 +74,7 @@ if __name__ == "__main__":
     # parser.add_argument("-cfg", "--config", type=str, default="configs/icon-pamir-filter.yaml")
     parser.add_argument("-cfg", "--config", type=str, default="configs/icon-pamir-filterv1.yaml")
     # parser.add_argument("-cfg", "--config", type=str, default="configs/icon-filter.yaml")
-    parser.add_argument("--mlp_first_dim", type=int, default=20) 
+    parser.add_argument("--mlp_first_dim", type=int, default=10) 
     parser.add_argument("--PE_sdf", type=int, default=0) 
 
     ####model
@@ -97,7 +96,16 @@ if __name__ == "__main__":
     parser.add_argument("--use_clip", default=False, action="store_true")
     parser.add_argument("--clip_fuse_layer", type=str, default="23") ##1 2 3
     #####
-
+    parser.add_argument('--triplane', action='store_true',default=False)
+    parser.add_argument('--train_on_cape', default=False, action="store_true")
+    parser.add_argument('--sdfdir', default=False, action="store_true")  
+    parser.add_argument("--pamir_vol_dim", type=int, default=3)
+        ####model
+    parser.add_argument("--se_start_channel", type=int, default=1)  
+    parser.add_argument("--se_end_channel", type=int, default=3)
+    parser.add_argument("--se_reduction", type=int, default=4)
+    parser.add_argument("--cse", default=False, action="store_true")
+    parser.add_argument("--sse", default=False, action="store_true")
     ###mlp unet
     parser.add_argument("--use_unet", default=False, action="store_true")
     parser.add_argument('--mlp_dim', nargs='+', type=int, default=[13, 512, 256, 128, 1]) #res_layers 13,128,256,512,256,128,1
