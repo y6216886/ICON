@@ -219,20 +219,20 @@ class ICON(pl.LightningModule):
         for name in self.in_total:
             in_tensor_dict.update({name: batch[name]})
 
-        if self.args.pamir_icon:
-            in_tensor_dict.update(
+
+        in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in self.icon_keys+self.pamir_keys
             }
         )
 
-        else: in_tensor_dict.update(
-            {
-                k: batch[k] if k in batch.keys() else None
-                for k in getattr(self, f"{self.prior_type}_keys")
-            }
-        )
+        # else: in_tensor_dict.update(
+        #     {
+        #         k: batch[k] if k in batch.keys() else None
+        #         for k in getattr(self, f"{self.prior_type}_keys")
+        #     }
+        # )
 
         if self.args.use_clip:
                     in_tensor_dict.update(
@@ -330,20 +330,20 @@ class ICON(pl.LightningModule):
             in_tensor_dict.update({name: batch[name]})
 
 
-        if self.args.pamir_icon:
-            in_tensor_dict.update(
+
+        in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in self.icon_keys+self.pamir_keys
             }
         )
 
-        else: in_tensor_dict.update(
-            {
-                k: batch[k] if k in batch.keys() else None
-                for k in getattr(self, f"{self.prior_type}_keys")
-            }
-        )
+        # else: in_tensor_dict.update(
+        #     {
+        #         k: batch[k] if k in batch.keys() else None
+        #         for k in getattr(self, f"{self.prior_type}_keys")
+        #     }
+        # )
         if self.args.use_clip:
                     in_tensor_dict.update(
             {
@@ -615,20 +615,20 @@ class ICON(pl.LightningModule):
             if name in batch.keys():
                 in_tensor_dict.update({name: batch[name]})
 
-        if self.args.pamir_icon:
-            in_tensor_dict.update(
+
+        in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in self.icon_keys+self.pamir_keys
             }
         )
 
-        else: in_tensor_dict.update(
-            {
-                k: batch[k] if k in batch.keys() else None
-                for k in getattr(self, f"{self.prior_type}_keys")
-            }
-        )
+        # else: in_tensor_dict.update(
+        #     {
+        #         k: batch[k] if k in batch.keys() else None
+        #         for k in getattr(self, f"{self.prior_type}_keys")
+        #     }
+        # )
 
         if "T_normal_F" not in in_tensor_dict.keys() or "T_normal_B" not in in_tensor_dict.keys():
 
@@ -909,20 +909,20 @@ class ICON(pl.LightningModule):
             if name in batch.keys():
                 in_tensor_dict.update({name: batch[name]})
 
-        if self.args.pamir_icon:
-            in_tensor_dict.update(
+        
+        in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in self.icon_keys+self.pamir_keys
             }
         )
 
-        else: in_tensor_dict.update(
-            {
-                k: batch[k] if k in batch.keys() else None
-                for k in getattr(self, f"{self.prior_type}_keys")
-            }
-        )
+        # else: in_tensor_dict.update(
+        #     {
+        #         k: batch[k] if k in batch.keys() else None
+        #         for k in getattr(self, f"{self.prior_type}_keys")
+        #     }
+        # )
         if self.args.use_clip:
                     in_tensor_dict.update(
             {

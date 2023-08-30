@@ -12,6 +12,10 @@ if __name__ == '__main__':
         '-c', '--config', default='./configs/train/icon-filter.yaml', help='vis sampler 3D'
     )
     parser.add_argument('-d', '--dataset', default='thuman2')
+    parser.add_argument("--pamir_icon", default=False, action="store_true")
+    parser.add_argument('--noise_scale', nargs='+', type=float, default=[0,0]) #2,3,4,5,6
+    parser.add_argument('--smplx2smpl', default=False, action="store_true") #2,3,4,5,6
+    parser.add_argument('--train_on_cape', default=False, action="store_true") 
     args_c = parser.parse_args()
 
     args = get_cfg_defaults()
@@ -27,7 +31,7 @@ if __name__ == '__main__':
         args.merge_from_list(cfg_test_mode)
 
     # dataset sampler
-    dataset = PIFuDataset(args, split='test', vis=args_c.show)
+    dataset = PIFuDataset(args, split='test', vis=args_c.show, args=args_c)
     print(f"Number of subjects :{len(dataset.subject_list)}")
     data_dict = dataset[1]
     # print(data_dict)

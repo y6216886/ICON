@@ -319,9 +319,8 @@ class PIFuDataset():
             self.get_sampling_geo(data_dict, is_valid=self.split == "val", is_sdf=self.use_sdf)
         )
         data_dict.update(self.load_smpl(data_dict, self.vis))
-
-        if self.prior_type == 'pamir' or self.args.pamir_icon:
-             data_dict.update(self.load_smpl_voxel(data_dict))
+        # breakpoint()
+        data_dict.update(self.load_smpl_voxel(data_dict))
 
         if (self.split not in ['val', 'test', 'test_train']) and (not self.vis):
 
@@ -546,6 +545,7 @@ class PIFuDataset():
         # print(smpl_type,"smpl_type")
         return_dict = {}
         # try:
+        # breakpoint()
         if 'smplx_param' in list(data_dict.keys()) and \
             os.path.exists(data_dict['smplx_param']) and \
                 sum(self.noise_scale) > 0.0:
@@ -595,10 +595,10 @@ class PIFuDataset():
         )
 
         if vis:
-
+            smplx_verts=smplx_verts.to(device=self.device)
             (xy, z) = torch.as_tensor(smplx_verts,device=self.device).split([2, 1], dim=1) 
             smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces,device=self.device).long())
-
+            # breakpoint()
             T_normal_F, T_normal_B = self.render_normal(
                 (smplx_verts * torch.tensor(np.array([1.0, -1.0, 1.0]),device=self.device)),
                 smplx_faces.to(self.device)
@@ -706,7 +706,7 @@ class PIFuDataset():
     def visualize_sampling3D(self, data_dict, mode='vis'):
 
         # create plot
-        vp = vedo.Plotter(title="", size=(1500, 1500), axes=0, bg='white')
+        # vp = vedo.Plotter(title="", size=(1500, 1500), axes=0, bg='white')
         vis_list = []
 
         assert mode in ['vis', 'sdf', 'normal', 'cmap', 'occ']
@@ -750,6 +750,13 @@ class PIFuDataset():
             )
             voxel.visual.vertex_colors = [0.0, 128.0, 0.0, 255.0]
             vis_list.append(voxel)
+            #save trimesh as obj
+            voxel.export(f"/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/results/visualization_dataloader/voxel.obj")
+            # import PIL
+            # image_arr = np.array(image_arr, dtype=np.uint8)
+            # image_arr = image_arr[..., ::-1]
+            # image_arr = PIL.Image.fromarray(image_arr)
+            # image_arr.save(f"/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/results/visualization_dataloader/image{img_id}.png")
 
         if 'smpl_verts' in list(data_dict.keys()):
             print(colored("smpl verts", "green"))
@@ -771,12 +778,19 @@ class PIFuDataset():
             image_dim = image_arr.shape[0]
             image = vedo.Picture(image_arr).scale(2.0 / image_dim).pos(-1.0, -1.0, img_pos[img_id])
             vis_list.append(image)
-
+            #save numpy matrix as PIL image
+            # import PIL
+            # image_arr = np.array(image_arr, dtype=np.uint8)
+            # image_arr = image_arr[..., ::-1]
+            # image_arr = PIL.Image.fromarray(image_arr)
+            # image_arr.save(f"/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/results/visualization_dataloader/image{img_id}.png")
+            
+        # breakpoint()
         # create a pointcloud
         pc = vedo.Points(points, r=15, c=np.float32(colors))
         vis_list.append(pc)
 
-        vp.show(*vis_list, bg="white", axes=1.0, interactive=True)
+        # vp.show(*vis_list, bg="white", axes=1.0, interactive=True)
 
 
 if __name__=="__main__":

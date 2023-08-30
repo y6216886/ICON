@@ -217,22 +217,11 @@ class MLP(pl.LightningModule):
                 if i in range(self.se_start_channel,self.se_end_channel):
                     y=self.se_conv[j](y) 
                     j+=1
-            elif self.args.mlpSemax:
-                if i in range(self.se_start_channel,self.se_end_channel):
-                    y_spa=self.se_conv_spatial[j](y) ##
-                    y_cha=self.se_conv_channel[j](y) ##
-                    y=torch.max(y_spa, y_cha)
-                    j+=1
             #####
-            if self.args.use_clip and i in self.clip_fuse_layer:
-                input=torch.cat([y, clip_feature], 1) if i not in self.res_layers else torch.cat([y, tmpy, clip_feature], 1)
-                if self.args.dropout!=0 and self.training and i>0: y= self.dropout(y)
-                y = f(input)
-            else: 
-                input=y if i not in self.res_layers else torch.cat([y, tmpy], 1)
-                if self.args.dropout!=0 and self.training and i>0: 
-                    y= self.dropout(y)
-                y = f(input)
+            input=y if i not in self.res_layers else torch.cat([y, tmpy], 1)
+            if self.args.dropout!=0 and self.training and i>0: 
+                y= self.dropout(y)
+            y = f(input)
 
             ###activation
             if i != len(self.filters) - 1:
@@ -456,6 +445,8 @@ if __name__=="__main__":
             self.se_start_channel=1
             self.se_end_channel=4
             self.se_reduction=16
+            self.sse=True
+            self.cse=False
     args_=args_()
     net=MLP(filter_channels=[12,128,256,128,1], res_layers=[2,4] ,args=args_).cuda()
     # net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()

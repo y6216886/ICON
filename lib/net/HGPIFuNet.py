@@ -126,34 +126,36 @@ class HGPIFuNet(BasePIFuNet):
             channels_IF[0]+=self.args.pamir_vol_dim
         if self.prior_type in ["icon", "keypoint"]:
             channels_IF[0] += self.smpl_dim
-        elif self.prior_type == "pamir":
-            channels_IF[0] += self.voxel_dim
-            (
-                smpl_vertex_code,
-                smpl_face_code,
-                smpl_faces,
-                smpl_tetras,
-            ) = read_smpl_constants(self.smplx_data.tedra_dir)
-            self.voxelization = Voxelization(
-                smpl_vertex_code,
-                smpl_face_code,
-                smpl_faces,
-                smpl_tetras,
-                volume_res=128,
-                sigma=0.05,
-                smooth_kernel_size=7,
-                batch_size=self.cfg.batch_size,
-                device=torch.device(f"cuda:{self.cfg.gpus[0]}"),
-            )
-            self.ve = VolumeEncoder(3, self.voxel_dim, self.opt.num_stack)
-
+        # elif self.prior_type == "pamir":
         elif self.prior_type == "pifu":
             channels_IF[0] += 1
         else:
             print(f"don't support {self.prior_type}!")
 
-        self.base_keys = ["smpl_verts", "smpl_faces"]
+        channels_IF[0] += self.voxel_dim
+        (
+            smpl_vertex_code,
+            smpl_face_code,
+            smpl_faces,
+            smpl_tetras,
+        ) = read_smpl_constants(self.smplx_data.tedra_dir)
+        self.voxelization = Voxelization(
+            smpl_vertex_code,
+            smpl_face_code,
+            smpl_faces,
+            smpl_tetras,
+            volume_res=128,
+            sigma=0.05,
+            smooth_kernel_size=7,
+            batch_size=self.cfg.batch_size,
+            device=torch.device(f"cuda:{self.cfg.gpus[0]}"),
+        )
+        self.ve = VolumeEncoder(3, self.voxel_dim, self.opt.num_stack)
 
+
+
+        self.base_keys = ["smpl_verts", "smpl_faces"]
+        # breakpoint()
         self.icon_keys = self.base_keys + [f"smpl_{feat_name}" for feat_name in self.smpl_feats]
         self.keypoint_keys = self.base_keys + [f"smpl_{feat_name}" for feat_name in self.smpl_feats]
 
@@ -316,11 +318,12 @@ class HGPIFuNet(BasePIFuNet):
                 features_G = self.F_filter(in_filter[:, self.channels_filter[0]])
         else:
             features_G = [in_filter[:, self.channels_filter[0]]]
-
+        # breakpoint()
         self.smpl_feat_dict = {
             k: in_tensor_dict[k] if k in in_tensor_dict.keys() else None
-            for k in getattr(self, "icon_keys")
+            for k in self.icon_keys + self.pamir_keys
         }
+        # breakpoint()
 
         # If it is not in training, only produce the last im_feat
         if not self.training:
@@ -342,32 +345,42 @@ class HGPIFuNet(BasePIFuNet):
 
         preds_list = []
         vol_feats = features
+ ##icon is slow due to the Point feat following code
 
-        if self.prior_type in ["icon", "keypoint"]: ##icon is slow due to the Point feat following code
+        # smpl_verts [B, N_vert, 3]
+        # smpl_faces [B, N_face, 3]
+        # xyz [B, 3, N]  --> points [B, N, 3]
 
-            # smpl_verts [B, N_vert, 3]
-            # smpl_faces [B, N_face, 3]
-            # xyz [B, 3, N]  --> points [B, N, 3]
+        point_feat_extractor = PointFeat(
+            self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args
+        )
 
-            point_feat_extractor = PointFeat(
-                self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args
+        point_feat_out = point_feat_extractor.query(
+            xyz.permute(0, 2, 1).contiguous(), self.smpl_feat_dict
+        )
+        # breakpoint()
+        feat_lst = [
+            point_feat_out[key] for key in self.smpl_feats if key in point_feat_out.keys()
+        ]
+        smpl_feat = torch.cat(feat_lst, dim=2).permute(0, 2, 1)
+
+        if self.prior_type == "keypoint":
+            kpt_feat = self.sp_encoder.forward(
+                cxyz=xyz.permute(0, 2, 1).contiguous(),
+                kptxyz=self.smpl_feat_dict["smpl_joint"],
             )
 
-            point_feat_out = point_feat_extractor.query(
-                xyz.permute(0, 2, 1).contiguous(), self.smpl_feat_dict
-            )
-            
-            feat_lst = [
-                point_feat_out[key] for key in self.smpl_feats if key in point_feat_out.keys()
-            ]
-            smpl_feat = torch.cat(feat_lst, dim=2).permute(0, 2, 1)
+        voxel_verts = self.smpl_feat_dict["voxel_verts"][:, :-self.
+                                                            smpl_feat_dict["pad_v_num"][0], :]
+        voxel_faces = self.smpl_feat_dict["voxel_faces"][:, :-self.
+                                                            smpl_feat_dict["pad_f_num"][0], :]
 
-            if self.prior_type == "keypoint":
-                kpt_feat = self.sp_encoder.forward(
-                    cxyz=xyz.permute(0, 2, 1).contiguous(),
-                    kptxyz=self.smpl_feat_dict["smpl_joint"],
-                )
-
+        self.voxelization.update_param(
+            batch_size=voxel_faces.shape[0],
+            smpl_tetra=voxel_faces[0].detach().cpu().numpy(),
+        )
+        vol = self.voxelization(voxel_verts)    # vol ~ [0,1]
+        vol_feats = self.ve(vol, intermediate_output=self.training)
 
 
         for im_feat, vol_feat in zip(features, vol_feats):
@@ -380,8 +393,9 @@ class HGPIFuNet(BasePIFuNet):
 
             # point_local_feat = self.index(im_feat, xy)
             # point_feat_list = [point_local_feat, smpl_feat[:, :, :]]
-            point_feat_list = [self.index(im_feat, xy), z, smpl_feat[:, :, :]]
-        
+            # point_feat_list = [self.index(im_feat, xy), z, smpl_feat[:, :, :]]
+            point_feat_list = [self.index(im_feat, xy), self.index(vol_feat, xyz), smpl_feat[:, :, :]]
+            breakpoint()
             # point_feat_list = [self.index(im_feat, xy), z]
             point_feat = torch.cat(point_feat_list, 1)
             # out of image plane is always set to 0
