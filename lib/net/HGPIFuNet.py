@@ -105,7 +105,7 @@ class HGPIFuNet(BasePIFuNet):
 
 
 
-        use_vis = (self.prior_type in ["icon", "keypoint"]) and ("vis" in self.smpl_feats)
+        use_vis = 1
         if self.prior_type in ["pamir", "pifu"]:
             use_vis = 1
         if self.args.triplane:
@@ -124,13 +124,8 @@ class HGPIFuNet(BasePIFuNet):
             channels_IF[0]+=2*self.args.PE_sdf
         if self.args.pamir_icon:
             channels_IF[0]+=self.args.pamir_vol_dim
-        if self.prior_type in ["icon", "keypoint"]:
-            channels_IF[0] += self.smpl_dim
-        # elif self.prior_type == "pamir":
-        elif self.prior_type == "pifu":
-            channels_IF[0] += 1
-        else:
-            print(f"don't support {self.prior_type}!")
+        # if self.prior_type in ["icon", "keypoint"]:
+        channels_IF[0] += self.smpl_dim
 
         channels_IF[0] += self.voxel_dim
         (
@@ -395,7 +390,7 @@ class HGPIFuNet(BasePIFuNet):
             # point_feat_list = [point_local_feat, smpl_feat[:, :, :]]
             # point_feat_list = [self.index(im_feat, xy), z, smpl_feat[:, :, :]]
             point_feat_list = [self.index(im_feat, xy), self.index(vol_feat, xyz), smpl_feat[:, :, :]]
-            breakpoint()
+            # breakpoint()
             # point_feat_list = [self.index(im_feat, xy), z]
             point_feat = torch.cat(point_feat_list, 1)
             # out of image plane is always set to 0
