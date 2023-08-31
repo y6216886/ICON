@@ -106,8 +106,8 @@ class HGPIFuNet(BasePIFuNet):
 
 
         use_vis = (self.prior_type in ["icon", "keypoint"]) and ("vis" in self.smpl_feats)
-        if self.prior_type in ["pamir", "pifu"]:
-            use_vis = 1
+
+        use_vis = 1
         if self.args.triplane:
             if self.use_filter:
                 channels_IF[0] = (self.hourglass_dim)*2//3 //(1 + use_vis)
@@ -122,35 +122,12 @@ class HGPIFuNet(BasePIFuNet):
             channels_IF[0]+=3
         if self.args.PE_sdf!=0:
             channels_IF[0]+=2*self.args.PE_sdf
-        if self.args.pamir_icon:
-            channels_IF[0]+=self.args.pamir_vol_dim
-        if self.prior_type in ["icon", "keypoint"]:
-            channels_IF[0] += self.smpl_dim
-        elif self.prior_type == "pamir":
-            channels_IF[0] += self.voxel_dim
-            (
-                smpl_vertex_code,
-                smpl_face_code,
-                smpl_faces,
-                smpl_tetras,
-            ) = read_smpl_constants(self.smplx_data.tedra_dir)
-            self.voxelization = Voxelization(
-                smpl_vertex_code,
-                smpl_face_code,
-                smpl_faces,
-                smpl_tetras,
-                volume_res=128,
-                sigma=0.05,
-                smooth_kernel_size=7,
-                batch_size=self.cfg.batch_size,
-                device=torch.device(f"cuda:{self.cfg.gpus[0]}"),
-            )
-            self.ve = VolumeEncoder(3, self.voxel_dim, self.opt.num_stack)
-
-        elif self.prior_type == "pifu":
-            channels_IF[0] += 1
-        else:
-            print(f"don't support {self.prior_type}!")
+        # if self.args.pamir_icon:
+        #     channels_IF[0]+=self.args.pamir_vol_dim
+        channels_IF[0] += self.smpl_dim
+        channels_IF[0] += 1#z coorinate of pifu
+        # breakpoint()
+        
 
         self.base_keys = ["smpl_verts", "smpl_faces"]
 
