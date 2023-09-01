@@ -38,3 +38,8 @@ sample_data/
 */*.gif
 *.gif
 data.tar.gz
+octree/*
+docker-compose.yml
+assets/
+docs/
+examples/

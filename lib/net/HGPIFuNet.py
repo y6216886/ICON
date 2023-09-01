@@ -389,7 +389,8 @@ class HGPIFuNet(BasePIFuNet):
             # point_local_feat = self.index(im_feat, xy)
             # point_feat_list = [point_local_feat, smpl_feat[:, :, :]]
             # point_feat_list = [self.index(im_feat, xy), z, smpl_feat[:, :, :]]
-            point_feat_list = [self.index(im_feat, xy), self.index(vol_feat, xyz), smpl_feat[:, :, :]]
+            if self.args.purepamir: point_feat_list = [self.index(im_feat, xy), self.index(vol_feat, xyz)]
+            else: point_feat_list = [self.index(im_feat, xy), self.index(vol_feat, xyz), smpl_feat[:, :, :]]
             # breakpoint()
             # point_feat_list = [self.index(im_feat, xy), z]
             point_feat = torch.cat(point_feat_list, 1)
