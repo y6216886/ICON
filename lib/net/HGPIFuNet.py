@@ -82,6 +82,7 @@ class HGPIFuNet(BasePIFuNet):
 
         self.smpl_dim = self.opt.smpl_dim
         self.voxel_dim = self.opt.voxel_dim
+        # breakpoint()
         self.hourglass_dim = self.opt.hourglass_dim
 
         self.in_geo = [item[0] for item in self.opt.in_geo]
@@ -318,6 +319,12 @@ class HGPIFuNet(BasePIFuNet):
             k: in_tensor_dict[k] if k in in_tensor_dict.keys() else None
             for k in self.icon_keys + self.pamir_keys
         }
+        if self.args.purepamir:
+                    self.smpl_feat_dict = {
+            k: in_tensor_dict[k] if k in in_tensor_dict.keys() else None
+            for k in self.pamir_keys
+        }
+
         # breakpoint()
 
         # If it is not in training, only produce the last im_feat
@@ -345,19 +352,19 @@ class HGPIFuNet(BasePIFuNet):
         # smpl_verts [B, N_vert, 3]
         # smpl_faces [B, N_face, 3]
         # xyz [B, 3, N]  --> points [B, N, 3]
+        if not self.args.purepamir:
+            point_feat_extractor = PointFeat(
+                self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args
+            )
 
-        point_feat_extractor = PointFeat(
-            self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args
-        )
-
-        point_feat_out = point_feat_extractor.query(
-            xyz.permute(0, 2, 1).contiguous(), self.smpl_feat_dict
-        )
-        # breakpoint()
-        feat_lst = [
-            point_feat_out[key] for key in self.smpl_feats if key in point_feat_out.keys()
-        ]
-        smpl_feat = torch.cat(feat_lst, dim=2).permute(0, 2, 1)
+            point_feat_out = point_feat_extractor.query(
+                xyz.permute(0, 2, 1).contiguous(), self.smpl_feat_dict
+            )
+            # breakpoint()
+            feat_lst = [
+                point_feat_out[key] for key in self.smpl_feats if key in point_feat_out.keys()
+            ]
+            smpl_feat = torch.cat(feat_lst, dim=2).permute(0, 2, 1)
 
         if self.prior_type == "keypoint":
             kpt_feat = self.sp_encoder.forward(

@@ -219,13 +219,22 @@ class ICON(pl.LightningModule):
         for name in self.in_total:
             in_tensor_dict.update({name: batch[name]})
 
-
-        in_tensor_dict.update(
+        if self.args.purepamir:
+                    in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
-                for k in self.icon_keys+self.pamir_keys
+                for k in self.pamir_keys
             }
         )
+        else:
+            in_tensor_dict.update(
+                {
+                    k: batch[k] if k in batch.keys() else None
+                    for k in self.icon_keys+self.pamir_keys
+                }
+            )
+
+
 
         # else: in_tensor_dict.update(
         #     {
@@ -330,8 +339,15 @@ class ICON(pl.LightningModule):
             in_tensor_dict.update({name: batch[name]})
 
 
-
-        in_tensor_dict.update(
+        if self.args.purepamir:
+                    in_tensor_dict.update(
+            {
+                k: batch[k] if k in batch.keys() else None
+                for k in self.pamir_keys
+            }
+        )
+        else:
+            in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in self.icon_keys+self.pamir_keys
@@ -615,8 +631,15 @@ class ICON(pl.LightningModule):
             if name in batch.keys():
                 in_tensor_dict.update({name: batch[name]})
 
-
-        in_tensor_dict.update(
+        if self.args.purepamir:
+                    in_tensor_dict.update(
+            {
+                k: batch[k] if k in batch.keys() else None
+                for k in self.pamir_keys
+            }
+        )
+        else:
+            in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in self.icon_keys+self.pamir_keys
@@ -851,6 +874,7 @@ class ICON(pl.LightningModule):
     def tensor2image(self, height, inter):
 
         all = []
+        # breakpoint()
         for dim in self.in_geo_dim:
             img = resize(
                 np.tile(
@@ -909,8 +933,15 @@ class ICON(pl.LightningModule):
             if name in batch.keys():
                 in_tensor_dict.update({name: batch[name]})
 
-        
-        in_tensor_dict.update(
+        if self.args.purepamir:
+                    in_tensor_dict.update(
+            {
+                k: batch[k] if k in batch.keys() else None
+                for k in self.pamir_keys
+            }
+        )
+        else:
+            in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in self.icon_keys+self.pamir_keys

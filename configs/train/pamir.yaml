@@ -1,7 +1,7 @@
 name: baseline/pamir_v2_0323
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
-resume_path: "./data/ckpt/pamir.ckpt"
-normal_path: "./data/ckpt/normal.ckpt"
+# resume_path: "./data/ckpt/pamir.ckpt"
+normal_path: "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/data/ckpt/normal.ckpt"
 results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
 dataset:
@@ -23,7 +23,7 @@ dataset:
   remove_outlier: False
   
   noise_type: ['pose', 'beta']
-  noise_scale: [0.01, 0.01]
+  noise_scale: [0.0, 0.0]
 
   types: ["thuman2"]
   scales: [100.0]
@@ -34,8 +34,10 @@ net:
   num_stack: 2
   prior_type: "pamir"
   use_filter: True
-  in_geo: (('image',3), ('normal_F',3), ('normal_B',3))
-  in_nml: (('image',3), ('T_normal_F',3), ('T_normal_B',3))
+  # in_geo: (('image',3), ('normal_F',3), ('normal_B',3))
+  # in_nml: (('image',3), ('T_normal_F',3), ('T_normal_B',3))
+  in_geo: [['image',3]] #, ('normal_F',3), ('normal_B',3))
+  in_nml: [['image',3]] #, ('T_normal_F',3), ('T_normal_B',3))
   gtype: 'HGPIFuNet'
   ctype: 'resnet34'
   norm_mlp: 'batch'
@@ -69,7 +71,7 @@ optim: RMSprop
 
 # training (batch=4, set=agora, rot-6)
 overfit: False
-num_epoch: 1
+num_epoch: 10
 freq_show_train: 1.0
 freq_show_val: 1.0
 freq_plot: 0.1
