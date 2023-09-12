@@ -85,7 +85,6 @@ if __name__ == "__main__":
     parser.add_argument("--conv3d_start", type=int, default=2)
     parser.add_argument("--conv3d_kernelsize", type=int, default=1)
     parser.add_argument("--pad_mode", type=str, default='zeros')
-
     ####uncertainty
     parser.add_argument("--uncertainty", default=False, action="store_true")
     parser.add_argument("--beta_min", type=float, default=0.03)
@@ -115,7 +114,7 @@ if __name__ == "__main__":
     ###dropout
     parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
     parser.add_argument('--perturb_sdf', type=float, default=0) #2,3,4,5,6
-    parser.add_argument('--pamir_icon', default=True, action="store_true") #2,3,4,5,6
+    parser.add_argument('--pamir_icon', action="store_true") #2,3,4,5,6
 
     parser.add_argument('--calc_metric', default=True, action="store_true")
     
@@ -269,6 +268,9 @@ if __name__ == "__main__":
 
             #######
             smpl_verts=data["smpl_verts"]
+            #convert smpl_verts that is numpy type to tensor type with requires_grad=True
+            # smpl_verts=torch.tensor(smpl_verts, requires_grad=True).cuda()#.unsqueeze(0)
+            # smpl_verts=torch.from_numpy(smpl_verts).cuda()
             #######
             
             smpl_joints *= torch.tensor([1.0, 1.0, -1.0]).to(device)
@@ -279,7 +281,7 @@ if __name__ == "__main__":
                 in_tensor["smpl_joint"] = smpl_joints[:, dataset.smpl_joint_ids_24, :]
             else:
                 in_tensor["smpl_joint"] = smpl_joints[:, dataset.smpl_joint_ids_24_pixie, :]
-
+            # breakpoint()
             # render optimized mesh (normal, T_normal, image [-1,1])
             in_tensor["T_normal_F"], in_tensor["T_normal_B"] = dataset.render_normal(
                 smpl_verts * torch.tensor([1.0, -1.0, -1.0]).to(device), in_tensor["smpl_faces"]
@@ -311,6 +313,7 @@ if __name__ == "__main__":
             pbar_desc = "Body Fitting --- "
             for k in ["normal", "silhouette"]:
                 pbar_desc += f"{k}: {losses[k]['value'] * losses[k]['weight']:.3f} | "
+                # breakpoint()
                 smpl_loss += losses[k]["value"] * losses[k]["weight"]
             pbar_desc += f"Total: {smpl_loss:.3f}"
             loop_smpl.set_description(pbar_desc)
@@ -429,7 +432,7 @@ if __name__ == "__main__":
         # cloth optimization
 
         per_data_lst = []
-
+        # breakpoint()
         # cloth recon
         in_tensor.update(
             dataset.compute_vis_cmap(in_tensor["smpl_verts"][0], in_tensor["smpl_faces"][0])

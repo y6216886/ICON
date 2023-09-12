@@ -15,7 +15,6 @@
 # Contact: ps-license@tuebingen.mpg.de
 import sys
 sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON")
-sys.path.append("/media/young/writable/code/human_reconstruction/")
 import warnings
 import logging
 
@@ -33,7 +32,7 @@ from lib.dataset.mesh_util import (
     remesh, tensor2variable, rot6d_to_rotmat
 )
 
-from lib.dataset.TestDataset import TestDataset
+from lib.dataset.TestDataset import TestDataset, TestDatasetv1
 from lib.net.local_affine import LocalAffine
 from pytorch3d.structures import Meshes
 from apps.ICON import ICON
@@ -104,6 +103,9 @@ if __name__ == "__main__":
     parser.add_argument('--mlp_dim', nargs='+', type=int, default=[13, 512, 256, 128, 1]) #res_layers 13,128,256,512,256,128,1
     parser.add_argument('--res_layers', nargs='+', type=int, default=[2,3,4]) #2,3,4,5,6
     ###
+    parser.add_argument("--expname", type=str, default="test")
+    parser.add_argument("--ckpt_path", type=str, default="./data/ckpt/icon-filter.ckpt")
+    
     
     ###dropout
     parser.add_argument('--dropout', type=float, default=0) #2,3,4,5,6
@@ -117,13 +119,17 @@ if __name__ == "__main__":
 
     cfg_show_list = [
         "test_gpus", [args.gpu_device], "mcube_res", 256, "clean_mesh", True, "test_mode", True,
-        "batch_size", 1
+        "batch_size", 1, "name", args.expname, "resume_path", args.ckpt_path
     ]
+    if args.pamir_icon:
+        cfg_pamir_icon_list=["net.voxel_dim", args.pamir_vol_dim]
+        cfg.merge_from_list(cfg_pamir_icon_list)
 
     cfg.merge_from_list(cfg_show_list)
+
     cfg.freeze()
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
     device = torch.device(f"cuda:{args.gpu_device}")
 
     # load model and dataloader
@@ -143,7 +149,7 @@ if __name__ == "__main__":
         print(colored("PIXIE isn't compatible with PaMIR, thus switch to PyMAF", "red"))
         dataset_param["hps_type"] = "pymaf"
 
-    dataset = TestDataset(dataset_param, device)
+    dataset = TestDatasetv1(dataset_param, device)
 
     print(colored(f"Dataset Size: {len(dataset)}", "green"))
 
@@ -421,7 +427,8 @@ if __name__ == "__main__":
             {"smpl_norm": compute_normal_batch(in_tensor["smpl_verts"], in_tensor["smpl_faces"])}
         )
 
-        if cfg.net.prior_type == "pamir":
+        if cfg.net.prior_type == "pamir" or args.pamir_icon:
+
             in_tensor.update(
                 dataset.compute_voxel_verts(
                     optimed_pose,
@@ -431,6 +438,7 @@ if __name__ == "__main__":
                     data["scale"],
                 )
             )
+        # breakpoint()
 
         with torch.no_grad():
             verts_pr, faces_pr, _ = model.test_single(in_tensor)

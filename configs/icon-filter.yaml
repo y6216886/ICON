@@ -1,8 +1,9 @@
 name: icon-filter
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 # resume_path: "./data/ckpt/icon-filter.ckpt"
-resume_path: "/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_debugv1_0417/last.ckpt"
+# resume_path: "/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_debugv1_0417/last.ckpt"
 # resume_path: "/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon_pamir_perturb_smpl_01_mlpse/last.ckpt"
+resume_path: "/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/trainonthuman2/train2_on_thuman2_36views_icon_pamir_vol{4}_pe{12}_mlpse_start_c_1_end_c_3_spatialse_r4/last.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
 results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 

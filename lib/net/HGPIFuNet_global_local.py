@@ -391,6 +391,7 @@ class HGPIFuNet_global_local(BasePIFuNet):
             else:
                 features_G = [in_filter[:, self.channels_filter[0]]]
         if self.args.pamir_icon:
+            # breakpoint()
             self.smpl_feat_dict = {
                 k: in_tensor_dict[k] if k in in_tensor_dict.keys() else None
                 for k in self.icon_keys+self.pamir_keys
@@ -513,7 +514,6 @@ class HGPIFuNet_global_local(BasePIFuNet):
 
             elif self.prior_type == "icon":
                 if "vis" in self.smpl_feats:
-                    
                     point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :])
                     point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
                 else:
@@ -540,7 +540,7 @@ class HGPIFuNet_global_local(BasePIFuNet):
                 point_feat_list = [self.index(im_feat, xy), z]
 
                                  
-
+            # breakpoint()
             point_feat = torch.cat(point_feat_list, 1)
             # out of image plane is always set to 0
             if self.args.use_clip:
