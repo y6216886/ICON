@@ -33,12 +33,16 @@ torch.backends.cudnn.benchmark = True
 
 
 class ICON(pl.LightningModule):
-    def __init__(self, cfg,args=None):
+    def __init__(self, cfg, args=None, total_iter=None):
         super(ICON, self).__init__()
         self.args=args
         self.cfg = cfg
         self.batch_size = self.cfg.batch_size
         self.lr_G = self.cfg.lr_G
+        if total_iter!=9999999:
+            self.iter_per_epoch=total_iter
+            self.total_iter=total_iter*cfg.num_epoch
+
 
         self.use_sdf = cfg.sdf
         self.prior_type = cfg.net.prior_type
@@ -62,6 +66,7 @@ class ICON(pl.LightningModule):
             # error_term=nn.BCELoss(),
             args=args
         )
+        # breakpoint()
         # print("noting bceloss")
 
         self.evaluator = Evaluator(device=torch.device(f"cuda:{self.cfg.gpus[0]}"))
@@ -202,7 +207,9 @@ class ICON(pl.LightningModule):
         return [optimizer_G], [scheduler_G]
 
     def training_step(self, batch, batch_idx):
-
+        print(batch_idx+1+self.current_epoch*self.iter_per_epoch)
+        print(self.total_iter)
+        self.netG.APE.progress.data.fill_(batch_idx+1+self.current_epoch*self.iter_per_epoch/self.total_iter)
         if not self.cfg.fast_dev:
             export_cfg(self.logger, self.cfg)
 
@@ -316,7 +323,8 @@ class ICON(pl.LightningModule):
         return {"log": tf_log}
 
     def validation_step(self, batch, batch_idx):
-
+        try:self.netG.APE.progress.data.fill_(1.)
+        except:pass
         self.netG.eval()
         self.netG.training = False
 
@@ -596,7 +604,8 @@ class ICON(pl.LightningModule):
         return verts_pr
 
     def test_step(self, batch, batch_idx):
-
+        try:self.netG.APE.progress.data.fill_(1.)
+        except:pass
         self.netG.eval()
         self.netG.training = False
         in_tensor_dict = {}

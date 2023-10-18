@@ -1,11 +1,15 @@
 from pytorch3d.structures import Meshes
 import torch.nn.functional as F
 import torch
+import sys
+sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/")
 from lib.common.render_utils import face_vertices
 from lib.dataset.mesh_util import SMPLX, barycentric_coordinates_of_projection
 from kaolin.ops.mesh import check_sign
 from kaolin.metrics.trianglemesh import point_to_mesh_distance
+import numpy as np
 import time
+
 smplx=SMPLX()
 import torch.nn as nn
 
@@ -37,9 +41,64 @@ class PosEmbedding(nn.Module):
 
         return torch.cat(out, -1)
     
+class PosEmbedding(nn.Module):
+    def __init__(self, max_logscale, N_freqs, logscale=True):
+        """
+        Defines a function that embeds x to (x, sin(2^k x), cos(2^k x), ...)
+        """
+        super().__init__()
+        self.funcs = [torch.sin, torch.cos]
 
+        if logscale:
+            self.freqs = 2**torch.linspace(0, max_logscale, N_freqs)
+        else:
+            self.freqs = torch.linspace(1, 2**max_logscale, N_freqs)
+
+    def forward(self, x):
+        """
+        Inputs:
+            x: (B, 3)
+
+        Outputs:
+            out: (B, 6*N_freqs+3)
+        """
+        out = [x]
+        for freq in self.freqs:
+            for func in self.funcs:
+                out += [func(freq*x)]
+
+        return torch.cat(out, -1)
+    
+
+class adaptive_positional_encoding(nn.Module):
+        def __init__(self, L, barf_c2f=[0.1, 0.5]) -> None:
+            super().__init__()
+            self.L=L
+            self.barf_c2f=barf_c2f
+            self.progress = torch.nn.Parameter(torch.tensor(0.))
+
+        def forward(self, input): # [B,...,N]  ##use this
+            shape = input.shape
+            freq = 2**torch.arange(self.L, dtype=torch.float32, device=input.device)*np.pi # [L]
+            spectrum = input[...,None]*freq # [B,...,N,L]
+            sin,cos = spectrum.sin(),spectrum.cos() # [B,...,N,L]
+            input_enc = torch.stack([sin,cos],dim=-2) # [B,...,N,2,L]
+            input_enc = input_enc.view(*shape[:-1],-1) # [B,...,2NL]
+            # coarse-to-fine: smoothly mask positional encoding for BARF
+                # set weights for different frequency bands
+            start,end = self.barf_c2f
+            alpha = (self.progress.data-start)/(end-start)*self.L
+            # print("self.progress.data",self.progress.data)
+            k = torch.arange(self.L,dtype=torch.float32, device=input.device)
+            weight = (1-(alpha-k).clamp_(min=0,max=1).mul_(np.pi).cos_())/2
+            # apply weights
+            shape = input_enc.shape
+            input_enc = (input_enc.view(-1,self.L)*weight).view(*shape)
+            input_enc=torch.cat([input,input_enc], dim=-1)
+            return input_enc
+        
 class PointFeat:
-    def __init__(self, verts, faces, args=None):
+    def __init__(self, verts, faces, args=None, adaptive_positional_encoding=None):
 
         # verts [B, N_vert, 3]
         # faces [B, N_face, 3]
@@ -65,7 +124,13 @@ class PointFeat:
 
         self.verts = verts
         self.triangles = face_vertices(self.verts, self.faces)
-        self.embedding_sdf = PosEmbedding(self.args.PE_sdf-1, self.args.PE_sdf)
+        # breakpoint()
+        if self.args.adaptive_pe_sdf:
+            self.embedding_sdf = adaptive_positional_encoding
+        else:
+            self.embedding_sdf = PosEmbedding(self.args.PE_sdf-1, self.args.PE_sdf)
+        # self.embedding_sdf = adaptive_positional_encoding#(L=self.args.PE_sdf)
+        # breakpoint()
 
     def query(self, points, feats={}):
         """
@@ -134,3 +199,13 @@ class PointFeat:
             out_dict[out_key] = out_dict[out_key].view(self.Bsize, -1, out_dict[out_key].shape[-1])
 
         return out_dict
+    
+
+if __name__ == "__main__":
+    APE=adaptive_positional_encoding(L=6)
+    APE=PosEmbedding(5,6)
+    input=torch.rand(2, 100, 1)
+    # output=APE.positional_encoding(input)
+    output=APE(input)
+    print(output.shape)
+

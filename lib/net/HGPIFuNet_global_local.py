@@ -23,7 +23,7 @@ from lib.net.MLP import MLP
 from lib.net.MLP3D import MLP3d
 from lib.net.MLP_N_shape import MLP_UNET
 from lib.net.spatial import SpatialEncoder
-from lib.dataset.PointFeat import PointFeat
+from lib.dataset.PointFeat import PointFeat, adaptive_positional_encoding
 from lib.dataset.mesh_util import SMPLX
 from lib.net.VE import VolumeEncoder
 from lib.net.HGFilters import *
@@ -99,7 +99,7 @@ class HGPIFuNet_global_local(BasePIFuNet):
         normal_B_lst = [3, 4, 5] if "image" not in self.in_geo else [6, 7, 8]
 
         # only ICON or ICON-Keypoint use visibility
-
+        self.APE=adaptive_positional_encoding(L=self.args.PE_sdf)
         if self.prior_type in ["icon", "keypoint"]:
             # if "image" in self.in_geo:
             #     self.channels_filter = [
@@ -425,7 +425,7 @@ class HGPIFuNet_global_local(BasePIFuNet):
 
         if self.args.pamir_icon:
             point_feat_extractor = PointFeat(
-                self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args
+                self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args, adaptive_positional_encoding=self.APE
             )
 
             point_feat_out = point_feat_extractor.query(

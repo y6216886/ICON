@@ -23,12 +23,13 @@ from lib.net.MLP import MLP
 from lib.net.MLP3D import MLP3d
 from lib.net.MLP_N_shape import MLP_UNET
 from lib.net.spatial import SpatialEncoder
-from lib.dataset.PointFeat import PointFeat
+from lib.dataset.PointFeat import PointFeat, adaptive_positional_encoding
 from lib.dataset.mesh_util import SMPLX
 from lib.net.VE import VolumeEncoder
 from lib.net.HGFilters import *
 from termcolor import colored
 from lib.net.BasePIFuNet import BasePIFuNet
+
 import torch.nn as nn
 import torch
 # import time
@@ -207,6 +208,7 @@ class HGPIFuNet(BasePIFuNet):
             )
 
         self.sp_encoder = SpatialEncoder()
+        # self.APE=adaptive_positional_encoding(L=self.args.PE_sdf)
 
         # network
         if self.use_filter:
@@ -380,7 +382,6 @@ class HGPIFuNet(BasePIFuNet):
             # smpl_verts [B, N_vert, 3]
             # smpl_faces [B, N_face, 3]
             # xyz [B, 3, N]  --> points [B, N, 3]
-
             point_feat_extractor = PointFeat(
                 self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args
             )

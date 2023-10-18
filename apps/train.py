@@ -97,6 +97,9 @@ if __name__ == "__main__":
     parser.add_argument("--num_gpus", type=int, default=1) 
     parser.add_argument("--mlp_first_dim", type=int, default=0) 
     parser.add_argument("--PE_sdf", type=int, default=0) 
+    parser.add_argument("--adaptive_pe_sdf", default=False, action="store_true") 
+
+    # parser.add_argument("--PE_sdf_dim", type=int, default=0)
     parser.add_argument("--batch_size", type=int, default=2) 
     parser.add_argument("--num_worker", type=int, default=8)
     parser.add_argument("--datasettype", nargs='+',  type=str, default=["cape"]) ##1 2 3  
@@ -279,10 +282,13 @@ if __name__ == "__main__":
     }
 
     datamodule = PIFuDataModule(cfg,args)
+
     if not cfg.test_mode:
         datamodule.setup(stage="fit")
         train_len = datamodule.data_size["train"]
         val_len = datamodule.data_size["val"]
+        total_iter=train_len// cfg.batch_size
+
         trainer_kwargs.update(
             {
                 "log_every_n_steps":
@@ -307,13 +313,15 @@ if __name__ == "__main__":
         cfg.merge_from_list(cfg_show_list)
     elif args.val_mode:
         datamodule.setup(stage="val")
+    else:
+        total_iter=9999999
 
 
     if not cfg.test_mode and not args.test_code and not args.val_mode:   
         save_code(cfg, args)
 
 
-    model = ICON(cfg, args)
+    model = ICON(cfg, args, total_iter)
 
 
     trainer = SubTrainer(accelerator='ddp' if args.num_gpus>1 else None, **trainer_kwargs) ##delete normal filter, voxilization, and reconengine while saving checkpoint
@@ -326,8 +334,8 @@ if __name__ == "__main__":
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpse/last.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpChannelSELayerv1/last.ckpt"
-        # resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'last.ckpt')
-        resume_path=os.path.join(cfg.ckpt_dir,args.name,'last.ckpt')
+        resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'epoch=09.ckpt')
+        # resume_path=os.path.join(cfg.ckpt_dir,args.name,'last.ckpt')
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon_checkv3/last.ckpt"
         if not os.path.exists(resume_path):
             NotADirectoryError("checkpoint {} not exists".format(resume_path))
