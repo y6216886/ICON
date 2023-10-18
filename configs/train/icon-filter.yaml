@@ -1,4 +1,4 @@
-name: baseline/icon-filter-v2_0221_batch8
+name: baseline/icon-filter-v2_0221_batch8v1
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 resume_path: "./data/ckpt/icon-filter.ckpt"
 normal_path: "./data/ckpt/normal.ckpt"
@@ -62,7 +62,7 @@ sdf_clip: 15.0
 fast_dev: 0
 resume: False
 test_mode: False
-mcube_res: 512
+mcube_res: 128
 clean_mesh: True
 num_sanity_val_steps: 1
 
