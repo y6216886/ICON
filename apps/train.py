@@ -119,6 +119,12 @@ if __name__ == "__main__":
     parser.add_argument("--se_reduction", type=int, default=4)
     parser.add_argument("--cse", default=False, action="store_true")
     parser.add_argument("--sse", default=False, action="store_true")
+    #add_argument of a list of  strings
+    # parser.add_argument('--kernel_pad_num', nargs='+', type=int, default=[1,0]) #2,3,4,5,6
+    parser.add_argument("--kernel_pad_num", type=str, default='10')
+    #add_argument of a strings
+    parser.add_argument("--mlp_pad_mode", type=str, default='zeros')
+    
     
     
 
@@ -334,8 +340,8 @@ if __name__ == "__main__":
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_wosdf/epoch=09.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpse/last.ckpt"
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon-filter_batch2_withnormal_mlpChannelSELayerv1/last.ckpt"
-        resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'epoch=09.ckpt')
-        # resume_path=os.path.join(cfg.ckpt_dir,args.name,'last.ckpt')
+        # resume_path=os.path.join(cfg.ckpt_dir,cfg.name,'epoch=09.ckpt')
+        resume_path=os.path.join(cfg.ckpt_dir,args.name,'last.ckpt')
         # resume_path="/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/baseline/icon_checkv3/last.ckpt"
         if not os.path.exists(resume_path):
             NotADirectoryError("checkpoint {} not exists".format(resume_path))

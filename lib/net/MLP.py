@@ -419,6 +419,7 @@ class SCSEModule(nn.Module):
         super().__init__()
 
         self.args=args
+        assert (self.args.sse or self.args.cse)==True
         if self.args.cse:
                 self.cSE = nn.Sequential(
             nn.AdaptiveAvgPool1d(1),
@@ -428,8 +429,20 @@ class SCSEModule(nn.Module):
             nn.Sigmoid(),
         )
         if self.args.sse:
-            self.sSE = nn.Sequential(nn.Conv1d(in_channels, 1, 1), nn.Sigmoid())
+            # breakpoint()
+            # self.sSE = nn.Sequential(nn.Conv1d(in_channels, 1, 1), nn.Sigmoid())
+            self.sSE = nn.Sequential(nn.Conv1d(in_channels, out_channels=1, kernel_size=int(self.args.kernel_pad_num[0]), padding=int(self.args.kernel_pad_num[1]), padding_mode=self.args.mlp_pad_mode), nn.Sigmoid())
+            """
+            padding_mode=['replicate', 'circular', 'zeros', 'reflect']
+            kernel_size=3, padding=1, dilation=1
+            kernel_size=5, padding=2, dilation=1
+            kernel_size=7, padding=3, dilation=1
+
+            
+            
+            """
     def forward(self, x):
+
         y=0
         if self.args.cse:
             cse=self.cSE(x)
@@ -442,7 +455,7 @@ class SCSEModule(nn.Module):
 
 if __name__=="__main__":
     import os
-    os.environ["CUDA_VISIBLE_DEVICES"]="2"
+    os.environ["CUDA_VISIBLE_DEVICES"]="0"
     class args_():
         def __init__(self) -> None:
             self.test_code=True
@@ -452,10 +465,14 @@ if __name__=="__main__":
             self.mlpSemax=False
             self.uncertainty=False
             self.use_clip=False
-            self.dropout=0.2
+            self.dropout=0
             self.se_start_channel=1
             self.se_end_channel=4
             self.se_reduction=16
+            self.cse=False
+            self.sse=True
+            self.kernel_pad_num=[3,1]
+            self.mlp_pad_mode="zeros"
     args_=args_()
     net=MLP(filter_channels=[12,128,256,128,1], res_layers=[2,4] ,args=args_).cuda()
     # net=MLP(filter_channels=[12,128,256,128,1], args=args_).cuda()
