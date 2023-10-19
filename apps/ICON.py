@@ -39,7 +39,7 @@ class ICON(pl.LightningModule):
         self.cfg = cfg
         self.batch_size = self.cfg.batch_size
         self.lr_G = self.cfg.lr_G
-        if total_iter!=9999999:
+        if total_iter!=9999999 and total_iter:
             self.iter_per_epoch=total_iter
             self.total_iter=total_iter*cfg.num_epoch
 
