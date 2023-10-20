@@ -493,6 +493,7 @@ class HGPIFuNet_global_local(BasePIFuNet):
 
 
         for im_feat, vol_feat in zip(features, vol_feats):
+            # breakpoint()
             # normal feature choice by smpl_vis
             if self.args.pamir_icon:
                 if "vis" in self.smpl_feats:
@@ -545,7 +546,7 @@ class HGPIFuNet_global_local(BasePIFuNet):
             # out of image plane is always set to 0
             if self.args.use_clip:
                    preds = regressor(point_feat, clip_feature) 
-            else: preds = regressor(point_feat) ###sdf feature in channle [:,6,:]
+            else: preds = regressor(point_feat, vol_feat) ###sdf feature in channle [:,6,:]
             preds = in_cube * preds
 
             preds_list.append(preds)

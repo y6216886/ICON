@@ -178,3 +178,10 @@ class VolumeEncoder(BaseNetwork):
             return out_lst
         else:
             return [out_lst[-1]]
+
+if __name__ == "__main__":
+    import torch
+    VolumeEncoder=VolumeEncoder()
+    input=torch.randn(1,3,64,64,64)
+    out=VolumeEncoder(input)
+    print(out[0].shape)

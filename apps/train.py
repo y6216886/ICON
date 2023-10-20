@@ -119,6 +119,7 @@ if __name__ == "__main__":
     parser.add_argument("--se_reduction", type=int, default=4)
     parser.add_argument("--cse", default=False, action="store_true")
     parser.add_argument("--sse", default=False, action="store_true")
+    parser.add_argument("--smpl_attention", default=False, action="store_true")
     #add_argument of a list of  strings
     # parser.add_argument('--kernel_pad_num', nargs='+', type=int, default=[1,0]) #2,3,4,5,6
     parser.add_argument("--kernel_pad_num", type=str, default='10')
