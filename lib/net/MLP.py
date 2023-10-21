@@ -5,7 +5,7 @@ import torch.nn as nn
 import pytorch_lightning as pl
 from termcolor import colored
 import torch.nn.functional as F
-
+from torch import einsum
 # class MLP(pl.LightningModule): ##1413
 #     def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None, args=None):
 
@@ -103,6 +103,16 @@ class MLP_uncertainty(pl.LightningModule):
     def forward(self,x):
         return self.net(x)
         
+
+class Sine(nn.Module):
+    def __init__(self, factor=30):
+        super().__init__()
+        self.factor = factor
+
+    def forward(self, input):
+        # See paper sec. 3.2, final paragraph, and supplement Sec. 1.5 for discussion of factor 30
+        return torch.sin(self.factor * input)
+    
 class MLP(pl.LightningModule):
     def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None, args=None):
 
@@ -125,8 +135,11 @@ class MLP(pl.LightningModule):
             self.clip_feature=768
             self.clip_fuse_layer=[int(i) for i in self.args.clip_fuse_layer] #[1,2,3]
             print("clip_fuse_layer", self.clip_fuse_layer)
-
-        self.activate = nn.LeakyReLU(inplace=True)
+        if self.args.activate_sine!=0:
+            # breakpoint()
+            self.activate = Sine(self.args.activate_sine)
+        else:
+            self.activate = nn.LeakyReLU(inplace=True)
         assert [self.args.mlpSe, self.args.mlpSev1, self.args.mlpSemax].count(True) in [0,1], "mlp se strategy cannot be embodied simultaneously"
         self.se_start_channel=self.args.se_start_channel
         self.se_end_channel=self.args.se_end_channel
@@ -213,6 +226,7 @@ class MLP(pl.LightningModule):
         j=0
         for i, f in enumerate(self.filters):
             ####se net
+
             if self.args.mlpSe or self.args.mlpSev1:
                 if i in range(self.se_start_channel,self.se_end_channel):
                     y=self.se_conv[j](y) 
@@ -311,10 +325,11 @@ class MLP(pl.LightningModule):
             [B, C_out, N] prediction
         '''
         y = feature 
-        vol_feat=vol_feat.detach()
+        # vol_feat=vol_feat.detach()
         tmpy = feature
         # len_=len(self.filters)
         j=0
+        # breakpoint()
         for i, f in enumerate(self.filters):
             ####se net
             if self.args.mlpSe or self.args.mlpSev1:
@@ -465,9 +480,12 @@ class SCSEModule(nn.Module):
     def forward(self, x, vol_feat=None):
         y=0
         if self.args.smpl_attention:
-            
+
             sse=self.smpl_attention(x, vol_feat) ##it is better to draw the attetion of the network to the whole feature map from voxelized smpl model, rather than a single point
-            y+= x * sse
+            # y+= x * sse
+            # breakpoint()
+            y+=einsum('bcp, bip-> bcp', x, sse)
+            # sse =sse.permute(0,2,1)
             return y
         else:
             if self.args.cse:
@@ -483,29 +501,98 @@ class SI_MODULE(nn.Module):
         super().__init__()
         self.sigmoid=nn.Sigmoid()
         self.fuse_net=fuse_net(points_channel=points_channel)
+        # self.fuse_net=Attention(points_channel)
     def forward(self, point_feature, vol_feature): # (bs, c, h, w, d) (bs, num_p, c)
         fused_feature=self.fuse_net(point_feature, vol_feature)
+        # fused_feature=self.fuse_net(point_feature)
         # breakpoint()
         weights=self.sigmoid(fused_feature)
         return weights
+
+
+
+# class fuse_net(nn.Module):
+#     #fuse a 2d feature of several points with the size of (channel dimension size, number of points ) and a 4d feature of a voxelization feature with size (channel dimension, height, width, depth) into a 2d feature
+#     def __init__(self, vol_dim=3, points_channel=13, args=None):
+#         super().__init__()
+#         self.vox_encoder=nn.Conv3d(in_channels=vol_dim, out_channels=points_channel, kernel_size=1)
+#         # self.fc1=nn.Linear(points_channel, points_channel*3)
+#         self.adaptive_pool=nn.AdaptiveAvgPool3d(1)
+#         self.scale=points_channel**-0.5
+#         self.bn1=nn.BatchNorm3d(points_channel)
+#         self.relu=nn.LeakyReLU(0.2, inplace=True)
+#         # self.fc1=nn.Linear(points_channel*2, points_channel)
+
+#     def forward(self, point_feature, vol_feature):
+#         vol_feature=self.vox_encoder(vol_feature)
+#         vol_feature = self.bn1(vol_feature)
+#         vol_feature = self.relu(vol_feature)
+#         vol_feature=self.adaptive_pool(vol_feature)
+#         vol_feature=vol_feature.squeeze(-1).squeeze(-1).squeeze(-1).unsqueeze(1)
+#         # breakpoint()
+#         fuse_feat=einsum('bic, bcp-> bip', vol_feature, point_feature)*self.scale
+#         # fuse_feat=torch.matmul(vol_feature, point_feature)  # (bs, 1, c) * (bs, c, num_p) = (bs, 1, num_p)
+
+#         # fuse_feat=torch.cat([fuse_feat, point_feature], dim=1)
+#         # fuse_feat=self.fc1(fuse_feat)
+#         # breakpoint()
+#         print(fuse_feat.mean(), fuse_feat.std())
+#         return fuse_feat
+
+
+from einops import rearrange, repeat
+class Attention(nn.Module):              
+    def __init__(self, dim, heads=8, dim_head=64, dropout=0.):
+        super().__init__()
+        inner_dim = dim_head * heads
+        project_out = not (heads == 1 and dim_head == dim)
+
+        self.heads = heads
+        self.scale = dim_head ** -0.5
+
+        self.attend = nn.Softmax(dim=-1)
+        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias=False)
+
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, dim),
+            nn.Dropout(dropout),
+        ) if project_out else nn.Identity()
+
+    def forward(self, x):
+        x=x.permute(0,2,1)
+        b, n, _, h = *x.shape, self.heads
+        qkv = self.to_qkv(x).chunk(3, dim=-1)           # (b, n(65), dim*3) ---> 3 * (b, n, dim)
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=h), qkv)          # q, k, v   (b, h, n, dim_head(64))
+
+        dots = einsum('b h i d, b h j d -> b h i j', q, k) * self.scale
+
+        attn = self.attend(dots)
+
+        out = einsum('b h i j, b h j d -> b h i d', attn, v)
+        out = rearrange(out, 'b h n d -> b n (h d)')
+        return self.to_out(out)
 
 class fuse_net(nn.Module):
     #fuse a 2d feature of several points with the size of (channel dimension size, number of points ) and a 4d feature of a voxelization feature with size (channel dimension, height, width, depth) into a 2d feature
     def __init__(self, vol_dim=3, points_channel=13, args=None):
         super().__init__()
         self.vox_encoder=nn.Conv3d(in_channels=vol_dim, out_channels=points_channel, kernel_size=1)
+        # self.fc1=nn.Linear(points_channel, points_channel*3)
         self.adaptive_pool=nn.AdaptiveAvgPool3d(1)
+        # self.scale=points_channel**-0.5
         self.bn1=nn.BatchNorm3d(points_channel)
         self.relu=nn.LeakyReLU(0.2, inplace=True)
-    def forward(self, point_feature, vol_feature):
-        vol_feature=self.vox_encoder(vol_feature)
+        # self.fc1=nn.Linear(points_channel*2, points_channel)
+
+    def forward(self, point_feature, vol_feature): 
+        vol_feature=self.vox_encoder(vol_feature) 
         vol_feature = self.bn1(vol_feature)
         vol_feature = self.relu(vol_feature)
         vol_feature=self.adaptive_pool(vol_feature)
         vol_feature=vol_feature.squeeze(-1).squeeze(-1).squeeze(-1).unsqueeze(1)
         # breakpoint()
-        fuse_feat=torch.matmul(vol_feature, point_feature)
-        # breakpoint()
+        fuse_feat=einsum('bic, bcp-> bip', vol_feature, point_feature)
+
         return fuse_feat
 
 
@@ -536,7 +623,7 @@ if __name__=="__main__":
     vol_feature=torch.randn(2,3,32,32,32).cuda()
     input=torch.randn(2,12,8000).cuda()
     print(net(input, vol_feature).size())
-    print(1)
+    # print(1)
     # point_feature=torch.randn(2,8000,16).cuda()
     # vol_feature=torch.randn(2,3,32,32,32).cuda()
     # SI_MODULE=SI_MODULE(points_channel=16).cuda()
@@ -548,3 +635,7 @@ if __name__=="__main__":
     # point_feature=torch.randn(2,8000,16).cuda()
     # vol_feature=torch.randn(2,3,32,32,32).cuda()
     # print(fuse_net(point_feature, vol_feature).size())
+
+    # fuse_net=Attention(16).cuda()
+    # point_feature=torch.randn(2,8000,16).cuda()
+    # print(fuse_net(point_feature).size())

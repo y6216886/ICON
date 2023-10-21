@@ -207,9 +207,10 @@ class ICON(pl.LightningModule):
         return [optimizer_G], [scheduler_G]
 
     def training_step(self, batch, batch_idx):
-        print(batch_idx+1+self.current_epoch*self.iter_per_epoch)
-        print(self.total_iter)
-        self.netG.APE.progress.data.fill_(batch_idx+1+self.current_epoch*self.iter_per_epoch/self.total_iter)
+        # print(batch_idx+1+self.current_epoch*self.iter_per_epoch)
+        # print(self.total_iter)
+        if self.args.smpl_attention:
+            self.netG.APE.progress.data.fill_(batch_idx+1+self.current_epoch*self.iter_per_epoch/self.total_iter)
         if not self.cfg.fast_dev:
             export_cfg(self.logger, self.cfg)
 

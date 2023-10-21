@@ -510,6 +510,7 @@ class HGPIFuNet_global_local(BasePIFuNet):
                         point_local_feat = self.index_triplane(im_feat, xyz, vis=False)
                         point_feat_list = [point_local_feat, smpl_feat[:, :, :],self.index(vol_feat, xyz)]   
                     else:
+                        # breakpoint()
                         point_local_feat = self.index(im_feat, xy)
                         point_feat_list = [point_local_feat, smpl_feat[:, :, :],self.index(vol_feat, xyz)]       ##, self.index(vol_feat, xyz)
 

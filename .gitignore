@@ -38,3 +38,4 @@ sample_data/
 */*.gif
 *.gif
 data.tar.gz
+core.*

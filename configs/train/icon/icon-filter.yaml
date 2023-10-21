@@ -1,7 +1,8 @@
 name: baseline/icon-filter_batch2_withnormal_debugv1_0417
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 # resume_path: "./data/ckpt/icon-filter.ckpt"
-normal_path: "./data/ckpt/normal.ckpt"
+normal_path: "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/data/ckpt/normal.ckpt"
+
 results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
 dataset:
@@ -45,14 +46,14 @@ net:
   norm_w: 0.001
   dc_w: 1.0
   hourglass_dim: 6
-  voxel_dim: 7
+  voxel_dim: 32
   smpl_dim: 7
 
 lr_G: 1e-4
 weight_decay: 0.0 
 momentum: 0.0
 batch_size: 2
-num_threads: 1
+num_threads: 16
 gpus: [0]
 test_gpus: [0]
 

@@ -125,6 +125,8 @@ if __name__ == "__main__":
     parser.add_argument("--kernel_pad_num", type=str, default='10')
     #add_argument of a strings
     parser.add_argument("--mlp_pad_mode", type=str, default='zeros')
+    #add a int argument with default number = 30
+    parser.add_argument("--activate_sine", type=int, default=30)
     
     
     
@@ -175,7 +177,7 @@ if __name__ == "__main__":
         rotation_num=3
     elif args.datasettype==["thuman2"]:
         rotation_num=36
-
+    # breakpoint()
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(["net.mlp_dim",args.mlp_dim, "net.res_layers",args.res_layers, "net.voxel_dim", args.pamir_vol_dim, "net.use_filter", args.filter, "dataset.noise_scale", args.noise_scale, "net.norm_mlp", args.norm_mlp, "batch_size",args.batch_size, "net.hourglass_dim", args.hourglass_dim, "dataset.types", args.datasettype,"num_threads",  args.num_worker, "dataset.rotation_num", rotation_num])
