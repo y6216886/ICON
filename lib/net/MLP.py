@@ -473,7 +473,7 @@ class SCSEModule(nn.Module):
             kernel_size=7, padding=3, dilation=1
             """
         if self.args.smpl_attention:
-            self.smpl_attention=SI_MODULE(points_channel=in_channels)
+            self.smpl_attention=SI_MODULE(points_channel=in_channels, args=self.args)
             
             
 
@@ -500,7 +500,7 @@ class SI_MODULE(nn.Module):
     def __init__(self, points_channel,  args=None):
         super().__init__()
         self.sigmoid=nn.Sigmoid()
-        self.fuse_net=fuse_net(points_channel=points_channel)
+        self.fuse_net=fuse_net(vol_dim=args.pamir_vol_dim, points_channel=points_channel)
         # self.fuse_net=Attention(points_channel)
     def forward(self, point_feature, vol_feature): # (bs, c, h, w, d) (bs, num_p, c)
         fused_feature=self.fuse_net(point_feature, vol_feature)

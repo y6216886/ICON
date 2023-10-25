@@ -1,7 +1,7 @@
 name: baseline/icon-filter_batch2_withnormal_debugv1_0417
 ckpt_dir: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/ckpt/'
 # resume_path: "./data/ckpt/icon-filter.ckpt"
-normal_path: "./data/ckpt/normal.ckpt"
+normal_path: "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/data/ckpt/normal.ckpt"
 results_path: '/mnt/cephfs/dataset/NVS/experimental_results/avatar/icon/data/results/'
 
 dataset:

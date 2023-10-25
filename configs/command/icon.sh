@@ -40,7 +40,7 @@
 
 # cd /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/; CUDA_VISIBLE_DEVICES=1  python -m apps.train --gpus 0 --num_gpus 1 -cfg /mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/configs/train/icon_uncertainty/icon-filter_uncertainty003.yaml  --filter --train_on_cape   --name trainoncape/train11_on_cape_icononly{4}1 
 
-CUDA_VISIBLE_DEVICES=1 python -m apps.train -cfg configs/train/icon/icon-filter.yaml  --gpus 0 --num_gpus 1 --name baseline/icon_checkv9_{no_filter_args}  --train_on_cape  
+CUDA_VISIBLE_DEVICES=1 python -m apps.train -cfg configs/train/icon/icon-filter.yaml  --gpus 0 --num_gpus 1 --name baseline/icon_v11  --train_on_cape  
 
 CUDA_VISIBLE_DEVICES=1 python -m apps.train -cfg configs/train/icon/icon-filter.yaml  --gpus 0 --num_gpus 1 --name baseline/icon_checkv9_{no_filter_args}  --train_on_cape   -test
 

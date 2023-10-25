@@ -126,7 +126,7 @@ if __name__ == "__main__":
     #add_argument of a strings
     parser.add_argument("--mlp_pad_mode", type=str, default='zeros')
     #add a int argument with default number = 30
-    parser.add_argument("--activate_sine", type=float, default=30)
+    parser.add_argument("--activate_sine", type=float, default=0)
     
     
     
