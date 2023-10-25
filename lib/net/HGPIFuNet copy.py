@@ -13,49 +13,27 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
-import sys 
-# from torchvision.utils import save_image
-sys.path.append("/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/")
+
 from lib.net.voxelize import Voxelization
 from lib.dataset.mesh_util import feat_select, read_smpl_constants
 from lib.net.NormalNet import NormalNet
-from lib.net.MLP import MLP
-from lib.net.MLP3D import MLP3d
-from lib.net.MLP_N_shape import MLP_UNET
+from lib.net.MLP_DIF import MLP
 from lib.net.spatial import SpatialEncoder
-from lib.dataset.PointFeat import PointFeat, adaptive_positional_encoding
+from lib.dataset.PointFeat import PointFeat
 from lib.dataset.mesh_util import SMPLX
 from lib.net.VE import VolumeEncoder
 from lib.net.HGFilters import *
 from termcolor import colored
 from lib.net.BasePIFuNet import BasePIFuNet
-
 import torch.nn as nn
 import torch
-# import time
 import torch.nn.functional as F
-import torch
-import math
 from torch.distributions import Normal
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import time
 
-def soft_assignment(x,y,weights):
-    miu = torch.mean(x)
-    sigma = torch.std(x)
-    x_hat = miu + weights*sigma
-    x_hat = x_hat.repeat(x.size(0),1)
-    x = x[:,None]
-    y = y[:,None]
-    x_dist = 10*torch.exp(-(x_hat-x)**2) #/5
-    x_p = F.softmax(x_dist,dim=1)
-    x_p = torch.sum(x_p,dim=0)/len(x)
-    y_dist = 10 * torch.exp(-(x_hat - y) ** 2) #/ 5
-    y_p = F.softmax(y_dist, dim=1)
-    y_p = torch.sum(y_p,dim=0)/len(x)
-    return x_p,y_p
 
 
 class HGPIFuNet(BasePIFuNet):
@@ -70,11 +48,10 @@ class HGPIFuNet(BasePIFuNet):
         4. Classification.
         5. During training, error is calculated on all stacks.
     """
-    def __init__(self, cfg, projection_mode="orthogonal", error_term=nn.MSELoss(), args=None):
+    def __init__(self, cfg, projection_mode="orthogonal", error_term=nn.MSELoss()):
 
         super(HGPIFuNet, self).__init__(projection_mode=projection_mode, error_term=error_term)
-        self.cfg=cfg
-        self.args=args
+
         self.l1_loss = nn.SmoothL1Loss()
         self.opt = cfg.net
         self.root = cfg.root
@@ -116,39 +93,20 @@ class HGPIFuNet(BasePIFuNet):
                 self.channels_filter = [normal_F_lst, normal_B_lst]
 
         else:
-            # if "image" in self.in_geo and not cfg.exclude_normal:
-            #     self.channels_filter = [image_lst + normal_F_lst + normal_B_lst]
-            # elif "image" not in self.in_geo:
-            #     self.channels_filter = [normal_F_lst + normal_B_lst]
-            # elif "image" in self.in_geo and cfg.exclude_normal:
-            #     self.channels_filter = [image_lst]
             if "image" in self.in_geo:
-                self.channels_filter = [image_lst] 
-            if "normal_F" in self.in_geo:
-                self.channels_filter += [normal_F_lst] 
-            if "normal_F" in self.in_geo:
-                self.channels_filter += [normal_B_lst] 
-
+                self.channels_filter = [image_lst + normal_F_lst + normal_B_lst]
+            else:
+                self.channels_filter = [normal_F_lst + normal_B_lst]
 
         use_vis = (self.prior_type in ["icon", "keypoint"]) and ("vis" in self.smpl_feats)
         if self.prior_type in ["pamir", "pifu"]:
             use_vis = 1
-        if self.args.triplane:
-            if self.use_filter:
-                channels_IF[0] = (self.hourglass_dim)*2//3 //(1 + use_vis)
-            else:
-                channels_IF[0] = len(self.channels_filter[0]) * (2 - use_vis)
+
+        if self.use_filter:
+            channels_IF[0] = (self.hourglass_dim) * (2 - use_vis)
         else:
-            if self.use_filter:
-                channels_IF[0] = (self.hourglass_dim) * (2 - use_vis)
-            else:
-                channels_IF[0] = len(self.channels_filter[0]) * (2 - use_vis)
-        if self.args.sdfdir:
-            channels_IF[0]+=3
-        if self.args.PE_sdf!=0:
-            channels_IF[0]+=2*self.args.PE_sdf
-        if self.args.pamir_icon:
-            channels_IF[0]+=self.args.pamir_vol_dim
+            channels_IF[0] = len(self.channels_filter[0]) * (2 - use_vis)
+
         if self.prior_type in ["icon", "keypoint"]:
             channels_IF[0] += self.smpl_dim
         elif self.prior_type == "pamir":
@@ -167,12 +125,12 @@ class HGPIFuNet(BasePIFuNet):
                 volume_res=128,
                 sigma=0.05,
                 smooth_kernel_size=7,
-                batch_size=self.cfg.batch_size,
-                device=torch.device(f"cuda:{self.cfg.gpus[0]}"),
+                batch_size=cfg.batch_size,
+                device=torch.device(f"cuda:{cfg.gpus[0]}"),
             )
             self.ve = VolumeEncoder(3, self.voxel_dim, self.opt.num_stack)
 
-        elif self.prior_type in ["pifu"]:
+        elif self.prior_type == "pifu":
             channels_IF[0] += 1
         else:
             print(f"don't support {self.prior_type}!")
@@ -185,8 +143,6 @@ class HGPIFuNet(BasePIFuNet):
         self.pamir_keys = ["voxel_verts", "voxel_faces", "pad_v_num", "pad_f_num"]
         self.pifu_keys = []
         self.test_mode = cfg.test_mode
-        
-
 
         self.if_regressor = MLP(
             filter_channels=channels_IF,
@@ -196,11 +152,8 @@ class HGPIFuNet(BasePIFuNet):
             last_op=nn.Sigmoid() if not cfg.test_mode else None,
             # last_op=nn.Sigmoid(),
             mode='train' if not cfg.test_mode else 'test',
-            args=args
         )
-
         self.sp_encoder = SpatialEncoder()
-        # self.APE=adaptive_positional_encoding(L=self.args.PE_sdf)
 
         # network
         if self.use_filter:
@@ -233,9 +186,35 @@ class HGPIFuNet(BasePIFuNet):
 
         print(colored(summary_log, "yellow"))
 
-        self.normal_filter = NormalNet(self.cfg)
+        self.normal_filter = NormalNet(cfg)
+
         init_net(self)
 
+    # def get_normal(self, in_tensor_dict):
+
+    #     # insert normal features
+    #     if (not self.training) and (not self.overfit):
+    #         with torch.no_grad():
+    #             feat_lst = []
+    #             if "image" in self.in_geo:
+    #                 feat_lst.append(in_tensor_dict["image"])    # [1, 3, 512, 512]
+    #             if "normal_F" in self.in_geo and "normal_B" in self.in_geo:
+    #                 if (
+    #                     "normal_F" not in in_tensor_dict.keys() or
+    #                     "normal_B" not in in_tensor_dict.keys()
+    #                 ):
+    #                     (nmlF, nmlB) = self.normal_filter(in_tensor_dict)
+    #                 else:
+    #                     nmlF = in_tensor_dict["normal_F"]
+    #                     nmlB = in_tensor_dict["normal_B"]
+    #                 feat_lst.append(nmlF)    # [1, 3, 512, 512]
+    #                 feat_lst.append(nmlB)    # [1, 3, 512, 512]
+    #         in_filter = torch.cat(feat_lst, dim=1)
+
+    #     else:
+    #         in_filter = torch.cat([in_tensor_dict[key] for key in self.in_geo], dim=1)
+
+    #     return in_filter
     def get_normal(self, in_tensor_dict):
 
         # insert normal features
@@ -315,7 +294,7 @@ class HGPIFuNet(BasePIFuNet):
         :param images: [B, C, H, W] input images
         """
 
-        in_filter = self.get_normal(in_tensor_dict) #the cmap is from the ground truth smpl model.
+        in_filter = self.get_normal(in_tensor_dict)
 
         features_G = []
 
@@ -334,7 +313,7 @@ class HGPIFuNet(BasePIFuNet):
                 features_G.append(torch.cat([features_F[idx], features_B[idx]], dim=1))
         else:
             if self.use_filter:
-                    features_G = self.F_filter(in_filter[:, self.channels_filter[0]])
+                features_G = self.F_filter(in_filter[:, self.channels_filter[0]])
             else:
                 features_G = [in_filter[:, self.channels_filter[0]]]
 
@@ -354,8 +333,10 @@ class HGPIFuNet(BasePIFuNet):
         else:
             return features_out
 
-    def query(self, features, points, calibs, transforms=None, regressor=None, clip_feature=None):
+    def query(self, features, points, calibs, transforms=None, regressor=None):
+
         xyz = self.projection(points, calibs, transforms)
+
         (xy, z) = xyz.split([2, 1], dim=1)
 
         in_cube = (xyz > -1.0) & (xyz < 1.0)
@@ -366,19 +347,20 @@ class HGPIFuNet(BasePIFuNet):
         sigma_0_list = []
         vol_feats = features
 
-        if self.prior_type in ["icon", "keypoint"]: ##icon is slow due to the Point feat following code
+        if self.prior_type in ["icon", "keypoint"]:
 
             # smpl_verts [B, N_vert, 3]
             # smpl_faces [B, N_face, 3]
             # xyz [B, 3, N]  --> points [B, N, 3]
+
             point_feat_extractor = PointFeat(
-                self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"], args=self.args
+                self.smpl_feat_dict["smpl_verts"], self.smpl_feat_dict["smpl_faces"]
             )
 
             point_feat_out = point_feat_extractor.query(
                 xyz.permute(0, 2, 1).contiguous(), self.smpl_feat_dict
             )
-            
+
             feat_lst = [
                 point_feat_out[key] for key in self.smpl_feats if key in point_feat_out.keys()
             ]
@@ -403,28 +385,19 @@ class HGPIFuNet(BasePIFuNet):
             )
             vol = self.voxelization(voxel_verts)    # vol ~ [0,1]
             vol_feats = self.ve(vol, intermediate_output=self.training)
-            step = 0
+
+        step = 0
         for im_feat, vol_feat in zip(features, vol_feats):
+
             # normal feature choice by smpl_vis
-            """
-            36*2/3=24
-            1, 24(12,12), 8000   = self.index_triplane(im_feat, xyz)
-            """
+
             if self.prior_type == "icon":
                 if "vis" in self.smpl_feats:
-                    if self.args.triplane:
-                        point_local_feat = feat_select(self.index_triplane(im_feat, xyz, vis=True), smpl_feat[:, [-1], :]) ##replace self.index with self.index_triplane, xy to xyz consider add the channel dimension of im_feat
-                        point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
-                    else:
-                        point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :]) ##replace self.index with self.index_triplane, xy to xyz consider add the channel dimension of im_feat
-                        point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
+                    point_local_feat = feat_select(self.index(im_feat, xy), smpl_feat[:, [-1], :])
+                    point_feat_list = [point_local_feat, smpl_feat[:, :-1, :]]
                 else:
-                    if self.args.triplane:
-                        point_local_feat = self.index_triplane(im_feat, xyz, vis=False)
-                        point_feat_list = [point_local_feat, smpl_feat[:, :, :]]
-                    else:
-                        point_local_feat = self.index(im_feat, xy)
-                        point_feat_list = [point_local_feat, smpl_feat[:, :, :]]
+                    point_local_feat = self.index(im_feat, xy)
+                    point_feat_list = [point_local_feat, smpl_feat[:, :, :]]
 
             if self.prior_type == "keypoint":
 
@@ -463,13 +436,11 @@ class HGPIFuNet(BasePIFuNet):
             return preds_list, miu_0_list, sigma_0_list
         else:   
             return preds_list
-
+        
     def univar_continue_KL_divergence2(self, pmu, psigma, qmu, qsigma):
         # p is target distribution
         return torch.log(qsigma / psigma) + (psigma ** 2 + (pmu - qmu) ** 2) / (2 * qsigma ** 2) - 0.5
 
-
-    #     return error_if
     def get_error(self, preds_if_list, miu_0_list, sigma_0_list, labels, occ_labels, draw_space_uncertainty = True):
         """calcaulate error
 
@@ -509,6 +480,7 @@ class HGPIFuNet(BasePIFuNet):
         self.draw_cnt = (self.draw_cnt + 1) % 2000
 
         return error_if
+
     def forward(self, in_tensor_dict, draw_surface_uncertainty=False):
         """
         sample_tensor [B, 3, N]
@@ -528,6 +500,43 @@ class HGPIFuNet(BasePIFuNet):
         preds_if_list, miu_0_list, sigma_0_list = self.query(
             in_feat, sample_tensor, calib_tensor, regressor=self.if_regressor
         )
+
+        if draw_surface_uncertainty:
+            xyz = sample_tensor.squeeze().detach().cpu().numpy()
+            uncertainty = sigma_0_list[-1].squeeze().detach().cpu().numpy()
+            xyz = xyz[:, 0: 8000]
+            xyz[0][-1] = 45
+            xyz[0][-2] = -45
+            xyz[1][-1] = 45
+            xyz[1][-2] = -45
+            xyz[2][-1] = 45
+            xyz[2][-2] = -45
+            uncertainty=uncertainty[0:8000]
+            xyz=xyz.tolist()
+            uncertainty=uncertainty.tolist()
+            fig = plt.figure()
+            ax = plt.subplot(projection = '3d')  # 创建一个三维的绘图工程
+            ax.set_title('3d_image_show')  # 设置本图名称
+            im = ax.scatter(xyz[2], xyz[0], xyz[1], marker='.', c=uncertainty, cmap='coolwarm')   # 绘制数据点 c: 'r'红色，'y'黄色，等颜色
+            # https://blog.csdn.net/qq_37851620/article/details/100642566
+            cbar = fig.colorbar(im, ax=ax)
+            ax.set_xlabel('X')  # 设置x坐标轴
+            ax.set_zlabel('Z')  # 设置z坐标轴
+            ax.set_ylabel('Y')  # 设置y坐标轴
+            plt.savefig('./nllbackon/'+draw_img_name+'.png')
+            plt.clf()
+            
+            fig = plt.figure()
+            ax = plt.subplot(projection = '3d')  # 创建一个三维的绘图工程
+            ax.set_title('3d_image_show')  # 设置本图名称
+            im = ax.scatter(xyz[0], xyz[2], xyz[1], marker='.', c=uncertainty, cmap='coolwarm') 
+            cbar = fig.colorbar(im, ax=ax)
+            ax.set_xlabel('X')  # 设置x坐标轴
+            ax.set_zlabel('Z')  # 设置z坐标轴
+            ax.set_ylabel('Y')  # 设置y坐标轴
+            plt.savefig('./nllfronton/'+draw_img_name+'.png')
+            plt.clf()
+
         error = self.get_error(preds_if_list, miu_0_list, sigma_0_list, label_tensor, occ_label_tensor)
 
         return preds_if_list[-1], error

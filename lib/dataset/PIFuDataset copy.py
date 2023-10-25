@@ -13,9 +13,8 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
-from threadpoolctl import threadpool_limits
-import sys
-sys.path.append("/media/young/writable/code/human_reconstruction/")
+# from threadpoolctl import threadpool_limits
+import multiprocessing
 from lib.renderer.mesh import load_fit_body, compute_normal_batch
 from lib.dataset.body_model import TetraSMPLModel
 from lib.common.render import Render
@@ -31,8 +30,8 @@ import trimesh
 import torch
 import vedo
 import torchvision.transforms as transforms
-import sys
-# sys.path.append("/media/young/writable/code/human_reconstruction/")
+
+import matplotlib.pyplot as plt
 
 cape_gender = {
     "male":
@@ -42,14 +41,12 @@ cape_gender = {
 
 
 class PIFuDataset():
-    def __init__(self, cfg, split='train', vis=False, args=None):
-        self.cfg=cfg
-        self.test=cfg.test_mode
+    def __init__(self, cfg, split='train', vis=False):
+
         self.split = split
-        self.root = cfg.root
+        self.root = '/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/data/'
         self.bsize = cfg.batch_size
         self.overfit = cfg.overfit
-        self.args=args
 
         # for debug, only used in visualize_sampling3D
         self.vis = vis
@@ -62,7 +59,7 @@ class PIFuDataset():
         self.prior_type = cfg.net.prior_type
 
         self.noise_type = self.opt.noise_type
-        self.noise_scale = self.args.noise_scale
+        self.noise_scale = self.opt.noise_scale
 
         noise_joints = [4, 5, 7, 8, 13, 14, 16, 17, 18, 19, 20, 21]
 
@@ -80,7 +77,7 @@ class PIFuDataset():
 
         self.use_sdf = cfg.sdf
         self.sdf_clip = cfg.sdf_clip
-        print(cfg.net.in_geo)
+
         # [(feat_name, channel_num),...]
         self.in_geo = [item[0] for item in cfg.net.in_geo]
         self.in_nml = [item[0] for item in cfg.net.in_nml]
@@ -99,7 +96,7 @@ class PIFuDataset():
         if self.split == 'train':
             self.rotations = np.arange(0, 360, 360 / self.opt.rotation_num).astype(np.int32)
         else:
-            self.rotations = list(range(0, 360, 120))
+            self.rotations = range(0, 360, 120)
 
         self.datasets_dict = {}
 
@@ -107,6 +104,7 @@ class PIFuDataset():
 
             mesh_dir = None
             smplx_dir = None
+
             dataset_dir = osp.join(self.root, dataset)
 
             mesh_dir = osp.join(dataset_dir, "scans")
@@ -124,22 +122,12 @@ class PIFuDataset():
                 self.datasets_dict[dataset].update(
                     {"subjects": np.loadtxt(osp.join(dataset_dir, "all.txt"), dtype=str)}
                 )
-            elif split == 'val':
-                self.datasets_dict[dataset].update(
-                    {"subjects": np.loadtxt(osp.join(dataset_dir, "val.txt"), dtype=str)}
-                )
-            elif split == 'test_train':
-                self.datasets_dict[dataset].update(
-                    {"subjects": np.loadtxt(osp.join(dataset_dir, "test_train.txt"), dtype=str)}
-                )
-
-
             else:
-                    self.datasets_dict[dataset].update(
-                        {"subjects": np.loadtxt(osp.join(dataset_dir, "test.txt"), dtype=str)}
-                    )
+                self.datasets_dict[dataset].update(
+                    {"subjects": np.loadtxt(osp.join(dataset_dir, "test.txt"), dtype=str)}
+                )
 
-        self.subject_list = list(self.get_subject_list(split))
+        self.subject_list = self.get_subject_list(split)
         self.smplx = SMPLX()
 
         # PIL to tensor
@@ -162,7 +150,7 @@ class PIFuDataset():
 
         self.device = torch.device(f"cuda:{cfg.gpus[0]}")
         self.render = Render(size=512, device=self.device)
-
+        # breakpoint()
     def render_normal(self, verts, faces):
 
         # render optimized mesh (normal, T_normal, image [-1,1])
@@ -174,7 +162,7 @@ class PIFuDataset():
         subject_list = []
 
         for dataset in self.datasets:
-            
+
             split_txt = osp.join(self.root, dataset, f'{split}.txt')
 
             if osp.exists(split_txt):
@@ -186,63 +174,45 @@ class PIFuDataset():
 
                 full_lst = np.loadtxt(full_txt, dtype=str)
                 full_lst = [dataset + "/" + item for item in full_lst]
-                if dataset=="thuman2":
-                    [train_lst, test_lst, val_lst] = np.split(full_lst, [
-                        500,
-                        500 + 5,
-                    ])
+                [train_lst, test_lst, val_lst] = np.split(full_lst, [
+                    500,
+                    500 + 5,
+                ])
 
-                    np.savetxt(full_txt.replace("all", "train"), train_lst, fmt="%s")
-                    np.savetxt(full_txt.replace("all", "test"), test_lst, fmt="%s")
-                    np.savetxt(full_txt.replace("all", "val"), val_lst, fmt="%s")
+                np.savetxt(full_txt.replace("all", "train"), train_lst, fmt="%s")
+                np.savetxt(full_txt.replace("all", "test"), test_lst, fmt="%s")
+                np.savetxt(full_txt.replace("all", "val"), val_lst, fmt="%s")
 
-                    print(f"load from {split_txt}")
-                    subject_list += np.loadtxt(split_txt, dtype=str).tolist()
-                elif dataset=="cape":
-                    print("mannually set split file")
-                    assert 1==0
+                print(f"load from {split_txt}")
+                subject_list += np.loadtxt(split_txt, dtype=str).tolist()
 
-
-        if self.split not in ['test', 'val', 'test_train'] :
+        if self.split != 'test':
             subject_list += subject_list[:self.bsize - len(subject_list) % self.bsize]
             print(colored(f"total: {len(subject_list)}", "yellow"))
-            random.shuffle(subject_list)
+            random.shuffle(subject_list)    # 打乱
 
         # subject_list = ["thuman2/0008"]
         return subject_list
 
     def __len__(self):
-        if self.args.test_code:
-            return min(63, len(self.subject_list) * len(self.rotations))
-        else:
-            return len(self.subject_list) * len(self.rotations)
+        return len(self.subject_list) * len(self.rotations)
 
-    @threadpool_limits.wrap(limits=1)
     def __getitem__(self, index):
-
+        # breakpoint()
         # only pick the first data if overfitting
         if self.overfit:
             index = 0
 
         rid = index % len(self.rotations)
         mid = index // len(self.rotations)
-
-
-
+        # breakpoint()
         rotation = self.rotations[rid]
         subject = self.subject_list[mid].split("/")[-1]
-        # if not self.test:
-        #     dataset = self.subject_list[mid].split("/")[-3]
-        # else:
-        #     dataset = self.subject_list[mid].split("/")[-2]
-        dataset = self.cfg.dataset.types[0]
-        # print(self.subject_list,mid,self.subject_list[mid])
-        if dataset=='thuman2':
-            render_folder = "/".join([dataset + f"_{36}views", subject])
-        elif dataset == "cape":
-            render_folder = "/".join([dataset + f"_{3}views", subject])
-        else:
-            render_folder = "/".join([dataset + f"_{self.opt.rotation_num}views", subject])
+        dataset = self.subject_list[mid].split("/")[-3]
+        # print(subject, dataset)
+        # breakpoint()
+        render_folder = "/".join([dataset + f"_{self.opt.rotation_num}views", subject])
+
         # setup paths
         data_dict = {
             'dataset': dataset,
@@ -254,36 +224,22 @@ class PIFuDataset():
             'smpl_path': osp.join(self.datasets_dict[dataset]["smpl_dir"], f"{subject}.obj"),
             'vis_path': osp.join(self.root, render_folder, 'vis', f'{rotation:03d}.pt')
         }
-        # print(dataset)
-        # print(self.datasets_dict[dataset]["mesh_dir"], f"{subject}/{subject}.obj")
-        if dataset == 'thuman2':
-            if self.args.smplx2smpl:
-                data_dict.update(
-                    {
-                        'mesh_path':
-                            osp.join(
-                                self.datasets_dict[dataset]["mesh_dir"], f"{subject}/{subject}.glb"
-                            ),
-                        'smpl_param':
-                            osp.join(self.datasets_dict[dataset]["smpl_dir"], f"{subject}.pkl")}
-                )
-            
-            else:
-                data_dict.update(
-                    {
-                        'mesh_path':
-                            osp.join(
-                                self.datasets_dict[dataset]["mesh_dir"], f"{subject}/{subject}.glb"
-                            ),
-                        'smplx_path':
-                            osp.join(self.datasets_dict[dataset]["smplx_dir"], f"{subject}.obj"),
-                        'smpl_param':
-                            osp.join(self.datasets_dict[dataset]["smpl_dir"], f"{subject}.pkl"),
-                        'smplx_param':
-                            osp.join(self.datasets_dict[dataset]["smplx_dir"], f"{subject}.pkl"),
-                    }
-                )
 
+        if dataset == 'thuman2':
+            data_dict.update(
+                {
+                    'mesh_path':
+                        osp.join(
+                            self.datasets_dict[dataset]["mesh_dir"], f"{subject}/{subject}.glb"
+                        ),
+                    'smplx_path':
+                        osp.join(self.datasets_dict[dataset]["smplx_dir"], f"{subject}.obj"),
+                    'smpl_param':
+                        osp.join(self.datasets_dict[dataset]["smpl_dir"], f"{subject}.pkl"),
+                    'smplx_param':
+                        osp.join(self.datasets_dict[dataset]["smplx_dir"], f"{subject}.pkl"),
+                }
+            )
         elif dataset == 'cape':
             data_dict.update(
                 {
@@ -300,7 +256,7 @@ class PIFuDataset():
         # image/normal/depth loader
         for name, channel in zip(self.in_total, self.in_total_dim):
 
-            if f'{name}_path' not in list(data_dict.keys()):
+            if f'{name}_path' not in data_dict.keys():
                 data_dict.update(
                     {
                         f'{name}_path':
@@ -320,10 +276,10 @@ class PIFuDataset():
         )
         data_dict.update(self.load_smpl(data_dict, self.vis))
 
-        if self.prior_type == 'pamir' or self.args.pamir_icon:
-             data_dict.update(self.load_smpl_voxel(data_dict))
+        if self.prior_type == 'pamir':
+            data_dict.update(self.load_smpl_voxel(data_dict))
 
-        if (self.split not in ['val', 'test', 'test_train']) and (not self.vis):
+        if (self.split != 'test') and (not self.vis):
 
             del data_dict['verts']
             del data_dict['faces']
@@ -331,10 +287,9 @@ class PIFuDataset():
         if not self.vis:
             del data_dict['mesh']
 
-        path_keys = [key for key in list(data_dict.keys()) if '_path' in key or '_dir' in key]
+        path_keys = [key for key in data_dict.keys() if '_path' in key or '_dir' in key]
         for key in path_keys:
             del data_dict[key]
-
         return data_dict
 
     def imagepath2tensor(self, path, channel=3, inv=False):
@@ -366,7 +321,7 @@ class PIFuDataset():
         calib_mat = np.matmul(intrinsic, extrinsic)
         calib_mat = torch.from_numpy(calib_mat).float()
         return {'calib': calib_mat}
-
+    
     def load_mesh(self, data_dict):
 
         mesh_path = data_dict['mesh_path']
@@ -383,6 +338,20 @@ class PIFuDataset():
             'verts': torch.as_tensor(mesh.verts).float(),
             'faces': torch.as_tensor(mesh.faces).long()
         }
+    # def load_mesh(self, data_dict):
+
+    #     mesh_path = data_dict['mesh_path']
+    #     scale = data_dict['scale']
+
+    #     verts, faces = obj_loader(mesh_path)
+
+    #     mesh = HoppeMesh(verts * scale, faces)
+
+    #     return {
+    #         'mesh': mesh,
+    #         'verts': torch.as_tensor(verts * scale).float(),
+    #         'faces': torch.as_tensor(faces).long()
+    #     }
 
     def add_noise(self, beta_num, smpl_pose, smpl_betas, noise_type, noise_scale, type, hashcode):
 
@@ -392,40 +361,31 @@ class PIFuDataset():
             noise_idx = self.noise_smplx_idx
         else:
             noise_idx = self.noise_smpl_idx
-        # if 'beta' in noise_type and noise_scale[noise_type.index("beta")] > 0.0:
-        #     smpl_betas += (np.random.rand(beta_num) -
-        #                    0.5) * 2.0 * noise_scale[noise_type.index("beta")]
-        #     smpl_betas = smpl_betas.astype(np.float32)
 
-        # if 'pose' in noise_type and noise_scale[noise_type.index("pose")] > 0.0:
-        #     smpl_pose[noise_idx] += (np.random.rand(len(noise_idx)) -
-        #                              0.5) * 2.0 * np.pi * noise_scale[noise_type.index("pose")]
-        #     smpl_pose = smpl_pose.astype(np.float32)
-        # print(self.args.noise_scale,self.args.noise_scale[0],self.args.noise_scale[1])
-        if 'beta' in noise_type and self.args.noise_scale[1] > 0.0:
+        if 'beta' in noise_type and noise_scale[noise_type.index("beta")] > 0.0:
             smpl_betas += (np.random.rand(beta_num) -
-                           0.5) * 2.0 * self.args.noise_scale[1]
-            smpl_betas = smpl_betas.astype(np.float32)
-
-        if 'pose' in noise_type and self.args.noise_scale[0] > 0.0:
+                           0.5) * 2.0 * noise_scale[noise_type.index("beta")]
+            # smpl_betas = smpl_betas.astype(np.float32)
+            # import pdb; pdb.set_trace()
+        if 'pose' in noise_type and noise_scale[noise_type.index("pose")] > 0.0:
             smpl_pose[noise_idx] += (np.random.rand(len(noise_idx)) -
-                                     0.5) * 2.0 * np.pi * self.args.noise_scale[0]
-            smpl_pose = smpl_pose.astype(np.float32)
+                                     0.5) * 2.0 * np.pi * noise_scale[noise_type.index("pose")]
+            # smpl_pose = smpl_pose.astype(np.float32)
+        
         if type == 'smplx':
             return torch.as_tensor(smpl_pose[None, ...]), torch.as_tensor(smpl_betas[None, ...])
         else:
             return smpl_pose, smpl_betas
-
+    
     def compute_smpl_verts(self, data_dict, noise_type=None, noise_scale=None):
 
         dataset = data_dict['dataset']
         smplx_dict = {}
-
+        
         smplx_param = np.load(data_dict['smplx_param'], allow_pickle=True)
         smplx_pose = smplx_param["body_pose"]    # [1,63]
         smplx_betas = smplx_param["betas"]    # [1,10]
-        # print(smplx_pose.max(), smplx_pose.min(),"smplx_pose")
-        # print(smplx_betas.max(), smplx_betas.min(),"smplx_betas")
+        # print('here')
         smplx_pose, smplx_betas = self.add_noise(
             smplx_betas.shape[1],
             smplx_pose[0],
@@ -464,18 +424,17 @@ class PIFuDataset():
             gender = "male" if pid in cape_gender["male"] else "female"
             smpl_pose = smpl_param['pose'].flatten()
             smpl_betas = np.zeros((1, 10))
-            
         else:
             gender = 'male'
             smpl_pose = rotation_matrix_to_angle_axis(torch.as_tensor(smpl_param["full_pose"][0])
                                                      ).numpy()
             smpl_betas = smpl_param["betas"]
-        
+
         smpl_path = osp.join(self.smplx.model_dir, f"smpl/SMPL_{gender.upper()}.pkl")
         tetra_path = osp.join(self.smplx.tedra_dir, f"tetra_{gender}_adult_smpl.npz")
 
         smpl_model = TetraSMPLModel(smpl_path, tetra_path, "adult")
-
+        # print('here11')
         smpl_pose, smpl_betas = self.add_noise(
             smpl_model.beta_shape[0],
             smpl_pose.flatten(),
@@ -497,21 +456,12 @@ class PIFuDataset():
                 smpl_param["scale"] + smpl_param["translation"]
             ) * self.datasets_dict[data_dict["dataset"]]["scale"]
 
-        # faces = (
-        #     np.loadtxt(
-        #         osp.join(self.smplx.tedra_dir, "tetrahedrons_male_adult.txt"),
-        #         dtype=np.int32,
-        #     ) - 1
-        # )
-
         faces = (
             np.loadtxt(
                 osp.join(self.smplx.tedra_dir, f'tetrahedrons_{gender}_adult.txt'),  ##this is an important bug that hurts performance of my model
                 dtype=np.int32,
             ) - 1
         )
-        
-        
 
         pad_v_num = int(8000 - verts.shape[0])
         pad_f_num = int(25100 - faces.shape[0])
@@ -520,33 +470,19 @@ class PIFuDataset():
                        constant_values=0.0).astype(np.float32)
         faces = np.pad(faces, ((0, pad_f_num), (0, 0)), mode="constant",
                        constant_values=0.0).astype(np.int32)
-        
-        # root_path="data/thuman2/smplobj"
-        # self.save_obj_mesh(os.path.join(root_path, f'{data_dict["subject"]}.obj'), verts, faces)
-        # smpl_model.save_mesh_to_obj(os.path.join(root_path, f'{data_dict["subject"]}.obj'))
-        # print("saving obj now!!")
-
 
         return verts, faces, pad_v_num, pad_f_num
-    
-    def save_obj_mesh(self, mesh_path, verts, faces):
-        file = open(mesh_path, 'w')
-        for v in verts:
-            file.write('v %.4f %.4f %.4f\n' % (v[0], v[1], v[2]))
-        for f in faces:
-            f_plus = f + 1
-            file.write('f %d %d %d\n' % (f_plus[0], f_plus[1], f_plus[2]))
-        file.close()
 
     def load_smpl(self, data_dict, vis=False):
+        # print('innn load smpl')
 
         smpl_type = "smplx" if (
-            'smplx_path' in list(data_dict.keys()) and os.path.exists(data_dict['smplx_path'])
+            'smplx_path' in data_dict.keys() and os.path.exists(data_dict['smplx_path'])
         ) else "smpl"
-        # print(smpl_type,"smpl_type")
+
         return_dict = {}
-        # try:
-        if 'smplx_param' in list(data_dict.keys()) and \
+
+        if 'smplx_param' in data_dict.keys() and \
             os.path.exists(data_dict['smplx_param']) and \
                 sum(self.noise_scale) > 0.0:
             smplx_verts, smplx_dict = self.compute_smpl_verts(
@@ -554,36 +490,32 @@ class PIFuDataset():
             )
             smplx_faces = torch.as_tensor(self.smplx.smplx_faces).long()
             smplx_cmap = torch.as_tensor(np.load(self.smplx.cmap_vert_path)).float()
-            ####add here to speed####
-            smplx_vis = torch.load(data_dict['vis_path']).float()  
-            return_dict.update({'smpl_vis': smplx_vis}) ##speed a little not too much
-            #########################
 
         else:
-            
-                smplx_vis = torch.load(data_dict['vis_path']).float()  ##need to perturb  {0,1}
-                return_dict.update({'smpl_vis': smplx_vis})
+            smplx_vis = torch.load(data_dict['vis_path']).float()
+            return_dict.update({'smpl_vis': smplx_vis})
 
-                smplx_verts = rescale_smpl(data_dict[f"{smpl_type}_path"], scale=100.0) ##need to perturb [-47.408991,35.852061]
-                smplx_faces = torch.as_tensor(getattr(self.smplx, f"{smpl_type}_faces")).long() ##hard to perturb
-                smplx_cmap = self.smplx.cmap_smpl_vids(smpl_type)
-
+            # 添加扰动
+            # smplx_verts = rescale_smpl(data_dict[f"{smpl_type}_path"], scale=random.uniform(95,101))
+            smplx_verts = rescale_smpl(data_dict[f"{smpl_type}_path"], scale=100.0)
+            smplx_faces = torch.as_tensor(getattr(self.smplx, f"{smpl_type}_faces")).long()
+            smplx_cmap = self.smplx.cmap_smpl_vids(smpl_type)
 
         smplx_verts = projection(smplx_verts, data_dict['calib']).float()
 
         # get smpl_vis
-        if "smpl_vis" not in list(return_dict.keys()) and "smpl_vis" in self.feat_keys:
-            (xy, z) = torch.as_tensor(smplx_verts,device=self.device).split([2, 1], dim=1) #, device=self.device
-            smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces,device=self.device)).long()  #, device=self.device
+        if "smpl_vis" not in return_dict.keys() and "smpl_vis" in self.feat_keys:
+            (xy, z) = torch.as_tensor(smplx_verts).to(self.device).split([2, 1], dim=1)
+            smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces).to(self.device).long())
             return_dict['smpl_vis'] = smplx_vis
 
-        if "smpl_norm" not in list(return_dict.keys()) and "smpl_norm" in self.feat_keys:
+        if "smpl_norm" not in return_dict.keys() and "smpl_norm" in self.feat_keys:
             # get smpl_norms
             smplx_norms = compute_normal_batch(smplx_verts.unsqueeze(0),
-                                            smplx_faces.unsqueeze(0))[0]
+                                               smplx_faces.unsqueeze(0))[0]
             return_dict["smpl_norm"] = smplx_norms
 
-        if "smpl_cmap" not in list(return_dict.keys()) and "smpl_cmap" in self.feat_keys:
+        if "smpl_cmap" not in return_dict.keys() and "smpl_cmap" in self.feat_keys:
             return_dict["smpl_cmap"] = smplx_cmap
 
         return_dict.update(
@@ -596,11 +528,11 @@ class PIFuDataset():
 
         if vis:
 
-            (xy, z) = torch.as_tensor(smplx_verts,device=self.device).split([2, 1], dim=1) 
-            smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces,device=self.device).long())
+            (xy, z) = torch.as_tensor(smplx_verts).to(self.device).split([2, 1], dim=1)
+            smplx_vis = get_visibility(xy, z, torch.as_tensor(smplx_faces).to(self.device).long())
 
             T_normal_F, T_normal_B = self.render_normal(
-                (smplx_verts * torch.tensor(np.array([1.0, -1.0, 1.0]),device=self.device)),
+                (smplx_verts * torch.tensor(np.array([1.0, -1.0, 1.0]))).to(self.device),
                 smplx_faces.to(self.device)
             )
 
@@ -634,9 +566,6 @@ class PIFuDataset():
             )
 
         return return_dict
-        # except:
-        #         print('warning')
-        #         print(data_dict['vis_path'])
 
     def load_smpl_voxel(self, data_dict):
 
@@ -656,32 +585,34 @@ class PIFuDataset():
 
     def get_sampling_geo(self, data_dict, is_valid=False, is_sdf=False):
 
+        # mesh = data_dict['mesh']
         mesh: HoppeMesh = data_dict['mesh']
         calib = data_dict['calib']
 
         # Samples are around the true surface with an offset
         n_samples_surface = 4 * self.opt.num_sample_geo
-        vert_ids = np.arange(mesh.verts.shape[0])
-
-        samples_surface_ids = np.random.choice(vert_ids, n_samples_surface, replace=True)
+        vert_ids = np.arange(mesh.verts.shape[0]) # (249996, 3)
+        samples_surface_ids = np.random.choice(vert_ids, n_samples_surface, replace=True)   # 32000
 
         samples_surface = mesh.verts[samples_surface_ids, :]
-
-        # Sampling offsets are random noise with constant scale (15cm - 20cm)
+        
+        # Sampling offsets are random noise with constant scale (15cm - 20cm) for draw
         offset = np.random.normal(scale=self.opt.sigma_geo, size=(n_samples_surface, 1))
         samples_surface += mesh.vert_normals[samples_surface_ids, :] * offset
-
+        
         # Uniform samples in [-1, 1]
         calib_inv = np.linalg.inv(calib)
         n_samples_space = self.opt.num_sample_geo // 4
         samples_space_img = 2.0 * np.random.rand(n_samples_space, 3) - 1.0
         samples_space = projection(samples_space_img, calib_inv)
-
         samples = np.concatenate([samples_surface, samples_space], 0)
+        # samples = samples_surface
+        
         np.random.shuffle(samples)
 
         # labels: in->1.0; out->0.0.
         inside = mesh.contains(samples)
+        
         inside_samples = samples[inside >= 0.5]
         outside_samples = samples[inside < 0.5]
 
@@ -698,7 +629,6 @@ class PIFuDataset():
             [np.ones(inside_samples.shape[0]),
              np.zeros(outside_samples.shape[0])]
         )
-
         sdf_labels = -1 * mesh.query(samples)
         
         samples = torch.from_numpy(samples).float()
@@ -751,7 +681,7 @@ class PIFuDataset():
         mesh.visual.vertex_colors = [128.0, 128.0, 128.0, 255.0]
         vis_list.append(mesh)
 
-        if 'voxel_verts' in list(data_dict.keys()):
+        if 'voxel_verts' in data_dict.keys():
             print(colored("voxel verts", "green"))
             voxel_verts = data_dict['voxel_verts'] * 2.0
             voxel_faces = data_dict['voxel_faces']
@@ -762,7 +692,7 @@ class PIFuDataset():
             voxel.visual.vertex_colors = [0.0, 128.0, 0.0, 255.0]
             vis_list.append(voxel)
 
-        if 'smpl_verts' in list(data_dict.keys()):
+        if 'smpl_verts' in data_dict.keys():
             print(colored("smpl verts", "green"))
             smplx_verts = data_dict['smpl_verts']
             smplx_faces = data_dict['smpl_faces']
@@ -788,151 +718,3 @@ class PIFuDataset():
         vis_list.append(pc)
 
         vp.show(*vis_list, bg="white", axes=1.0, interactive=True)
-
-
-if __name__=="__main__":
-    from tqdm import tqdm
-    class args_():
-        def __init__(self) -> None:
-            self.test_code=False
-            self.smplx2smpl=False
-            self.pamir_icon=True
-            self.noise_scale=[0,0]
-    args_=args_()
-    from torchvision.utils import save_image
-    try:
-        config_file="configs/train/icon-filter.yaml"
-    except:config_file="configs/train/icon/icon-filter.yaml"
-
-    from lib.common.config import get_cfg_defaults
-    from torch.utils.data import DataLoader
-    # from tqdm import tqdm
-    cfg1 = get_cfg_defaults()
-
-    cfg1.merge_from_file(config_file)
-    # cfg_test_mode = [
-    #         "test_mode",
-    #         True,
-    #         "dataset.types",
-    #         ["cape"],
-    #         "dataset.scales",
-    #         [100.0],
-    #         "dataset.rotation_num",
-    #         3,
-    #         "mcube_res",
-    #         256,
-    #         "clean_mesh",
-    #         True,
-    #     ]
-    # cfg1.merge_from_list(cfg_test_mode)
-    pifu= PIFuDataset(cfg=cfg1, split='train', args=args_)
-    test_data_loader = DataLoader(
-            pifu,
-            batch_size=1,
-            shuffle=False,
-            num_workers=8,
-            pin_memory=True
-        )
-    print("train", len(test_data_loader))
-    for i,j in tqdm(enumerate(test_data_loader)):
-        print(i)
-        # imgtensor=torch.cat([j['normal_F'],j['normal_B'],j['T_normal_F'],j['T_normal_B']],dim=0)
-        # save_image( imgtensor, "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/examples/normals.png",nrow=2, normalize=True)
-        # break
-        for key in j.keys():
-            try:
-                print(key,  j[key].size())
-
-            except:
-                print(key)
-
-    # pifu= PIFuDataset(cfg=cfg1, split='test', args=args_)
-    # test_data_loader = DataLoader(
-    #         pifu,
-    #         batch_size=1,
-    #         shuffle=False,
-    #         num_workers=8,
-    #         pin_memory=True
-    #     )
-    # print("train", len(test_data_loader))
-    # for i,j in tqdm(enumerate(test_data_loader)):
-    #     print(i)
-    #     # imgtensor=torch.cat([j['normal_F'],j['normal_B'],j['T_normal_F'],j['T_normal_B']],dim=0)
-    #     # save_image( imgtensor, "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/examples/normals.png",nrow=2, normalize=True)
-    #     # break
-    #     for key in j.keys():
-    #         try:
-    #             print(key,  j[key].size())
-
-    #         except:
-    #             print(key)
-
-    # pifu= PIFuDataset(cfg=cfg1, split='val', args=args_)
-    # test_data_loader = DataLoader(
-    #         pifu,
-    #         batch_size=1,
-    #         shuffle=False,
-    #         num_workers=8,
-    #         pin_memory=True
-    #     )
-    # print("train", len(test_data_loader))
-    # for i,j in tqdm(enumerate(test_data_loader)):
-    #     print(i)
-    #     # imgtensor=torch.cat([j['normal_F'],j['normal_B'],j['T_normal_F'],j['T_normal_B']],dim=0)
-    #     # save_image( imgtensor, "/mnt/cephfs/home/yangyifan/yangyifan/code/avatar/ICON/examples/normals.png",nrow=2, normalize=True)
-    #     # break
-    #     for key in j.keys():
-    #         try:
-    #             print(key,  j[key].size())
-
-    #         except:
-    #             print(key)
-    ##regenerate mesh for cape or just check the size
-    """
-    calib torch.Size([1, 4, 4])
-    normal_F torch.Size([1, 3, 512, 512])
-    normal_B torch.Size([1, 3, 512, 512])
-    image torch.Size([1, 3, 512, 512])
-    T_normal_F torch.Size([1, 3, 512, 512])
-    T_normal_B torch.Size([1, 3, 512, 512])
-    samples_geo torch.Size([1, 8000, 3])
-    labels_geo torch.Size([1, 8000])
-    smpl_vis torch.Size([1, 10475, 1])
-    smpl_norm torch.Size([1, 10475, 3])
-    smpl_cmap torch.Size([1, 10475, 3])
-    smpl_verts torch.Size([1, 10475, 3])
-    smpl_faces torch.Size([1, 20908, 3])
-    47
-    dataset
-    subject
-    rotation torch.Size([1])
-    scale torch.Size([1])
-    smpl_param
-    smplx_param
-    
-    
-    """
-
-
-    # pifu= PIFuDataset(cfg=cfg1, split='val')
-    # test_data_loader = DataLoader(
-    #         pifu,
-    #         batch_size=1,
-    #         shuffle=False,
-    #         num_workers=16,
-    #         pin_memory=True
-    #     )
-    # print("val")
-    # for i,j in enumerate(test_data_loader):
-    #     print(1)
-    # print('test')
-    # pifu= PIFuDataset(cfg=cfg1, split='test')
-    # test_data_loader = DataLoader(
-    #         pifu,
-    #         batch_size=1,
-    #         shuffle=False,
-    #         num_workers=16,
-    #         pin_memory=True
-    #     )
-    # for i,j in enumerate(test_data_loader):
-    #     print(2)

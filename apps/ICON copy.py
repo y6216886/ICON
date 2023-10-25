@@ -13,12 +13,10 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
-import wandb
-import csv
+
 from lib.common.seg3d_lossless import Seg3dLossless
 from lib.dataset.Evaluator import Evaluator
 from lib.net import HGPIFuNet
-from lib.net.HGPIFuNet_global_local import HGPIFuNet_global_local
 from lib.common.train_util import *
 from lib.common.render import Render
 from lib.dataset.mesh_util import SMPLX, update_mesh_shape_prior_losses, get_visibility
@@ -33,41 +31,24 @@ torch.backends.cudnn.benchmark = True
 
 
 class ICON(pl.LightningModule):
-    def __init__(self, cfg, args=None, total_iter=None):
+    def __init__(self, cfg):
         super(ICON, self).__init__()
-        self.args=args
+
         self.cfg = cfg
         self.batch_size = self.cfg.batch_size
         self.lr_G = self.cfg.lr_G
-        if total_iter!=9999999 and total_iter:
-            self.iter_per_epoch=total_iter
-            self.total_iter=total_iter*cfg.num_epoch
-
 
         self.use_sdf = cfg.sdf
         self.prior_type = cfg.net.prior_type
         self.mcube_res = cfg.mcube_res
         self.clean_mesh_flag = cfg.clean_mesh
 
-        if self.args.pamir_icon:
-            print("using HGPIFuNet_global_local for pamir icon")
-            self.netG = HGPIFuNet_global_local(
+        self.netG = HGPIFuNet(
             self.cfg,
             self.cfg.projection_mode,
+            # error_term=nn.SmoothL1Loss() if self.use_sdf else nn.MSELoss(),
             error_term=nn.MSELoss(),
-            # error_term=nn.BCELoss(),
-            args=args
         )
-
-        else: self.netG = HGPIFuNet(
-            self.cfg,
-            self.cfg.projection_mode,
-            error_term=nn.SmoothL1Loss() if self.use_sdf else nn.MSELoss(),
-            # error_term=nn.BCELoss(),
-            args=args
-        )
-        # breakpoint()
-        # print("noting bceloss")
 
         self.evaluator = Evaluator(device=torch.device(f"cuda:{self.cfg.gpus[0]}"))
 
@@ -89,7 +70,7 @@ class ICON(pl.LightningModule):
         self.keypoint_keys = self.base_keys + [f"smpl_{feat_name}" for feat_name in self.feat_names]
         self.pamir_keys = ["voxel_verts", "voxel_faces", "pad_v_num", "pad_f_num"]
         self.pifu_keys = []
-
+        self.res = {}
         self.reconEngine = Seg3dLossless(
             query_func=query_func,
             b_min=[[-1.0, 1.0, -1.0]],
@@ -97,14 +78,14 @@ class ICON(pl.LightningModule):
             resolutions=self.resolutions,
             align_corners=True,
             balance_value=0.50,
-            device=torch.device(f"cuda:{self.cfg.gpus[0]}"),
+            device=torch.device(f"cuda:{self.cfg.test_gpus[0]}"),
             visualize=False,
             debug=False,
             use_cuda_impl=False,
             faster=True,
         )
 
-        self.render = Render(size=512, device=torch.device(f"cuda:{self.cfg.gpus[0]}"))
+        self.render = Render(size=512, device=torch.device(f"cuda:{self.cfg.test_gpus[0]}"))
         self.smpl_data = SMPLX()
 
         self.get_smpl_model = lambda smpl_type, gender, age, v_template: smplx.create(
@@ -129,32 +110,8 @@ class ICON(pl.LightningModule):
 
         self.export_dir = None
         self.result_eval = {}
-    def set_meshres(self, meshres):
-        print("setting meshres to:", meshres)
-        self.mcube_res=meshres
-        self.resolutions = (
-            np.logspace(
-                start=5,
-                stop=np.log2(self.mcube_res),
-                base=2,
-                num=int(np.log2(self.mcube_res) - 4),
-                endpoint=True,
-            ) + 1.0
-        )
-        self.resolutions = self.resolutions.astype(np.int16).tolist()
-        self.reconEngine = Seg3dLossless(
-            query_func=query_func,
-            b_min=[[-1.0, 1.0, -1.0]],
-            b_max=[[1.0, -1.0, 1.0]],
-            resolutions=self.resolutions,
-            align_corners=True,
-            balance_value=0.50,
-            device=torch.device(f"cuda:{self.cfg.gpus[0]}"),
-            visualize=False,
-            debug=False,
-            use_cuda_impl=False,
-            faster=True,
-        )
+        
+        # self.sigmoid_beta = nn.Parameter(-10000 * torch.ones(1),requires_grad=True)
 
     def get_progress_bar_dict(self):
         tqdm_dict = super().get_progress_bar_dict()
@@ -174,7 +131,7 @@ class ICON(pl.LightningModule):
         if self.cfg.net.use_filter:
             optim_params_G.append({"params": self.netG.F_filter.parameters(), "lr": self.lr_G})
 
-        if self.cfg.net.prior_type == "pamir" or self.args.pamir_icon:
+        if self.cfg.net.prior_type == "pamir":
             optim_params_G.append({"params": self.netG.ve.parameters(), "lr": self.lr_G})
 
         if self.cfg.optim == "Adadelta":
@@ -207,17 +164,11 @@ class ICON(pl.LightningModule):
         return [optimizer_G], [scheduler_G]
 
     def training_step(self, batch, batch_idx):
-        # print(batch_idx+1+self.current_epoch*self.iter_per_epoch)
-        # print(self.total_iter)
-        if self.args.adaptive_pe_sdf:
-            self.netG.APE.progress.data.fill_(batch_idx+1+self.current_epoch*self.iter_per_epoch/self.total_iter)
+
         if not self.cfg.fast_dev:
             export_cfg(self.logger, self.cfg)
 
         self.netG.train()
-        self.netG.training = True
-
-
         in_tensor_dict = {
             "sample": batch["samples_geo"].permute(0, 2, 1),
             "calib": batch["calib"],
@@ -229,30 +180,14 @@ class ICON(pl.LightningModule):
         for name in self.in_total:
             in_tensor_dict.update({name: batch[name]})
 
-        if self.args.pamir_icon:
-            in_tensor_dict.update(
-            {
-                k: batch[k] if k in batch.keys() else None
-                for k in self.icon_keys+self.pamir_keys
-            }
-        )
-
-        else: in_tensor_dict.update(
+        in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in getattr(self, f"{self.prior_type}_keys")
             }
         )
 
-        if self.args.use_clip:
-                    in_tensor_dict.update(
-            {
-                "clip_feature":batch["clip_feature"]
-            }
-        )
         preds_G, error_G = self.netG(in_tensor_dict)
-        if preds_G.size(1)!=1:
-            preds_G=preds_G[:,:1,:]
 
         acc, iou, prec, recall = self.evaluator.calc_acc(
             preds_G.flatten(),
@@ -261,40 +196,26 @@ class ICON(pl.LightningModule):
             use_sdf=self.cfg.sdf,
         )
 
-        if self.args.kl_div:
-                metrics_log = {
-            "train_loss": error_G[0].item(),
-            "kl_loss":error_G[1].item(),
-            "train_acc": acc.item(),
-            "train_iou": iou.item(),
-            "train_prec": prec.item(),
-            "train_recall": recall.item(),
-        }
         # metrics processing
-        else: metrics_log = {
+        metrics_log = {
             "train_loss": error_G.item(),
             "train_acc": acc.item(),
             "train_iou": iou.item(),
             "train_prec": prec.item(),
             "train_recall": recall.item(),
         }
-        for key in metrics_log:
-            self.log(key, metrics_log[key])
 
         tf_log = tf_log_convert(metrics_log)
         bar_log = bar_log_convert(metrics_log)
 
-        if batch_idx % int(self.cfg.freq_show_train) == 0:
+        # if batch_idx % int(self.cfg.freq_show_train) == 0:
 
-            with torch.no_grad():
-                self.render_func(in_tensor_dict, dataset="train")
+        #     with torch.no_grad():
+        #         self.render_func(in_tensor_dict, dataset="train")
 
         metrics_return = {k.replace("train_", ""): torch.tensor(v) for k, v in metrics_log.items()}
-        if self.args.kl_div:
-            metrics_return.update({"loss": error_G[0], "log": tf_log, "progress_bar": bar_log})
-        else:
-            metrics_return.update({"loss": error_G, "log": tf_log, "progress_bar": bar_log})
-
+        # error_G = error_G * 0
+        metrics_return.update({"loss": error_G, "log": tf_log, "progress_bar": bar_log})
 
         return metrics_return
 
@@ -304,16 +225,7 @@ class ICON(pl.LightningModule):
             outputs = outputs[0]
 
         # metrics processing
-        if self.args.kl_div:
-            metrics_log = {
-            "train_avgloss": batch_mean(outputs, "loss"),
-            "train_avg_kl_loss": batch_mean(outputs, "kl_loss"),
-            "train_avgiou": batch_mean(outputs, "iou"),
-            "train_avgprec": batch_mean(outputs, "prec"),
-            "train_avgrecall": batch_mean(outputs, "recall"),
-            "train_avgacc": batch_mean(outputs, "acc"),
-        }
-        else: metrics_log = {
+        metrics_log = {
             "train_avgloss": batch_mean(outputs, "loss"),
             "train_avgiou": batch_mean(outputs, "iou"),
             "train_avgprec": batch_mean(outputs, "prec"),
@@ -326,11 +238,11 @@ class ICON(pl.LightningModule):
         return {"log": tf_log}
 
     def validation_step(self, batch, batch_idx):
-        try:self.netG.APE.progress.data.fill_(1.)
-        except:pass
+
         self.netG.eval()
         self.netG.training = False
-
+        # yxt add for learnable alpha
+        # batch["labels_geo"] = 1.0/(1+ torch.exp(self.sigmoid_beta*batch["labels_geo"]))
         in_tensor_dict = {
             "sample": batch["samples_geo"].permute(0, 2, 1),
             "calib": batch["calib"],
@@ -342,28 +254,15 @@ class ICON(pl.LightningModule):
         for name in self.in_total:
             in_tensor_dict.update({name: batch[name]})
 
-
-        if self.args.pamir_icon:
-            in_tensor_dict.update(
-            {
-                k: batch[k] if k in batch.keys() else None
-                for k in self.icon_keys+self.pamir_keys
-            }
-        )
-
-        else: in_tensor_dict.update(
+        in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in getattr(self, f"{self.prior_type}_keys")
             }
         )
-        if self.args.use_clip:
-                    in_tensor_dict.update(
-            {
-                "clip_feature":batch["clip_feature"]
-            }
-        )
+
         preds_G, error_G = self.netG(in_tensor_dict)
+
         acc, iou, prec, recall = self.evaluator.calc_acc(
             preds_G.flatten(),
             in_tensor_dict["label"].flatten(),
@@ -371,19 +270,11 @@ class ICON(pl.LightningModule):
             use_sdf=self.cfg.sdf,
         )
 
-        if batch_idx % int(self.cfg.freq_show_val) == 0:
-            with torch.no_grad():
-                self.render_func(in_tensor_dict, dataset="val", idx=batch_idx) ##this function is computational reduntant
-        if self.args.kl_div:
-            metrics_return = {
-            "val_loss": error_G[0],
-            "kl_loss": error_G[1],
-            "val_acc": acc,
-            "val_iou": iou,
-            "val_prec": prec,
-            "val_recall": recall,
-        }
-        else: metrics_return = {
+        # if batch_idx % int(self.cfg.freq_show_val) == 0:
+        #     with torch.no_grad():
+        #         self.render_func(in_tensor_dict, dataset="val", idx=batch_idx)
+
+        metrics_return = {
             "val_loss": error_G,
             "val_acc": acc,
             "val_iou": iou,
@@ -427,7 +318,7 @@ class ICON(pl.LightningModule):
             batch["type"][0], batch["gender"][0], batch["age"][0], None
         ).to(self.device)
         in_tensor_dict["smpl_faces"] = (
-            torch.tensor(smpl_model.faces.astype(np.int),device=self.device).long().unsqueeze(0)
+            torch.tensor(smpl_model.faces.astype(np.int)).long().unsqueeze(0).to(self.device)
         )
 
         # The optimizer and variables
@@ -495,7 +386,7 @@ class ICON(pl.LightningModule):
                 [in_tensor_dict["normal_F"][0], in_tensor_dict["normal_B"][0]], dim=2
             ).permute(1, 2, 0)
             gt_arr = ((gt_arr + 1.0) * 0.5).to(self.device)
-            bg_color = (torch.Tensor([0.5, 0.5, 0.5], device=self.device).unsqueeze(0).unsqueeze(0)) 
+            bg_color = (torch.Tensor([0.5, 0.5, 0.5]).unsqueeze(0).unsqueeze(0).to(self.device))
             gt_arr = ((gt_arr - bg_color).sum(dim=-1) != 0.0).float()
             loss += torch.abs(smpl_arr - gt_arr).mean()
 
@@ -607,8 +498,7 @@ class ICON(pl.LightningModule):
         return verts_pr
 
     def test_step(self, batch, batch_idx):
-        try:self.netG.APE.progress.data.fill_(1.)
-        except:pass
+        # breakpoint()
         self.netG.eval()
         self.netG.training = False
         in_tensor_dict = {}
@@ -618,24 +508,16 @@ class ICON(pl.LightningModule):
         mesh_rot = batch["rotation"][0].item()
 
         self.export_dir = osp.join(
-            self.cfg.results_path, self.args.name, "-".join(self.cfg.dataset.types), mesh_name
+            self.cfg.results_path, self.cfg.name, "-".join(self.cfg.dataset.types), mesh_name
         )
-        print(self.export_dir)
+
         os.makedirs(self.export_dir, exist_ok=True)
 
         for name in self.in_total:
             if name in batch.keys():
                 in_tensor_dict.update({name: batch[name]})
 
-        if self.args.pamir_icon:
-            in_tensor_dict.update(
-            {
-                k: batch[k] if k in batch.keys() else None
-                for k in self.icon_keys+self.pamir_keys
-            }
-        )
-
-        else: in_tensor_dict.update(
+        in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in getattr(self, f"{self.prior_type}_keys")
@@ -646,26 +528,16 @@ class ICON(pl.LightningModule):
 
             # update the new T_normal_F/B
             self.render.load_meshes(
-                batch["smpl_verts"] * torch.tensor([1.0, -1.0, 1.0],device=self.device),
+                batch["smpl_verts"] * torch.tensor([1.0, -1.0, 1.0]).to(self.device),
                 batch["smpl_faces"]
             )
             T_normal_F, T_noraml_B = self.render.get_rgb_image()
             in_tensor_dict.update({'T_normal_F': T_normal_F, 'T_normal_B': T_noraml_B})
-        if self.args.use_clip:
-                    in_tensor_dict.update(
-            {
-                "clip_feature":batch["clip_feature"]
-            }
-        )
-        else: in_tensor_dict.update(
-            {
-                "clip_feature":None
-            })
+
         with torch.no_grad():
             features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
-            # breakpoint()
             sdf = self.reconEngine(
-                opt=self.cfg, netG=self.netG, features=features, proj_matrix=None, clip_feature=in_tensor_dict["clip_feature"]
+                opt=self.cfg, netG=self.netG, features=features, proj_matrix=None
             )
 
         def tensor2arr(x):
@@ -678,12 +550,9 @@ class ICON(pl.LightningModule):
         image_inter = np.concatenate(
             self.tensor2image(512, inter[0]) + [smpl_F, smpl_B, image], axis=1
         )
-        try:
-            Image.fromarray((image_inter).astype(np.uint8)).save(
-                osp.join(self.export_dir, f"{mesh_rot}_inter.png")
-            )
-
-        except:print("No space left ERROR")
+        Image.fromarray((image_inter).astype(np.uint8)).save(
+            osp.join(self.export_dir, f"{mesh_rot}_inter.png")
+        )
 
         verts_pr, faces_pr = self.reconEngine.export_mesh(sdf)
 
@@ -692,11 +561,15 @@ class ICON(pl.LightningModule):
 
         verts_gt = batch["verts"][0]
         faces_gt = batch["faces"][0]
-
+        verts_smpl = batch["smpl_verts"] * torch.tensor([1.0, -1.0, 1.0]).to(self.device)
+        faces_smpl = batch["smpl_faces"][0]
+        # import pdb;pdb.set_trace()
         self.result_eval.update(
             {
                 "verts_gt": verts_gt,
                 "faces_gt": faces_gt,
+                "verts_smpl": verts_smpl[0],
+                "faces_smpl": faces_smpl,
                 "verts_pr": verts_pr,
                 "faces_pr": faces_pr,
                 "recon_size": (self.resolutions[-1] - 1.0),
@@ -704,153 +577,42 @@ class ICON(pl.LightningModule):
             }
         )
 
-        self.evaluator.set_mesh(self.result_eval)
-        chamfer, p2s = self.evaluator.calculate_chamfer_p2s(num_samples=1000)
+        self.evaluator.set_mesh(self.result_eval, self.export_dir)
+        chamfer, p2s, smpl_p2s_dist, smpl_chamfer_dist, ddp2s, ddch = self.evaluator.calculate_chamfer_p2s(num_samples=1000)
         normal_consist = self.evaluator.calculate_normal_consist(
             osp.join(self.export_dir, f"{mesh_rot}_nc.png")
         )
 
         test_log = {"chamfer": chamfer, "p2s": p2s, "NC": normal_consist}
-        name_log={"mesh_name":mesh_name,"rotation":mesh_rot}
-
-        return test_log, name_log
+        # test_log = {"chamfer": chamfer, "p2s": p2s, "NC": normal_consist, "smpl_p2s_dist":smpl_p2s_dist, "smpl_chamfer_dist":smpl_chamfer_dist,
+        #             "ddp2s": ddp2s, "ddch":ddch}
+        # print(self.export_dir.split('/')[-1], test_log,'????')
+        # self.res[str(self.export_dir.split('/')[-1]+'-'+str(mesh_rot))] = {"chamfer": chamfer.detach().cpu().numpy(), "p2s": p2s.detach().cpu().numpy(), "NC": normal_consist.detach().cpu().numpy(),
+        #                                                                    "smpl_p2s_dist":smpl_p2s_dist.detach().cpu().numpy(), "smpl_chamfer_dist":smpl_chamfer_dist.detach().cpu().numpy(),"ddp2s": ddp2s.detach().cpu().numpy(), "ddch":ddch.detach().cpu().numpy()}
+        # import pdb;pdb.set_trace()
+        return test_log
 
     def test_epoch_end(self, outputs):
-        # breakpoint()
-        # make_test_gif("/".join(self.export_dir.split("/")[:-2]))
-        if self.args.val_mode:
-            if self.cfg.dataset.types[0]=="thuman2":
-                accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
-                    outputs,
-                    rot_num=3,
-                    split={
-                        "thuman2": (0, 21)
-                    },
-                )
-            if self.cfg.dataset.types[0]=="cape":
-                accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
-                    outputs,
-                    rot_num=3,
-                    split={
-                    "cape-easy": (0, 8),
-                    "cape-hard": (8, 16),
-                    "cape-all": (16, 25)
-                    },
-                )
-        
-        elif not self.cfg.test_mode:
 
-            # accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
-            #     outputs,
-            #     rot_num=3,
-            #     # split={
-            #     #     "cape-easy": (0, 50),
-            #     #     "cape-hard": (50, 100)
-            #     # },
-            #     split={
-            #         "thuman2": (0, 5)
-            #     },
-            # )
-            if self.cfg.dataset.types[0]=="cape":
-                accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
-                    outputs,
-                    rot_num=3,
-                    split={
-                    "cape-easy": (0, 8),
-                    "cape-hard": (8, 16),
-                    "cape-all": (16, 25)
-                    },
-                )
-            elif self.cfg.dataset.types[0]=="thuman2":
-                accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
-                    outputs,
-                    rot_num=3,
-                    split={
-                        "thuman2": (0, 21)
-                    },
-                )
+        accu_outputs = accumulate(
+            outputs,
+            rot_num=3,
+            split={
+                "cape-easy": (0, 50),
+                "cape-hard": (50, 100)
+            },
+        )
 
-        elif self.cfg.test_mode:
-            if self.args.train_on_cape:
-                accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
-                    outputs,
-                    rot_num=3,
-                    split={
-                    "cape-easy": (0, 8),
-                    "cape-hard": (8, 16),
-                    "cape-all": (16, 25)
-                    },
-                )
-            elif self.cfg.dataset.types[0]=="cape":
-                accu_outputs, specific_output = accumulate(
-                    outputs,
-                    rot_num=3,
-                    split={
-                        "cape-easy": (0, 50),
-                        "cape-hard": (50, 100),
-                        "cape-all": (0, 150)
-                    },
-                )
-
-            elif self.cfg.dataset.types[0]=="thuman2":
-                accu_outputs, specific_output = accumulate(  ###ddp will cause error, i.e., idx > len output 
-                    outputs,
-                    rot_num=3,
-                    split={
-                        "thuman2": (0, 21)
-                    },
-                )
         print(colored(self.cfg.name, "green"))
         print(colored(self.cfg.dataset.noise_scale, "green"))
 
-        # self.logger.experiment.add_hparams(
-        #     hparam_dict={
-        #         "lr_G": self.lr_G,
-        #         "bsize": self.batch_size
-        #     },
-        #     metric_dict=accu_outputs,
-        # )
-        self.log("lr_G", self.lr_G)
-        self.log("bsize", self.batch_size)
-        for key_ in accu_outputs:
-            self.log(key_, accu_outputs[key_])
-        try:
-            with open(osp.join(self.export_dir, "../test_results.txt"),"a") as f:
-                for keys in accu_outputs.keys():
-                    f.writelines(keys+" ")
-                f.writelines("\n")
-                for keys in accu_outputs.keys():
-                    f.writelines(str(accu_outputs[keys].cpu().item())[:7] + " ")
-                f.writelines("\n")
-                for keys in accu_outputs.keys():
-                    f.writelines(str(keys)+" : "+ str(accu_outputs[keys].cpu().item())+"\n")
-        except: print("saving text failed")
-
-        try:
-            # with open(osp.join(self.export_dir, "../specific_test_results.csv"),"a") as f:
-            with open(osp.join(self.export_dir, "../specific_test_results.csv"), 'a', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                col_name_list=['Name']
-                for colname in specific_output.keys():
-                    temp_keys_list=colname.split('#')
-                    dataset_metric= temp_keys_list[-1]
-                    if dataset_metric not in col_name_list:
-                        col_name_list.append(dataset_metric)
-                # Write the header row
-                writer.writerow(col_name_list)
-                rearrange_dict={}
-                for name, value in specific_output.items():
-                    temp_keys_list=name.split('#')
-                    mesh_name=temp_keys_list[0]
-                    if mesh_name not in rearrange_dict.keys():
-                        rearrange_dict[mesh_name] = []
-                    value=value.item()
-                    rearrange_dict[mesh_name].append(value)
-                # Write the data rows
-                for meshname, value in rearrange_dict.items():
-                    writer.writerow([meshname, *value])
-                
-        except: print("saving text failed")
+        self.logger.experiment.add_hparams(
+            hparam_dict={
+                "lr_G": self.lr_G,
+                "bsize": self.batch_size
+            },
+            metric_dict=accu_outputs,
+        )
 
         np.save(
             osp.join(self.export_dir, "../test_results.npy"),
@@ -879,18 +641,19 @@ class ICON(pl.LightningModule):
         return all
 
     def render_func(self, in_tensor_dict, dataset="title", idx=0):
+
         for name in in_tensor_dict.keys():
             if in_tensor_dict[name] is not None:
                 in_tensor_dict[name] = in_tensor_dict[name][0:1]
 
         self.netG.eval()
-        features, inter = self.netG.filter(in_tensor_dict, return_inter=True) #1 12 128 128,  1 6 512 512
-        if self.args.use_clip: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None, clip_feature=in_tensor_dict["clip_feature"])
-        else: sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None)
+        features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
+        sdf = self.reconEngine(opt=self.cfg, netG=self.netG, features=features, proj_matrix=None)
+
         if sdf is not None:
             render = self.reconEngine.display(sdf)
 
-            image_pred = np.flip(render[:, :, ::-1], axis=0)  ##513 2052 3  GPU:9152MB
+            image_pred = np.flip(render[:, :, ::-1], axis=0)
             height = image_pred.shape[0]
 
             image_gt = resize(
@@ -900,56 +663,37 @@ class ICON(pl.LightningModule):
             )
             image_inter = self.tensor2image(height, inter[0])
             image = np.concatenate([image_pred, image_gt] + image_inter, axis=1)
-            if self.args.logger=="tb":
-                step_id = self.global_step if dataset == "train" else self.global_step + idx
-                self.logger.experiment.add_image(
-                    tag=f"Occupancy-{dataset}/{step_id}",
-                    img_tensor=image.transpose(2, 0, 1),
-                    global_step=step_id,
-                )
-            elif self.args.logger=="wandb":
-                if self.trainer.global_rank == 0:
-                    self.logger.experiment.log({"Occupancy": [wandb.Image(image)]})
+
+            step_id = self.global_step if dataset == "train" else self.global_step + idx
+            self.logger.experiment.add_image(
+                tag=f"Occupancy-{dataset}/{step_id}",
+                img_tensor=image.transpose(2, 0, 1),
+                global_step=step_id,
+            )
 
     def test_single(self, batch):
 
         self.netG.eval()
         self.netG.training = False
         in_tensor_dict = {}
-        # breakpoint()
+
         for name in self.in_total:
             if name in batch.keys():
                 in_tensor_dict.update({name: batch[name]})
 
-        if self.args.pamir_icon:
-            in_tensor_dict.update(
-            {
-                k: batch[k] if k in batch.keys() else None
-                for k in self.icon_keys+self.pamir_keys
-            }
-        )
-
-        else: in_tensor_dict.update(
+        in_tensor_dict.update(
             {
                 k: batch[k] if k in batch.keys() else None
                 for k in getattr(self, f"{self.prior_type}_keys")
             }
         )
-        if self.args.use_clip:
-                    in_tensor_dict.update(
-            {
-                "clip_feature":batch["clip_feature"]
-            }
-        )
-        else: in_tensor_dict.update(
-            {
-                "clip_feature":None
-            })
+
         with torch.no_grad():
             features, inter = self.netG.filter(in_tensor_dict, return_inter=True)
             sdf = self.reconEngine(
-                opt=self.cfg, netG=self.netG, features=features, proj_matrix=None, clip_feature=in_tensor_dict["clip_feature"]
+                opt=self.cfg, netG=self.netG, features=features, proj_matrix=None
             )
+
         verts_pr, faces_pr = self.reconEngine.export_mesh(sdf)
 
         if self.clean_mesh_flag:

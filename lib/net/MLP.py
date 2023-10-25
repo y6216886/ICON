@@ -6,117 +6,13 @@ import pytorch_lightning as pl
 from termcolor import colored
 import torch.nn.functional as F
 from torch import einsum
-# class MLP(pl.LightningModule): ##1413
-#     def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None, args=None):
 
-#         super(MLP, self).__init__()
-#         self.args=args
-#         if self.args.mlp_first_dim!=0:
-#             filter_channels[0]=self.args.mlp_first_dim
-#             print(colored("I have modified mlp filter channles{}".format(filter_channels),"red"))
-#         self.filters = nn.ModuleList()
-#         self.norms = nn.ModuleList()
-#         self.res_layers = res_layers
-#         self.norm = norm
-#         self.last_op = last_op
-#         self.name = name
-#         self.activate = nn.LeakyReLU(inplace=True)
-#         if self.args.mlpSe:
-#             self.se_conv = nn.ModuleList()
-#             for filters_nums_ in filter_channels[1:-1]:
-#                 self.se_conv.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
-#                 # self.se_conv.append(ChannelSELayer(filters_nums_))  #1457 gpu memory for bs 2
-#         elif self.args.mlpSev1:
-#             self.se_conv = nn.ModuleList()
-#             for filters_nums_ in filter_channels[1:-1]:
-#                 # self.se_conv.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
-#                 self.se_conv.append(ChannelSELayer(filters_nums_))  #1457 gpu memory for bs 2
-#         # elif self.args.mlpSemax:
-#         #     self.se_conv = nn.ModuleList()
-#         #     for filters_nums_ in filter_channels[1:-1]:
-#         #         # self.se_conv.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
-#         #         self.se_conv.append(ChannelSELayer(filters_nums_)) 
-
-#         for l in range(0, len(filter_channels) - 1):
-#             if l in self.res_layers:
-#                 self.filters.append(
-#                     nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
-#                 )
-#             else:
-#                 self.filters.append(nn.Conv1d(filter_channels[l], filter_channels[l + 1], 1))
-
-#             if l != len(filter_channels) - 2:
-#                 if norm == 'group':
-#                     self.norms.append(nn.GroupNorm(32, filter_channels[l + 1]))
-#                 elif norm == 'batch':
-#                     self.norms.append(nn.BatchNorm1d(filter_channels[l + 1]))
-#                 elif norm == 'instance':
-#                     self.norms.append(nn.InstanceNorm1d(filter_channels[l + 1]))
-#                 elif norm == 'weight':
-#                     self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
-#                     # print(self.filters[l].weight_g.size(),
-#                     #       self.filters[l].weight_v.size())
-#         self.len_filter=len(self.filters)
-
-#     def forward(self, feature):
-#         '''
-#         feature may include multiple view inputs
-#         args:
-#             feature: [B, C_in, N]
-#         return:
-#             [B, C_out, N] prediction
-#         '''
-#         y = feature
-#         tmpy = feature
-
-#         for i, f in enumerate(self.filters):
-
-#             y = f(y if i not in self.res_layers else torch.cat([y, tmpy], 1))
-#             if i != len(self.filters) - 1:
-#                 if self.norm not in ['batch', 'group', 'instance']:
-#                     y = self.activate(y)
-#                 else:
-#                     y = self.activate(self.norms[i](y))
-#             if self.args.mlpSe or self.args.mlpSev1:
-#                 if i!=self.len_filter-1:
-#                     y=self.se_conv[i](y)
-#         if self.last_op is not None:
-#             y = self.last_op(y)
-
-#         return y
-
-class MLP_uncertainty(pl.LightningModule):
-    def __init__(self):
-
-        super(MLP_uncertainty, self).__init__()
-        self.net=nn.Sequential(nn.Conv1d(1, 4, 1),
-                                            nn.ELU(inplace=True),
-                                            nn.Dropout(p=0.2),
-                                            nn.Conv1d(4, 8, 1),
-                                            nn.ELU(inplace=True),
-                                            nn.Dropout(p=0.2),
-                                            nn.Conv1d(8, 1, 1),
-                )
-        for m in self.modules():
-            if isinstance(m, nn.Conv1d):
-                m.bias.data.zero_()
-    def forward(self,x):
-        return self.net(x)
-        
-
-class Sine(nn.Module):
-    def __init__(self, factor=30):
-        super().__init__()
-        self.factor = factor
-
-    def forward(self, input):
-        # See paper sec. 3.2, final paragraph, and supplement Sec. 1.5 for discussion of factor 30
-        return torch.sin(self.factor * input)
     
 class MLP(pl.LightningModule):
-    def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None, args=None):
+    def __init__(self, filter_channels, name=None, res_layers=[], norm='group', last_op=None,mode=None, args=None):
 
         super(MLP, self).__init__()
+        filter_channels[-1]=2
         self.args=args
         self.len_channels=len(filter_channels)
         if args.mlp_first_dim!=0:
@@ -130,16 +26,10 @@ class MLP(pl.LightningModule):
         self.res_layers = res_layers
         self.norm = norm
         self.last_op = last_op
+        self.mode = mode
         self.name = name
-        if self.args.use_clip:
-            self.clip_feature=768
-            self.clip_fuse_layer=[int(i) for i in self.args.clip_fuse_layer] #[1,2,3]
-            print("clip_fuse_layer", self.clip_fuse_layer)
-        if self.args.activate_sine!=0:
-            # breakpoint()
-            self.activate = Sine(self.args.activate_sine)
-        else:
-            self.activate = nn.LeakyReLU(inplace=True)
+
+        self.activate = nn.LeakyReLU(inplace=True)
         assert [self.args.mlpSe, self.args.mlpSev1, self.args.mlpSemax].count(True) in [0,1], "mlp se strategy cannot be embodied simultaneously"
         self.se_start_channel=self.args.se_start_channel
         self.se_end_channel=self.args.se_end_channel
@@ -162,32 +52,8 @@ class MLP(pl.LightningModule):
             for filters_nums_ in filter_channels[self.se_start_channel:self.se_end_channel]:
                 self.se_conv_spatial.append(SpatialSELayer(filters_nums_))  #1449 gpu memory for bs 2
                 self.se_conv_channel.append(ChannelSELayer(filters_nums_)) 
-        if self.args.use_clip:
-            for l in range(0, len(filter_channels) - 1):
-                if l in self.res_layers and l not in self.clip_fuse_layer:
-                    self.filters.append(
-                        nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
-                    )
-                elif l in self.res_layers and l in self.clip_fuse_layer:
-                    self.filters.append(nn.Conv1d(filter_channels[l]+ filter_channels[0] + self.clip_feature, filter_channels[l + 1], 1))
-                elif l not in self.res_layers and l in self.clip_fuse_layer:
-                    self.filters.append(nn.Conv1d(filter_channels[l] + self.clip_feature, filter_channels[l + 1], 1))
-                elif l not in self.res_layers and l not in self.clip_fuse_layer:
-                    self.filters.append(nn.Conv1d(filter_channels[l], filter_channels[l + 1], 1))
-
-                if l != len(filter_channels) - 2:
-                    if norm == 'group':
-                        self.norms.append(nn.GroupNorm(32, filter_channels[l + 1]))
-                    elif norm == 'batch':
-                        self.norms.append(nn.BatchNorm1d(filter_channels[l + 1]))
-                    elif norm == 'instance':
-                        self.norms.append(nn.InstanceNorm1d(filter_channels[l + 1]))
-                    elif norm == 'weight':
-                        self.filters[l] = nn.utils.weight_norm(self.filters[l], name='weight')
-                        # print(self.filters[l].weight_g.size(),
-                        #       self.filters[l].weight_v.size())
-        else:
-            for l in range(0, len(filter_channels) - 1):
+        
+        for l in range(0, len(filter_channels) - 1):
                 if l in self.res_layers:
                     self.filters.append(
                         nn.Conv1d(filter_channels[l] + filter_channels[0], filter_channels[l + 1], 1)
@@ -207,116 +73,122 @@ class MLP(pl.LightningModule):
                         # print(self.filters[l].weight_g.size(),
                         #       self.filters[l].weight_v.size())
         self.len_filter=len(self.filters)
-        if self.args.dropout!=0: self.dropout=nn.Dropout(self.args.dropout)
-        if self.args.uncertainty:
-            self.mlp_uncertainty=MLP_uncertainty()
+        self.filters_fine = nn.ModuleList()
+        self.norms_fine = nn.ModuleList()
+        filter_channels_fine = [16, 512, 256, 128, 1]
+        for l in range(0, len(filter_channels_fine) - 1):
+            if l in self.res_layers:
+                self.filters_fine.append(
+                    nn.Conv1d(filter_channels_fine[l] + filter_channels_fine[0],
+                              filter_channels_fine[l + 1], 1))
+            else:
+                self.filters_fine.append(
+                    nn.Conv1d(filter_channels_fine[l], filter_channels_fine[l + 1], 1))
+            if l != len(filter_channels_fine) - 2:
+                self.norms_fine.append(nn.BatchNorm1d(filter_channels_fine[l + 1]))
 
-    def forward_clip(self, feature, clip_feature=None): ##todo fuse clip feature into
-        '''
-        feature may include multiple view inputs
-        args:
-            feature: [B, C_in, N]
-        return:
-            [B, C_out, N] prediction
-        '''
-        y = feature
-        if self.args.use_clip: clip_feature=clip_feature.unsqueeze(-1).repeat(1,1,8000)
-        tmpy = feature
-        # len_=len(self.filters)
-        j=0
-        for i, f in enumerate(self.filters):
-            ####se net
-
-            if self.args.mlpSe or self.args.mlpSev1:
-                if i in range(self.se_start_channel,self.se_end_channel):
-                    y=self.se_conv[j](y) 
-                    j+=1
-            elif self.args.mlpSemax:
-                if i in range(self.se_start_channel,self.se_end_channel):
-                    y_spa=self.se_conv_spatial[j](y) ##
-                    y_cha=self.se_conv_channel[j](y) ##
-                    y=torch.max(y_spa, y_cha)
-                    j+=1
-            #####
-            if self.args.use_clip and i in self.clip_fuse_layer:
-                input=torch.cat([y, clip_feature], 1) if i not in self.res_layers else torch.cat([y, tmpy, clip_feature], 1)
-                if self.args.dropout!=0 and self.training and i>0: y= self.dropout(y)
-                y = f(input)
-            else: 
-                input=y if i not in self.res_layers else torch.cat([y, tmpy], 1)
-                if self.args.dropout!=0 and self.training and i>0: 
-                    y= self.dropout(y)
-                y = f(input)
-
-            ###activation
-            if i != len(self.filters) - 1:
-                if self.norm not in ['batch', 'group', 'instance']:
-                    y = self.activate(y)
-                else:
-                    y = self.activate(self.norms[i](y))
-            ###
-##bug do not activate the last channel
-
-        if self.last_op is not None:
-            y = self.last_op(y)
-        if self.args.uncertainty:
-            y_uncertainty=self.mlp_uncertainty(y)
-            return torch.cat([y,y_uncertainty],dim=1)
-        return y
     
-    def forward_se(self, feature, clip_feature=None): ##todo fuse clip feature into
-        '''
-        feature may include multiple view inputs
-        args:
-            feature: [B, C_in, N]
-        return:
-            [B, C_out, N] prediction
-        '''
-        y = feature
-        if self.args.use_clip: clip_feature=clip_feature.unsqueeze(-1).repeat(1,1,8000)
-        tmpy = feature
-        # len_=len(self.filters)
-        j=0
-        for i, f in enumerate(self.filters):
-            ####se net
-            if self.args.mlpSe or self.args.mlpSev1:
-                if i in range(self.se_start_channel,self.se_end_channel):
-                    y=self.se_conv[j](y) 
-                    j+=1
-            elif self.args.mlpSemax:
-                if i in range(self.se_start_channel,self.se_end_channel):
-                    y_spa=self.se_conv_spatial[j](y) ##
-                    y_cha=self.se_conv_channel[j](y) ##
-                    y=torch.max(y_spa, y_cha)
-                    j+=1
-            #####
-            if self.args.use_clip and i in self.clip_fuse_layer:
-                input=torch.cat([y, clip_feature], 1) if i not in self.res_layers else torch.cat([y, tmpy, clip_feature], 1)
-                if self.args.dropout!=0 and self.training and i>0: y= self.dropout(y)
-                y = f(input)
-            else: 
-                input=y if i not in self.res_layers else torch.cat([y, tmpy], 1)
-                if self.args.dropout!=0 and self.training and i>0: 
-                    y= self.dropout(y)
-                y = f(input)
+#     def forward_se(self, feature, clip_feature=None): ##todo fuse clip feature into
+#         '''
+#         feature may include multiple view inputs
+#         args:
+#             feature: [B, C_in, N]
+#         return:
+#             [B, C_out, N] prediction
+#         '''
+#         y = feature
+#         if self.args.use_clip: clip_feature=clip_feature.unsqueeze(-1).repeat(1,1,8000)
+#         tmpy = feature
+#         # len_=len(self.filters)
+#         j=0
+#         for i, f in enumerate(self.filters):
+#             ####se net
+#             if self.args.mlpSe or self.args.mlpSev1:
+#                 if i in range(self.se_start_channel,self.se_end_channel):
+#                     y=self.se_conv[j](y) 
+#                     j+=1
+#             elif self.args.mlpSemax:
+#                 if i in range(self.se_start_channel,self.se_end_channel):
+#                     y_spa=self.se_conv_spatial[j](y) ##
+#                     y_cha=self.se_conv_channel[j](y) ##
+#                     y=torch.max(y_spa, y_cha)
+#                     j+=1
+#             #####
+#             if self.args.use_clip and i in self.clip_fuse_layer:
+#                 input=torch.cat([y, clip_feature], 1) if i not in self.res_layers else torch.cat([y, tmpy, clip_feature], 1)
+#                 if self.args.dropout!=0 and self.training and i>0: y= self.dropout(y)
+#                 y = f(input)
+#             else: 
+#                 input=y if i not in self.res_layers else torch.cat([y, tmpy], 1)
+#                 if self.args.dropout!=0 and self.training and i>0: 
+#                     y= self.dropout(y)
+#                 y = f(input)
 
-            ###activation
-            if i != len(self.filters) - 1:
-                if self.norm not in ['batch', 'group', 'instance']:
-                    y = self.activate(y)
-                else:
-                    y = self.activate(self.norms[i](y))
-            ###
-##bug do not activate the last channel
+#             ###activation
+#             if i != len(self.filters) - 1:
+#                 if self.norm not in ['batch', 'group', 'instance']:
+#                     y = self.activate(y)
+#                 else:
+#                     y = self.activate(self.norms[i](y))
+#             ###
+# ##bug do not activate the last channel
 
-        if self.last_op is not None:
-            y = self.last_op(y)
-        if self.args.uncertainty:
-            y_uncertainty=self.mlp_uncertainty(y)
-            return torch.cat([y,y_uncertainty],dim=1)
-        return y
+#         if self.last_op is not None:
+#             y = self.last_op(y)
+#         if self.args.uncertainty:
+#             y_uncertainty=self.mlp_uncertainty(y)
+#             return torch.cat([y,y_uncertainty],dim=1)
+#         return y
     
-    def forward_vol_attention(self, feature, vol_feat=None): ##todo fuse clip feature into
+#     def forward_vol_attention(self, feature, vol_feat=None): ##todo fuse clip feature into
+#         '''
+#         feature may include multiple view inputs
+#         args:
+#             feature: [B, C_in, N]
+#         return:
+#             [B, C_out, N] prediction
+#         '''
+#         y = feature 
+#         # vol_feat=vol_feat.detach()
+#         tmpy = feature
+#         # len_=len(self.filters)
+#         j=0
+#         # breakpoint()
+#         for i, f in enumerate(self.filters):
+#             ####se net
+#             if self.args.mlpSe or self.args.mlpSev1:
+#                 if i in range(self.se_start_channel,self.se_end_channel):
+#                     y=self.se_conv[j](y, vol_feat) 
+#                     j+=1
+#             elif self.args.mlpSemax:
+#                 if i in range(self.se_start_channel,self.se_end_channel):
+#                     y_spa=self.se_conv_spatial[j](y) ##
+#                     y_cha=self.se_conv_channel[j](y) ##
+#                     y=torch.max(y_spa, y_cha)
+#                     j+=1
+
+#             input=y if i not in self.res_layers else torch.cat([y, tmpy], 1)
+#             if self.args.dropout!=0 and self.training and i>0: 
+#                 y= self.dropout(y)
+#             y = f(input)
+
+#             ###activation
+#             if i != len(self.filters) - 1:
+#                 if self.norm not in ['batch', 'group', 'instance']:
+#                     y = self.activate(y)
+#                 else:
+#                     y = self.activate(self.norms[i](y))
+#             ###
+# ##bug do not activate the last channel
+
+#         if self.last_op is not None:
+#             y = self.last_op(y)
+#         if self.args.uncertainty:
+#             y_uncertainty=self.mlp_uncertainty(y)
+#             return torch.cat([y,y_uncertainty],dim=1)
+#         return y
+
+    def forward_dif(self, feature, vol_feat=None): ##todo fuse clip feature into
         '''
         feature may include multiple view inputs
         args:
@@ -357,16 +229,39 @@ class MLP(pl.LightningModule):
             ###
 ##bug do not activate the last channel
 
+        mu_0, sigma_0 = torch.split(y, 1, dim=1) # (B, C=1, N), (B, C=1, N)
+        sigma_0 = F.softplus(sigma_0)
+        sigma_0 += 1e-8
+        q_distribution = torch.distributions.Normal(mu_0, sigma_0)
+        z = q_distribution.rsample()
+
+        if self.mode != 'test':
+            feat_fine = torch.cat([tmpy, z, mu_0, sigma_0], 1)  # (B, C=13+2+1, N)
+        else:
+            feat_fine = torch.cat([tmpy, mu_0, mu_0, sigma_0], 1)
+        fine_y = feat_fine
+        tmp_fine_y = feat_fine
+
+        for i, f in enumerate(self.filters_fine):
+            fine_y = f(fine_y if i not in self.res_layers else torch.cat([fine_y, tmp_fine_y], 1))
+            if i != len(self.filters_fine) - 1:
+                if self.norm not in ['batch', 'group', 'instance']:
+                    fine_y = self.activate(fine_y)
+                else:
+                    fine_y = self.activate(self.norms_fine[i](fine_y)) # (B, C=1, N)
+
         if self.last_op is not None:
-            y = self.last_op(y)
-        if self.args.uncertainty:
-            y_uncertainty=self.mlp_uncertainty(y)
-            return torch.cat([y,y_uncertainty],dim=1)
-        return y
+            fine_y = self.last_op(fine_y) # (B, C=1, N)
+        else:
+            fine_y = fine_y
+        if self.mode != 'test':
+            return fine_y, mu_0, sigma_0
+        else:
+            return fine_y
     
     def forward(self,x, vol_feat=None):
         if self.args.smpl_attention:
-            return self.forward_vol_attention(x, vol_feat)
+            return self.forward_dif(x, vol_feat)
         else:
             return self.forward_se(x)
 

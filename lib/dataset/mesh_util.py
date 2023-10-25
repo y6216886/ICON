@@ -106,6 +106,17 @@ class HoppeMesh:
         self.verts = np.array(self.trimesh.vertices)
         self.faces = np.array(self.trimesh.faces)
         self.vert_normals = np.array(self.trimesh.vertex_normals)
+        self.kd_tree = cKDTree(self.verts)
+        self.len = len(self.verts)
+
+    def query(self, points):
+        dists, idx = self.kd_tree.query(points)
+        # FIXME: because the eyebows are removed, cKDTree around eyebows
+        # are not accurate. Cause a few false-inside labels here.
+        dirs = points - self.verts[idx]
+        signs = (dirs * self.vert_normals[idx]).sum(axis=1)
+        signs = (signs > 0) * 2 - 1
+        return signs * dists
 
     def contains(self, points):
 

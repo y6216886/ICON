@@ -208,31 +208,14 @@ class HGPIFuNet_global_local(BasePIFuNet):
 
         self.pamir_keys = ["voxel_verts", "voxel_faces", "pad_v_num", "pad_f_num"]
         self.pifu_keys = []
-        if args.mlp3d:
-            self.if_regressor = MLP3d(
+       
+        self.if_regressor = MLP(
                 filter_channels=channels_IF,
                 name="if",
                 res_layers=self.opt.res_layers,
                 norm=self.opt.norm_mlp,
                 last_op=nn.Sigmoid() if not self.cfg.test_mode else None,
-                args=args
-            )
-        elif args.use_unet:
-            self.if_regressor = MLP_UNET(
-                filter_channels=channels_IF,
-                name="if",
-                res_layers=self.opt.res_layers,
-                norm=self.opt.norm_mlp,
-                last_op=nn.Sigmoid() if not self.cfg.test_mode else None,
-                args=args
-            )
-        else:
-            self.if_regressor = MLP(
-                filter_channels=channels_IF,
-                name="if",
-                res_layers=self.opt.res_layers,
-                norm=self.opt.norm_mlp,
-                last_op=nn.Sigmoid() if not self.cfg.test_mode else None,
+                mode='train' if not cfg.test_mode else 'test',
                 args=args
             )
 
@@ -421,6 +404,8 @@ class HGPIFuNet_global_local(BasePIFuNet):
         in_cube = in_cube.all(dim=1, keepdim=True).detach().float()
 
         preds_list = []
+        miu_0_list = []
+        sigma_0_list = []
         vol_feats = features
 
         if self.args.pamir_icon:
@@ -545,12 +530,23 @@ class HGPIFuNet_global_local(BasePIFuNet):
             # breakpoint()
             point_feat = torch.cat(point_feat_list, 1)
             # out of image plane is always set to 0
-            if self.args.use_clip:
-                   preds = regressor(point_feat, clip_feature) 
-            else: preds = regressor(point_feat, vol_feat) ###sdf feature in channle [:,6,:]
-            preds = in_cube * preds
+            
+            if not self.test_mode:
+                preds, mu_0, sigma_0 = regressor(point_feat)
+                preds = in_cube * preds
 
-            preds_list.append(preds)
+                preds_list.append(preds)
+                miu_0_list.append(mu_0)
+                sigma_0_list.append(sigma_0)
+            else:
+                preds = regressor(point_feat)
+                preds = in_cube * preds
+                preds_list.append(preds)
+
+        if not self.test_mode:
+            return preds_list, miu_0_list, sigma_0_list
+        else:   
+            return preds_list
 
         return preds_list
 
