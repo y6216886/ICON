@@ -246,7 +246,7 @@ class HGPIFuNet(BasePIFuNet):
         self.mark = math.log(6)/math.log(10)
         self.bins = torch.logspace(0,self.mark, n_bins)-1
         self.bins=self.bins.cuda()
-        breakpoint()
+        # breakpoint()
         init_net(self)
 
     def get_normal(self, in_tensor_dict):
